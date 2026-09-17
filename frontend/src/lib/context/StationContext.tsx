@@ -1,0 +1,141 @@
+'use client';
+
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { EnergyData, Station, StationId, WeatherData } from '../types';
+import { apiClient } from '../api/client';
+
+export type TimeRange = '6H' | '12H' | '24H' | '7D';
+
+export interface ToastMessage {
+  id: string;
+  type: 'SUCCESS' | 'WARNING' | 'ERROR' | 'INFO';
+  title: string;
+  message: string;
+}
+
+interface StationContextType {
+  activeStationId: StationId;
+  setActiveStationId: (id: StationId) => void;
+  station: Station | null;
+  weather: WeatherData | null;
+  energy: EnergyData | null;
+  timeRange: TimeRange;
+  setTimeRange: (range: TimeRange) => void;
+  unreadAlertCount: number;
+  refreshAlertCount: () => Promise<void>;
+  toasts: ToastMessage[];
+  addToast: (toast: Omit<ToastMessage, 'id'>) => void;
+  removeToast: (id: string) => void;
+  isLiveTelemetry: boolean;
+  setIsLiveTelemetry: (live: boolean) => void;
+  lastTelemetryTick: Date;
+}
+
+const StationContext = createContext<StationContextType | undefined>(undefined);
+
+export function StationProvider({ children }: { children: React.ReactNode }) {
+  const [activeStationId, setActiveStationId] = useState<StationId>('maitri');
+  const [station, setStation] = useState<Station | null>(null);
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [energy, setEnergy] = useState<EnergyData | null>(null);
+  const [timeRange, setTimeRange] = useState<TimeRange>('24H');
+  const [unreadAlertCount, setUnreadAlertCount] = useState<number>(3);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [isLiveTelemetry, setIsLiveTelemetry] = useState<boolean>(true);
+  const [lastTelemetryTick, setLastTelemetryTick] = useState<Date>(new Date());
+
+  const addToast = (toast: Omit<ToastMessage, 'id'>) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { ...toast, id }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4500);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const refreshAlertCount = async () => {
+    const alerts = await apiClient.getAlerts(activeStationId);
+    setUnreadAlertCount(alerts.filter((a) => !a.acknowledged).length);
+  };
+
+  // Load initial station data
+  useEffect(() => {
+    let isMounted = true;
+    async function loadData() {
+      const st = await apiClient.getStation(activeStationId);
+      const wt = await apiClient.getWeatherData(activeStationId);
+      const en = await apiClient.getEnergyData(activeStationId);
+      if (isMounted) {
+        setStation(st);
+        setWeather(wt);
+        setEnergy(en);
+        refreshAlertCount();
+      }
+    }
+    loadData();
+    return () => {
+      isMounted = false;
+    };
+  }, [activeStationId]);
+
+  // Live telemetry pulse every 5 seconds (micro-jitter in live SCADA data)
+  useEffect(() => {
+    if (!isLiveTelemetry) return;
+    const interval = setInterval(() => {
+      setLastTelemetryTick(new Date());
+      setEnergy((prev) => {
+        if (!prev) return prev;
+        const jitter = (Math.random() * 2 - 1) * 2.5;
+        const newLoad = Math.round(prev.currentLoadKW + jitter);
+        const newSolar = Math.max(0, Math.round(prev.solarGenerationKW + (Math.random() * 1 - 0.5)));
+        const newWind = Math.max(0, Math.round(prev.windGenerationKW + (Math.random() * 2 - 1)));
+        const newRen = newSolar + newWind;
+        return {
+          ...prev,
+          currentLoadKW: newLoad,
+          solarGenerationKW: newSolar,
+          windGenerationKW: newWind,
+          totalRenewableKW: newRen,
+          renewablePenetrationPercent: +((newRen / newLoad) * 100).toFixed(1),
+        };
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isLiveTelemetry]);
+
+  return (
+    <StationContext.Provider
+      value={{
+        activeStationId,
+        setActiveStationId,
+        station,
+        weather,
+        energy,
+        timeRange,
+        setTimeRange,
+        unreadAlertCount,
+        refreshAlertCount,
+        toasts,
+        addToast,
+        removeToast,
+        isLiveTelemetry,
+        setIsLiveTelemetry,
+        lastTelemetryTick,
+      }}
+    >
+      {children}
+    </StationContext.Provider>
+  );
+}
+
+export function useStation() {
+  const context = useContext(StationContext);
+  if (!context) {
+    throw new Error('useStation must be used within a StationProvider');
+  }
+  return context;
+}

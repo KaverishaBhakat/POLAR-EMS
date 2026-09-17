@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Helvetica Neue ME";
+  src: url("https://db.onlinewebfonts.com/t/95cecf452d3208890088a5b4c19c7ecf.eot");
+  src: url("https://db.onlinewebfonts.com/t/95cecf452d3208890088a5b4c19c7ecf.eot?#iefix") format("embedded-opentype"),
+       url("https://db.onlinewebfonts.com/t/95cecf452d3208890088a5b4c19c7ecf.woff2") format("woff2"),
+       url("https://db.onlinewebfonts.com/t/95cecf452d3208890088a5b4c19c7ecf.woff") format("woff"),
+       url("https://db.onlinewebfonts.com/t/95cecf452d3208890088a5b4c19c7ecf.ttf") format("truetype"),
+       url("https://db.onlinewebfonts.com/t/95cecf452d3208890088a5b4c19c7ecf.svg#Helvetica Neue ME") format("svg");
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Helvetica Neue ME', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background-color: #080D14;
+  color: #F1F5F9;
+}
+
+/* Custom Scrollbar for SCADA Control Room */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #080D14;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1B2C42;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #06B6D4;
+}
