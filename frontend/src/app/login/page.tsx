@@ -18,12 +18,12 @@ import {
   CheckCircle2,
   BadgeCheck,
 } from 'lucide-react';
-import { useStation } from '@/lib/context/StationContext';
+import { useStation, getInitials } from '@/lib/context/StationContext';
 
 function AuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { addToast } = useStation();
+  const { addToast, setCurrentUser, setActiveStationId } = useStation();
 
   const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'signin';
   const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
@@ -52,6 +52,27 @@ function AuthContent() {
     e.preventDefault();
     setIsLoading(true);
     setTimeout(() => {
+      if (signInEmail === 'chief.engineer@ncpor.res.in') {
+        setCurrentUser({
+          name: 'Dr. A. K. Sharma',
+          email: 'chief.engineer@ncpor.res.in',
+          role: 'Station Chief Engineer (NCPOR)',
+          station: 'maitri',
+          initials: 'AS',
+        });
+      } else {
+        const stored = typeof window !== 'undefined' ? localStorage.getItem('polar_ems_user') : null;
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (parsed.email === signInEmail) {
+              setCurrentUser(parsed);
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+      }
       addToast({
         type: 'SUCCESS',
         title: 'Authentication Verified',
@@ -81,10 +102,24 @@ function AuthContent() {
           ? 'Bharati Research Station'
           : 'NCPOR Operations HQ';
 
+      const userName = signUpName.trim() || 'Officer';
+      const userProfile = {
+        name: userName,
+        email: signUpEmail.trim(),
+        role: `${signUpRole} (${signUpStation === 'bharati' ? 'Bharati' : signUpStation === 'maitri' ? 'Maitri' : 'HQ'})`,
+        station: signUpStation,
+        initials: getInitials(userName),
+      };
+
+      setCurrentUser(userProfile);
+      if (signUpStation === 'bharati' || signUpStation === 'maitri') {
+        setActiveStationId(signUpStation);
+      }
+
       addToast({
         type: 'SUCCESS',
         title: 'Station Operator Registered',
-        message: `Welcome ${signUpName || 'Officer'}. Account verified for ${stationLabel} (${signUpRole}).`,
+        message: `Welcome ${userName}. Account verified for ${stationLabel} (${signUpRole}).`,
       });
       router.push('/dashboard');
     }, 800);
@@ -93,12 +128,19 @@ function AuthContent() {
   const handleDemoLogin = (stationId: 'maitri' | 'bharati') => {
     setIsLoading(true);
     setTimeout(() => {
+      const stationName = stationId === 'maitri' ? 'Maitri' : 'Bharati';
+      setCurrentUser({
+        name: 'Dr. A. K. Sharma',
+        email: `chief.${stationId}@ncpor.res.in`,
+        role: `Station Chief Engineer (${stationName})`,
+        station: stationId,
+        initials: 'AS',
+      });
+      setActiveStationId(stationId);
       addToast({
         type: 'SUCCESS',
         title: 'Demo Access Granted',
-        message: `Authenticated as Station Chief Engineer (${
-          stationId === 'maitri' ? 'Maitri' : 'Bharati'
-        }).`,
+        message: `Authenticated as Station Chief Engineer (${stationName}).`,
       });
       router.push('/dashboard');
     }, 400);

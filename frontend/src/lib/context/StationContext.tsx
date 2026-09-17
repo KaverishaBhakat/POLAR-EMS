@@ -13,6 +13,29 @@ export interface ToastMessage {
   message: string;
 }
 
+export interface UserProfile {
+  name: string;
+  email: string;
+  role: string;
+  station: string;
+  initials: string;
+}
+
+export const getInitials = (name: string): string => {
+  if (!name) return 'SO';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+export const DEFAULT_USER: UserProfile = {
+  name: 'Kaverisha Bhakat',
+  email: 'kaveri@gmail.com',
+  role: 'Microgrid SCADA Operator (Bharati)',
+  station: 'bharati',
+  initials: 'KB',
+};
+
 interface StationContextType {
   activeStationId: StationId;
   setActiveStationId: (id: StationId) => void;
@@ -29,12 +52,15 @@ interface StationContextType {
   isLiveTelemetry: boolean;
   setIsLiveTelemetry: (live: boolean) => void;
   lastTelemetryTick: Date;
+  currentUser: UserProfile;
+  setCurrentUser: (user: UserProfile) => void;
 }
 
 const StationContext = createContext<StationContextType | undefined>(undefined);
 
 export function StationProvider({ children }: { children: React.ReactNode }) {
   const [activeStationId, setActiveStationId] = useState<StationId>('maitri');
+  const [currentUser, setCurrentUserState] = useState<UserProfile>(DEFAULT_USER);
   const [station, setStation] = useState<Station | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [energy, setEnergy] = useState<EnergyData | null>(null);
@@ -43,6 +69,33 @@ export function StationProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isLiveTelemetry, setIsLiveTelemetry] = useState<boolean>(true);
   const [lastTelemetryTick, setLastTelemetryTick] = useState<Date>(new Date());
+
+  // Synchronize user profile with localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('polar_ems_user');
+        if (saved) {
+          setCurrentUserState(JSON.parse(saved));
+        } else {
+          localStorage.setItem('polar_ems_user', JSON.stringify(DEFAULT_USER));
+        }
+      } catch (e) {
+        console.error('Error reading polar_ems_user from localStorage:', e);
+      }
+    }
+  }, []);
+
+  const setCurrentUser = (user: UserProfile) => {
+    setCurrentUserState(user);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('polar_ems_user', JSON.stringify(user));
+      } catch (e) {
+        console.error('Error saving polar_ems_user to localStorage:', e);
+      }
+    }
+  };
 
   const addToast = (toast: Omit<ToastMessage, 'id'>) => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -125,6 +178,8 @@ export function StationProvider({ children }: { children: React.ReactNode }) {
         isLiveTelemetry,
         setIsLiveTelemetry,
         lastTelemetryTick,
+        currentUser,
+        setCurrentUser,
       }}
     >
       {children}

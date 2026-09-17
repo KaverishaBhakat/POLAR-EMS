@@ -35,7 +35,7 @@ const NAV_ITEMS = [
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
-  const { unreadAlertCount } = useStation();
+  const { unreadAlertCount, currentUser } = useStation();
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -145,14 +145,14 @@ export const Sidebar: React.FC = () => {
         {!collapsed ? (
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded bg-[#16273B] border border-cyan-500/30 flex items-center justify-center text-cyan-300 font-mono text-xs font-bold flex-shrink-0">
-              <User size={14} />
+              {currentUser?.initials || <User size={14} />}
             </div>
             <div className="overflow-hidden flex-1">
-              <p className="text-xs font-semibold text-slate-200 truncate font-mono">
-                Dr. A. K. Sharma
+              <p className="text-xs font-semibold text-slate-200 truncate font-mono" title={currentUser?.name}>
+                {currentUser?.name || 'Station Officer'}
               </p>
-              <p className="text-[10px] text-slate-400 truncate">
-                Station Chief Engineer (NCPOR)
+              <p className="text-[10px] text-slate-400 truncate" title={currentUser?.role}>
+                {currentUser?.role || 'Station SCADA Operator'}
               </p>
             </div>
             <Link
@@ -165,8 +165,8 @@ export const Sidebar: React.FC = () => {
           </div>
         ) : (
           <div className="flex justify-center">
-            <div className="w-8 h-8 rounded bg-[#16273B] border border-cyan-500/30 flex items-center justify-center text-cyan-300 font-mono text-xs font-bold">
-              AS
+            <div className="w-8 h-8 rounded bg-[#16273B] border border-cyan-500/30 flex items-center justify-center text-cyan-300 font-mono text-xs font-bold" title={currentUser?.name}>
+              {currentUser?.initials || 'SO'}
             </div>
           </div>
         )}
