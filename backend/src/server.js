@@ -15,8 +15,8 @@ const server = app.listen(env.PORT, async () => {
   if (dbConnected) {
     console.log(`✅ PostgreSQL Database connection established.`);
   } else {
-    console.warn(`⚠️ PostgreSQL connection not available yet at ${env.DATABASE_URL}.`);
-    console.warn(`💡 Tip: Run 'docker compose up -d' or verify your local PostgreSQL service.`);
+    console.warn(`⚠️ PostgreSQL connection not available yet.`);
+    console.warn(`💡 Tip: Verify your DATABASE_URL configuration or database service.`);
   }
 });
 
