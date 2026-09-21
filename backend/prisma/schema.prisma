@@ -8,21 +8,15 @@ datasource db {
   directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
-enum Role {
-  ADMIN
-  OPERATOR
-  VIEWER
-}
-
 model User {
   id           String       @id @default(uuid())
   name         String
   email        String       @unique
   passwordHash String
   role         Role         @default(VIEWER)
-  simulations  Simulation[]
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+  simulations  Simulation[]
 
   @@map("users")
 }
@@ -36,16 +30,16 @@ model Station {
   longitude           Float
   status              String                @default("ONLINE")
   description         String?
-  weatherData         WeatherData[]
-  energyLoads         EnergyLoad[]
-  renewableGeneration RenewableGeneration[]
-  generators          Generator[]
-  batteries           Battery[]
-  criticalLoads       CriticalLoad[]
-  alerts              Alert[]
-  simulations         Simulation[]
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
+  alerts              Alert[]
+  batteries           Battery[]
+  criticalLoads       CriticalLoad[]
+  energyLoads         EnergyLoad[]
+  generators          Generator[]
+  renewableGeneration RenewableGeneration[]
+  simulations         Simulation[]
+  weatherData         WeatherData[]
 
   @@map("stations")
 }
@@ -53,7 +47,6 @@ model Station {
 model WeatherData {
   id             String   @id @default(uuid())
   stationId      String
-  station        Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
   timestamp      DateTime
   temperature    Float
   pressure       Float
@@ -62,6 +55,7 @@ model WeatherData {
   windDirection  String
   solarRadiation Float
   createdAt      DateTime @default(now())
+  station        Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
 
   @@index([stationId, timestamp])
   @@map("weather_data")
@@ -70,7 +64,6 @@ model WeatherData {
 model EnergyLoad {
   id                String   @id @default(uuid())
   stationId         String
-  station           Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
   timestamp         DateTime
   totalLoad         Float
   heatingLoad       Float
@@ -80,6 +73,7 @@ model EnergyLoad {
   refrigerationLoad Float
   flexibleLoad      Float
   createdAt         DateTime @default(now())
+  station           Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
 
   @@index([stationId, timestamp])
   @@map("energy_loads")
@@ -88,12 +82,12 @@ model EnergyLoad {
 model RenewableGeneration {
   id             String   @id @default(uuid())
   stationId      String
-  station        Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
   timestamp      DateTime
   solarPower     Float
   windPower      Float
   totalRenewable Float
   createdAt      DateTime @default(now())
+  station        Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
 
   @@index([stationId, timestamp])
   @@map("renewable_generation")
@@ -102,7 +96,6 @@ model RenewableGeneration {
 model Generator {
   id            String             @id @default(uuid())
   stationId     String
-  station       Station            @relation(fields: [stationId], references: [id], onDelete: Cascade)
   name          String
   capacity      Float
   minimumOutput Float
@@ -111,9 +104,10 @@ model Generator {
   status        String             @default("STOPPED")
   fuelLevel     Float
   totalRuntime  Float              @default(0)
-  readings      GeneratorReading[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
+  readings      GeneratorReading[]
+  station       Station            @relation(fields: [stationId], references: [id], onDelete: Cascade)
 
   @@map("generators")
 }
@@ -121,13 +115,13 @@ model Generator {
 model GeneratorReading {
   id           String    @id @default(uuid())
   generatorId  String
-  generator    Generator @relation(fields: [generatorId], references: [id], onDelete: Cascade)
   timestamp    DateTime
   powerOutput  Float
   fuelConsumed Float
   efficiency   Float
   runtime      Float
   createdAt    DateTime  @default(now())
+  generator    Generator @relation(fields: [generatorId], references: [id], onDelete: Cascade)
 
   @@index([generatorId, timestamp])
   @@map("generator_readings")
@@ -136,7 +130,6 @@ model GeneratorReading {
 model Battery {
   id                String           @id @default(uuid())
   stationId         String
-  station           Station          @relation(fields: [stationId], references: [id], onDelete: Cascade)
   name              String
   capacity          Float
   currentSOC        Float
@@ -145,9 +138,10 @@ model Battery {
   maxChargePower    Float
   maxDischargePower Float
   status            String           @default("IDLE")
-  readings          BatteryReading[]
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
+  station           Station          @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  readings          BatteryReading[]
 
   @@map("batteries")
 }
@@ -155,12 +149,12 @@ model Battery {
 model BatteryReading {
   id             String   @id @default(uuid())
   batteryId      String
-  battery        Battery  @relation(fields: [batteryId], references: [id], onDelete: Cascade)
   timestamp      DateTime
   soc            Float
   chargePower    Float
   dischargePower Float
   createdAt      DateTime @default(now())
+  battery        Battery  @relation(fields: [batteryId], references: [id], onDelete: Cascade)
 
   @@index([batteryId, timestamp])
   @@map("battery_readings")
@@ -169,7 +163,6 @@ model BatteryReading {
 model CriticalLoad {
   id           String   @id @default(uuid())
   stationId    String
-  station      Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
   name         String
   category     String
   priority     Int
@@ -178,6 +171,7 @@ model CriticalLoad {
   status       String   @default("ONLINE")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  station      Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
 
   @@map("critical_loads")
 }
@@ -185,7 +179,6 @@ model CriticalLoad {
 model Alert {
   id             String    @id @default(uuid())
   stationId      String
-  station        Station   @relation(fields: [stationId], references: [id], onDelete: Cascade)
   type           String
   severity       String
   title          String
@@ -194,6 +187,7 @@ model Alert {
   source         String
   createdAt      DateTime  @default(now())
   acknowledgedAt DateTime?
+  station        Station   @relation(fields: [stationId], references: [id], onDelete: Cascade)
 
   @@map("alerts")
 }
@@ -201,9 +195,7 @@ model Alert {
 model Simulation {
   id                     String            @id @default(uuid())
   userId                 String
-  user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   stationId              String
-  station                Station           @relation(fields: [stationId], references: [id], onDelete: Cascade)
   name                   String
   temperature            Float
   windSpeed              Float
@@ -212,8 +204,10 @@ model Simulation {
   batterySOC             Float
   renewableForecastError Float
   generatorFailure       Boolean
-  result                 SimulationResult?
   createdAt              DateTime          @default(now())
+  result                 SimulationResult?
+  station                Station           @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("simulations")
 }
@@ -221,7 +215,6 @@ model Simulation {
 model SimulationResult {
   id                   String     @id @default(uuid())
   simulationId         String     @unique
-  simulation           Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
   predictedLoad        Float
   renewableGeneration  Float
   batterySOC           Float
@@ -231,6 +224,13 @@ model SimulationResult {
   criticalLoadRisk     Boolean
   recommendation       String
   createdAt            DateTime   @default(now())
+  simulation           Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
 
   @@map("simulation_results")
+}
+
+enum Role {
+  ADMIN
+  OPERATOR
+  VIEWER
 }
