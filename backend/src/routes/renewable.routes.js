@@ -12,6 +12,7 @@ const { authenticate, authorize } = require('../middleware/auth.middleware');
 const router = express.Router();
 
 router.get('/:stationId/latest', validate(stationParamSchema), renewableController.getLatestRenewable);
+router.get('/:stationId/current', validate(stationParamSchema), renewableController.getLatestRenewable);
 router.get('/:stationId/history', validate(historyQuerySchema), renewableController.getRenewableHistory);
 router.get('/:stationId/range', validate(rangeQuerySchema), renewableController.getRenewableRange);
 

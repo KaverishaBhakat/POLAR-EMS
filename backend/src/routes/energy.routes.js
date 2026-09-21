@@ -12,6 +12,7 @@ const { authenticate, authorize } = require('../middleware/auth.middleware');
 const router = express.Router();
 
 router.get('/:stationId/latest', validate(stationParamSchema), energyController.getLatestEnergy);
+router.get('/:stationId/current', validate(stationParamSchema), energyController.getLatestEnergy);
 router.get('/:stationId/history', validate(historyQuerySchema), energyController.getEnergyHistory);
 router.get('/:stationId/range', validate(rangeQuerySchema), energyController.getEnergyRange);
 

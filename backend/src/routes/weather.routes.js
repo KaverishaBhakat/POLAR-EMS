@@ -12,6 +12,7 @@ const { authenticate, authorize } = require('../middleware/auth.middleware');
 const router = express.Router();
 
 router.get('/:stationId/latest', validate(stationParamSchema), weatherController.getLatestWeather);
+router.get('/:stationId/current', validate(stationParamSchema), weatherController.getLatestWeather);
 router.get('/:stationId/history', validate(historyQuerySchema), weatherController.getWeatherHistory);
 router.get('/:stationId/range', validate(rangeQuerySchema), weatherController.getWeatherRange);
 
