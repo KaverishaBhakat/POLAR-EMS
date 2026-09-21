@@ -30,27 +30,76 @@ export default function DashboardPage() {
     async function loadDashboardData() {
       setLoading(true);
       try {
-        try {
-          const dashboard = await apiClient.getDashboardData(activeStationId);
-          console.log('BACKEND DASHBOARD:', dashboard);
-          if (isMounted) {
-            setDashboardBackend(dashboard);
-          }
-        } catch (apiErr) {
-          console.warn('Backend live dashboard data not yet available, using client telemetry:', apiErr);
+        const dashboard = await apiClient.getDashboardData(activeStationId);
+        console.log('BACKEND DASHBOARD TELEMETRY:', dashboard);
+
+        if (!isMounted) return;
+
+        setDashboardBackend(dashboard);
+
+        // 1. Map real DB Generators
+        if (dashboard.generators && dashboard.generators.length > 0) {
+          setGenerators(dashboard.generators);
+        } else {
+          setGenerators([]);
         }
 
-        const gens = await apiClient.getGenerators(activeStationId);
-        const loads = await apiClient.getCriticalLoads(activeStationId);
-        const fc = await apiClient.getForecast(activeStationId);
-        if (isMounted) {
-          setGenerators(gens);
-          setCriticalLoads(loads);
-          setForecastPoints(fc.points);
-          setInsight(fc.insights[0] || null);
+        // 2. Map real DB Critical Loads
+        if (dashboard.criticalLoads && dashboard.criticalLoads.length > 0) {
+          setCriticalLoads(dashboard.criticalLoads);
+        } else {
+          setCriticalLoads([]);
+        }
+
+        // 3. Map real DB Forecast / Time-series points
+        if (dashboard.points && dashboard.points.length > 0) {
+          setForecastPoints(dashboard.points);
+        } else {
+          setForecastPoints([]);
+        }
+
+        // 4. Map Dynamic AI Operational Advisory from alerts or live telemetry summary
+        const activeAlert = dashboard.alerts && dashboard.alerts.length > 0 ? dashboard.alerts[0] : null;
+        if (activeAlert) {
+          setInsight({
+            id: activeAlert.id,
+            timestamp: new Date(activeAlert.createdAt || Date.now()).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+            stationId: activeStationId,
+            title: activeAlert.title,
+            description: activeAlert.description,
+            confidence: 96.8,
+            recommendedAction:
+              activeAlert.recommendedAction || 'Acknowledge alert and inspect subsystem SCADA status.',
+            category: 'SAFETY',
+            impact: activeAlert.severity === 'CRITICAL' ? 'High' : 'Medium',
+            priority: activeAlert.severity === 'CRITICAL' ? 'HIGH' : 'MEDIUM',
+          });
+        } else {
+          const hasData = Boolean(dashboard.summary?.hasTelemetryData);
+          setInsight({
+            id: 'ai-advisory-live',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            stationId: activeStationId,
+            title: hasData
+              ? `Renewable Priority Dispatch — ${dashboard.summary?.renewablePercentage || 0}% Clean Penetration`
+              : 'SCADA Operational Standby — Clean Database State',
+            description: hasData
+              ? `Real-time microgrid load is ${dashboard.summary?.currentLoad || 0} kW balanced with ${dashboard.summary?.renewableGeneration || 0} kW renewable yield and BESS at ${dashboard.summary?.batterySOC || 0}% SOC.`
+              : 'Telemetry channels are listening on 415V bus. Synthetic demo data removed. Awaiting SCADA telemetry packet ingestion.',
+            confidence: 98.4,
+            recommendedAction: hasData
+              ? 'Maintain automated priority dispatch curve and balance diesel generator loading across active circuits.'
+              : 'Inject live SCADA telemetry or batch datasets via the Ingestion Hub to begin automated optimization.',
+            category: 'GENERATION',
+            impact: 'High',
+            priority: 'HIGH',
+          });
         }
       } catch (err) {
-        console.error('Error loading dashboard telemetry:', err);
+        console.error('Error loading dashboard telemetry from backend:', err);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -62,7 +111,7 @@ export default function DashboardPage() {
     };
   }, [activeStationId]);
 
-  if (!energy || loading) {
+  if (loading && !dashboardBackend) {
     return (
       <div className="space-y-4">
         <LoadingSkeleton className="h-24" />
@@ -98,6 +147,12 @@ export default function DashboardPage() {
     ? dashboardBackend.summary.fuelLevel
     : 78.5;
 
+  const displaySolarKW = dashboardBackend?.renewable?.solarPower ?? (energy?.solarGenerationKW || 0);
+  const displayWindKW = dashboardBackend?.renewable?.windPower ?? (energy?.windGenerationKW || 0);
+  const displayBatteryFlow = dashboardBackend?.battery?.flowKW ?? (energy?.batteryFlowKW || 0);
+  const displayTotalCriticalKW = dashboardBackend?.summary?.totalCriticalPowerKW ?? (energy?.criticalLoadKW || 73.2);
+  const stationDisplayName = dashboardBackend?.station?.name || station?.name || 'Antarctic Station';
+
   return (
     <div className="space-y-6">
       {/* Page Title & Subtitle */}
@@ -108,7 +163,7 @@ export default function DashboardPage() {
             Energy Operations Center
           </h1>
           <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Real-time energy monitoring and intelligent resource management | {station?.name}
+            Real-time energy monitoring and intelligent resource management | {stationDisplayName}
           </p>
         </div>
 
@@ -218,7 +273,7 @@ export default function DashboardPage() {
           value={`${energy?.criticalLoadProtectedPercent || 100}%`}
           unit="Protected"
           icon={ShieldCheck}
-          subtitle={`${energy?.criticalLoadKW || 73.2} kW Reserved`}
+          subtitle={`${displayTotalCriticalKW} kW Reserved`}
           tooltip="Guaranteed power allocation for life support, habitat heating, SATCOM, and medical ward."
           accentColor="emerald"
           status={{ variant: 'PROTECTED', label: '100% SECURE' }}
@@ -242,12 +297,12 @@ export default function DashboardPage() {
 
       {/* SECOND SECTION: Power Distribution SCADA Flow */}
       <EnergyFlow
-        solarKW={energy.solarGenerationKW}
-        windKW={energy.windGenerationKW}
+        solarKW={displaySolarKW}
+        windKW={displayWindKW}
         generatorKW={generators.filter((g) => g.status === 'RUNNING').reduce((acc, g) => acc + g.outputKW, 0)}
-        batteryFlowKW={energy.batteryFlowKW}
-        batterySoc={energy.batterySocPercent}
-        loadKW={energy.currentLoadKW}
+        batteryFlowKW={displayBatteryFlow}
+        batterySoc={displayBatterySOC}
+        loadKW={displayLoadKW}
       />
 
       {/* THIRD SECTION: Generator Status (G1 – G4) */}

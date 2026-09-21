@@ -166,7 +166,7 @@ export const EnergyFlow: React.FC<EnergyFlowProps> = ({
               <div className="bg-[#0D1724] p-1.5 rounded border border-[#1B2C42]">
                 <div className="text-slate-400">Renewable Share</div>
                 <div className="text-cyan-300 font-bold text-xs mt-0.5">
-                  {+(((solarKW + windKW) / loadKW) * 100).toFixed(1)}%
+                  {loadKW > 0 ? (((solarKW + windKW) / loadKW) * 100).toFixed(1) : '0.0'}%
                 </div>
               </div>
               <div className="bg-[#0D1724] p-1.5 rounded border border-[#1B2C42]">
