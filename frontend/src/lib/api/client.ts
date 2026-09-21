@@ -79,6 +79,72 @@ export const apiClient = {
     const result = await response.json();
     return result.data;
   },
+
+  // SCADA Data Ingestion & Database Management
+  async ingestTelemetry(stationId: StationId, payload: any) {
+    const response = await fetch(`${API_BASE_URL}/ingest/${stationId}/telemetry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to ingest telemetry');
+    }
+    return result.data;
+  },
+
+  async ingestBatch(stationId: StationId, datasetType: string, records: any[]) {
+    const response = await fetch(`${API_BASE_URL}/ingest/${stationId}/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ datasetType, records }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to upload batch dataset');
+    }
+    return result.data;
+  },
+
+  async getIngestStatus(stationId?: string) {
+    const query = stationId ? `?stationId=${stationId}` : '';
+    const response = await fetch(`${API_BASE_URL}/ingest/status${query}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch database ingestion status');
+    }
+    return result.data;
+  },
+
+  async purgeTelemetry(stationId?: string) {
+    const response = await fetch(`${API_BASE_URL}/ingest/purge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stationId: stationId || 'all' }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to purge telemetry');
+    }
+    return result.data;
+  },
+
+  async getTemplate(type: string) {
+    const response = await fetch(`${API_BASE_URL}/ingest/template/${type}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch template format');
+    }
+    return result.data;
+  },
   // Station Metadata
   async getStations(): Promise<Record<StationId, Station>> {
     return { ...STATIONS };

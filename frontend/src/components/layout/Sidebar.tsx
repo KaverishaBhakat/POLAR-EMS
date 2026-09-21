@@ -20,10 +20,12 @@ import {
   User,
   Compass,
   Zap,
+  UploadCloud,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { name: 'Dashboard', href: '/dashboard', icon: Activity, badge: 'LIVE' },
+  { name: 'Data Ingestion', href: '/data-upload', icon: UploadCloud, badge: 'INGEST' },
   { name: 'Forecast', href: '/forecast', icon: TrendingUp, badge: 'AI' },
   { name: 'Optimization', href: '/optimization', icon: Sliders, badge: 'SAVE 21%' },
   { name: 'Simulation', href: '/simulation', icon: PlaySquare, badge: 'TEST' },
