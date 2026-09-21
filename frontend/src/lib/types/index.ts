@@ -1,29 +1,35 @@
 export type StationId = 'maitri' | 'bharati';
 
 export interface Station {
-  id: StationId;
+  id: string;
+  code?: string;
   name: string;
-  hindiName: string;
+  hindiName?: string;
   location: string;
-  coordinates: {
+  latitude?: number;
+  longitude?: number;
+  coordinates?: {
     lat: string;
     lng: string;
     latVal: number;
     lngVal: number;
   };
-  elevation: string;
-  established: number;
-  type: string;
-  winterPopulation: number;
-  summerPopulation: number;
-  currentPersonnel: number;
-  status: 'OPERATIONAL' | 'STANDBY' | 'MAINTENANCE' | 'ALERT';
-  installedSolarKW: number;
-  installedWindKW: number;
-  batteryCapacityKWh: number;
-  generatorCapacityKVA: number;
-  generatorCount: number;
-  chpEnabled: boolean;
+  elevation?: string;
+  established?: number;
+  type?: string;
+  winterPopulation?: number;
+  summerPopulation?: number;
+  currentPersonnel?: number;
+  status: 'OPERATIONAL' | 'STANDBY' | 'MAINTENANCE' | 'ALERT' | 'ONLINE' | 'OFFLINE' | string;
+  description?: string | null;
+  installedSolarKW?: number;
+  installedWindKW?: number;
+  batteryCapacityKWh?: number;
+  generatorCapacityKVA?: number;
+  generatorCount?: number;
+  chpEnabled?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface WeatherData {

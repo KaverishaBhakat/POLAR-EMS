@@ -146,31 +146,230 @@ export const apiClient = {
     return result.data;
   },
   // Station Metadata
-  async getStations(): Promise<Record<StationId, Station>> {
-    return { ...STATIONS };
+  async getStations(): Promise<Station[]> {
+    const response = await fetch(`${API_BASE_URL}/stations`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to fetch stations from database');
+    }
+    const result = await response.json();
+    const stations = (result.data || []).map((st: Station) => {
+      if (st && st.latitude != null && st.longitude != null && !st.coordinates) {
+        st.coordinates = {
+          lat: `${Math.abs(st.latitude).toFixed(2)}° ${st.latitude < 0 ? 'S' : 'N'}`,
+          lng: `${Math.abs(st.longitude).toFixed(2)}° ${st.longitude < 0 ? 'W' : 'E'}`,
+          latVal: st.latitude,
+          lngVal: st.longitude,
+        };
+      }
+      if (!st.hindiName) {
+        if (st.code?.toUpperCase() === 'MAITRI') st.hindiName = 'मैत्री अनुसंधान केंद्र';
+        else if (st.code?.toUpperCase() === 'BHARATI') st.hindiName = 'भारती अनुसंधान केंद्र';
+      }
+      return st;
+    });
+    return stations;
   },
 
-  async getStation(stationId: StationId): Promise<Station> {
-    return STATIONS[stationId] || STATIONS.maitri;
+  async getStation(stationId: StationId | string): Promise<Station> {
+    const response = await fetch(`${API_BASE_URL}/stations/${stationId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch station ${stationId}`);
+    }
+    const result = await response.json();
+    const st = result.data;
+    if (st && st.latitude != null && st.longitude != null && !st.coordinates) {
+      st.coordinates = {
+        lat: `${Math.abs(st.latitude).toFixed(2)}° ${st.latitude < 0 ? 'S' : 'N'}`,
+        lng: `${Math.abs(st.longitude).toFixed(2)}° ${st.longitude < 0 ? 'W' : 'E'}`,
+        latVal: st.latitude,
+        lngVal: st.longitude,
+      };
+    }
+    if (st && !st.hindiName) {
+      if (st.code?.toUpperCase() === 'MAITRI') st.hindiName = 'मैत्री अनुसंधान केंद्र';
+      else if (st.code?.toUpperCase() === 'BHARATI') st.hindiName = 'भारती अनुसंधान केंद्र';
+    }
+    return st;
+  },
+
+  async getStationSummary(stationId: StationId | string) {
+    const response = await fetch(`${API_BASE_URL}/stations/${stationId}/summary`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch station summary for ${stationId}`);
+    }
+    const result = await response.json();
+    return result.data;
   },
 
   // Meteorology
   async getWeatherData(stationId: StationId): Promise<WeatherData> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/weather/${stationId}/current`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      });
+      if (response.ok) {
+        const result = await response.json();
+        const w = result.data;
+        if (w) {
+          const fallback = WEATHER_DATA[stationId] || WEATHER_DATA.maitri;
+          return {
+            stationId,
+            temperature: w.temperature,
+            apparentTemperature: Math.round((w.temperature - (w.windSpeed * 0.7)) * 10) / 10,
+            windSpeed: w.windSpeed,
+            windDirection: w.windDirection || fallback.windDirection,
+            windGust: Math.round(w.windSpeed * 1.35 * 10) / 10,
+            humidity: w.humidity,
+            pressure: w.pressure,
+            solarRadiation: w.solarRadiation,
+            visibility: fallback.visibility,
+            blizzardRisk: w.windSpeed > 22 ? 'HIGH' : w.windSpeed > 15 ? 'ELEVATED' : 'LOW',
+            condition: w.windSpeed > 22 ? 'Katabatic Blizzard' : 'Polar Clear',
+            uvIndex: fallback.uvIndex,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn(`Falling back to client weather for ${stationId}:`, err);
+    }
     return WEATHER_DATA[stationId] || WEATHER_DATA.maitri;
   },
 
   // Real-time Energy Telemetry
   async getEnergyData(stationId: StationId): Promise<EnergyData> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/dashboard/${stationId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      });
+      if (response.ok) {
+        const result = await response.json();
+        const d = result.data;
+        const fallback = ENERGY_DATA[stationId] || ENERGY_DATA.maitri;
+        if (d && d.summary) {
+          const loadKW = d.summary.currentLoad;
+          const renKW = d.summary.renewableGeneration;
+          const soc = d.summary.batterySOC;
+          const renPercent = d.summary.renewablePercentage;
+          const fuelLevel = d.summary.fuelLevel;
+
+          return {
+            stationId,
+            timestamp: new Date().toISOString(),
+            currentLoadKW: loadKW,
+            previousHourLoadKW: loadKW,
+            loadTrendPercent: 0,
+            solarGenerationKW: d.renewable?.solarPower || 0,
+            windGenerationKW: d.renewable?.windPower || 0,
+            totalRenewableKW: renKW,
+            renewablePenetrationPercent: renPercent,
+            batterySocPercent: soc,
+            batteryCurrentKWh: Math.round((soc / 100) * (d.battery?.capacity || 500)),
+            batteryCapacityKWh: d.battery?.capacity || 500,
+            batteryFlowKW: d.battery?.flowKW || 0,
+            batteryStatus: d.battery?.status || 'IDLE',
+            batteryHealthPercent: 98,
+            fuelConsumptionRateLh: Math.round((d.generators || []).reduce((acc: number, g: any) => acc + (g.fuelConsumptionLh || 0), 0) * 10) / 10,
+            dailyFuelConsumptionL: Math.round(fuelLevel * 3.5),
+            baselineDailyFuelL: fallback.baselineDailyFuelL,
+            fuelSavingsPercent: Math.max(0, Math.round(renPercent * 0.4)),
+            fuelRemainingL: Math.round(fuelLevel * 28),
+            fuelReserveDays: Math.round((fuelLevel * 28) / 85),
+            criticalLoadKW: d.summary.totalCriticalPowerKW || 73.2,
+            criticalLoadProtectedPercent: 100,
+            co2AvoidedDailyKg: Math.round(renKW * 0.72 * 24 * 10) / 10,
+            co2AvoidedTotalTonnes: Math.round((renKW * 0.72 * 24 * 30) / 1000 * 10) / 10,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn(`Falling back to client energy for ${stationId}:`, err);
+    }
     return ENERGY_DATA[stationId] || ENERGY_DATA.maitri;
   },
 
   // Genset Telemetry
   async getGenerators(stationId: StationId): Promise<Generator[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/generators/${stationId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      });
+      if (response.ok) {
+        const result = await response.json();
+        if (Array.isArray(result.data) && result.data.length > 0) {
+          return result.data.map((g: any, idx: number) => {
+            const lastReading = g.readings?.[0];
+            const outKW = lastReading ? lastReading.powerOutput : 0;
+            return {
+              id: `G${idx + 1}`,
+              name: g.name,
+              model: 'Cummins Arctic Polar-VTA28',
+              status: (g.status || (outKW > 0 ? 'RUNNING' : 'STANDBY')) as any,
+              outputKW: outKW,
+              maxOutputKW: g.capacity,
+              efficiencyPercent: g.efficiency || 38.5,
+              fuelConsumptionLh: Math.round(outKW * 0.25 * 10) / 10,
+              runtimeHours: g.totalRuntime || 0,
+              loadPercentage: g.capacity > 0 ? Math.round((outKW / g.capacity) * 100) : 0,
+              temperatureC: outKW > 0 ? 86 : 22,
+              oilPressureBar: outKW > 0 ? 4.6 : 0,
+              frequencyHz: 50.0,
+              voltageV: 415.0,
+            };
+          });
+        }
+      }
+    } catch (err) {
+      console.warn(`Falling back to client generators for ${stationId}:`, err);
+    }
     return GENERATORS[stationId] || GENERATORS.maitri;
   },
 
   // Critical Life-Support Loads
   async getCriticalLoads(stationId: StationId): Promise<CriticalLoadItem[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/critical-loads/${stationId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      });
+      if (response.ok) {
+        const result = await response.json();
+        if (Array.isArray(result.data) && result.data.length > 0) {
+          return result.data.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            category: c.category,
+            powerKW: c.currentPower || c.ratedPower,
+            percentage: c.ratedPower > 0 ? Math.round(((c.currentPower || c.ratedPower) / c.ratedPower) * 100) : 100,
+            status: c.status === 'ONLINE' ? 'PROTECTED' : 'OPTIMIZED',
+            subsystem: c.name,
+          }));
+        }
+      }
+    } catch (err) {
+      console.warn(`Falling back to client critical loads for ${stationId}:`, err);
+    }
     return CRITICAL_LOADS[stationId] || CRITICAL_LOADS.maitri;
   },
 
@@ -227,6 +426,84 @@ export const apiClient = {
 
   // System Alerts
   async getAlerts(stationId?: StationId): Promise<SystemAlert[]> {
+    try {
+      if (stationId) {
+        const response = await fetch(`${API_BASE_URL}/alerts/${stationId}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
+        });
+        if (response.ok) {
+          const result = await response.json();
+          if (Array.isArray(result.data) && result.data.length > 0) {
+            return result.data.map((a: any) => ({
+              id: a.id,
+              timestamp: new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              stationId,
+              severity: a.severity as any,
+              title: a.title,
+              description: a.message || a.description,
+              rootCause: a.source || 'Polar SCADA subsystem telemetry anomaly',
+              recommendedAction: 'Inspect telemetry status and acknowledge alarm.',
+              acknowledged: Boolean(a.acknowledgedAt),
+              dismissed: a.status === 'RESOLVED',
+              category: (a.type || 'WEATHER') as any,
+            }));
+          }
+        }
+      } else {
+        const [rMaitri, rBharati] = await Promise.all([
+          fetch(`${API_BASE_URL}/alerts/maitri`, { cache: 'no-store' }),
+          fetch(`${API_BASE_URL}/alerts/bharati`, { cache: 'no-store' }),
+        ]);
+        const dbAlerts: SystemAlert[] = [];
+        if (rMaitri.ok) {
+          const dataM = await rMaitri.json();
+          if (Array.isArray(dataM.data)) {
+            dbAlerts.push(
+              ...dataM.data.map((a: any) => ({
+                id: a.id,
+                timestamp: new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                stationId: 'maitri' as StationId,
+                severity: a.severity as any,
+                title: a.title,
+                description: a.message || a.description,
+                rootCause: a.source || 'Polar SCADA subsystem telemetry anomaly',
+                recommendedAction: 'Inspect telemetry status and acknowledge alarm.',
+                acknowledged: Boolean(a.acknowledgedAt),
+                dismissed: a.status === 'RESOLVED',
+                category: (a.type || 'WEATHER') as any,
+              }))
+            );
+          }
+        }
+        if (rBharati.ok) {
+          const dataB = await rBharati.json();
+          if (Array.isArray(dataB.data)) {
+            dbAlerts.push(
+              ...dataB.data.map((a: any) => ({
+                id: a.id,
+                timestamp: new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                stationId: 'bharati' as StationId,
+                severity: a.severity as any,
+                title: a.title,
+                description: a.message || a.description,
+                rootCause: a.source || 'Polar SCADA subsystem telemetry anomaly',
+                recommendedAction: 'Inspect telemetry status and acknowledge alarm.',
+                acknowledged: Boolean(a.acknowledgedAt),
+                dismissed: a.status === 'RESOLVED',
+                category: (a.type || 'WEATHER') as any,
+              }))
+            );
+          }
+        }
+        if (dbAlerts.length > 0) {
+          return dbAlerts;
+        }
+      }
+    } catch (err) {
+      console.warn(`Falling back to client alerts:`, err);
+    }
     if (stationId) {
       return alertsState.filter((a) => a.stationId === stationId && !a.dismissed);
     }
@@ -234,11 +511,27 @@ export const apiClient = {
   },
 
   async acknowledgeAlert(alertId: string): Promise<SystemAlert | null> {
+    try {
+      await fetch(`${API_BASE_URL}/alerts/${alertId}/acknowledge`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (err) {
+      console.warn('Backend alert acknowledgment failed, updating client state:', err);
+    }
     alertsState = alertsState.map((a) => (a.id === alertId ? { ...a, acknowledged: true } : a));
     return alertsState.find((a) => a.id === alertId) || null;
   },
 
   async dismissAlert(alertId: string): Promise<boolean> {
+    try {
+      await fetch(`${API_BASE_URL}/alerts/${alertId}/resolve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (err) {
+      console.warn('Backend alert resolve failed, updating client state:', err);
+    }
     alertsState = alertsState.map((a) => (a.id === alertId ? { ...a, dismissed: true } : a));
     return true;
   },

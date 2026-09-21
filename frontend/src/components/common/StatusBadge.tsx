@@ -35,6 +35,13 @@ const STATUS_CONFIG: Record<
     dot: 'bg-emerald-400',
     glow: 'shadow-[0_0_8px_rgba(16,185,129,0.35)]',
   },
+  ONLINE: {
+    bg: 'bg-emerald-500/10',
+    text: 'text-emerald-400',
+    border: 'border-emerald-500/30',
+    dot: 'bg-emerald-400',
+    glow: 'shadow-[0_0_8px_rgba(16,185,129,0.35)]',
+  },
   RUNNING: {
     bg: 'bg-emerald-500/10',
     text: 'text-emerald-400',
