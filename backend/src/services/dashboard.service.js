@@ -139,6 +139,7 @@ class DashboardService {
         renewablePercentage,
         energyBalance: balance,
         riskAssessment,
+        hasTelemetryData: Boolean(latestWeather || latestEnergy || latestRenewable),
       },
     };
   }

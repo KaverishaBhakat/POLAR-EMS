@@ -21,6 +21,7 @@ const alertRoutes = require('./routes/alert.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const simulationRoutes = require('./routes/simulation.routes');
+const ingestRoutes = require('./routes/ingest.routes');
 
 // Future AI Services Placeholders
 const forecastService = require('./services/forecast.service');
@@ -88,6 +89,7 @@ app.use('/api/alerts', alertRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/simulation', simulationRoutes);
+app.use('/api/ingest', ingestRoutes);
 
 // Conceptual Future AI/ML Placeholders (Phase 2 integration routes)
 app.get('/api/forecast/:stationId', async (req, res) => {
