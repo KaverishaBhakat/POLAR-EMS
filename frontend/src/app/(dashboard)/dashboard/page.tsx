@@ -15,6 +15,7 @@ import { Zap, Sun, BatteryCharging, Fuel, ShieldCheck, Leaf, Activity } from 'lu
 
 export default function DashboardPage() {
   const { activeStationId, station, energy } = useStation();
+  console.log('ACTIVE STATION:', activeStationId);
 
   const [generators, setGenerators] = useState<Generator[]>([]);
   const [criticalLoads, setCriticalLoads] = useState<CriticalLoadItem[]>([]);
@@ -27,6 +28,13 @@ export default function DashboardPage() {
     async function loadDashboardData() {
       setLoading(true);
       try {
+        try {
+          const dashboard = await apiClient.getDashboardData(activeStationId);
+          console.log('BACKEND DASHBOARD:', dashboard);
+        } catch (apiErr) {
+          console.warn('Backend live dashboard data not yet available, using client telemetry:', apiErr);
+        }
+
         const gens = await apiClient.getGenerators(activeStationId);
         const loads = await apiClient.getCriticalLoads(activeStationId);
         const fc = await apiClient.getForecast(activeStationId);
@@ -36,10 +44,13 @@ export default function DashboardPage() {
           setForecastPoints(fc.points);
           setInsight(fc.insights[0] || null);
         }
+      } catch (err) {
+        console.error('Error loading dashboard telemetry:', err);
       } finally {
         if (isMounted) setLoading(false);
       }
     }
+
     loadDashboardData();
     return () => {
       isMounted = false;

@@ -15,7 +15,8 @@ import {
   BadgeCheck,
   Building2,
 } from 'lucide-react';
-import { useStation, getInitials } from '@/lib/context/StationContext';
+import { apiClient } from '@/lib/api/client';
+import { useStation, getInitials, UserProfile } from '@/lib/context/StationContext';
 
 function SignUpContent() {
   const router = useRouter();
@@ -29,7 +30,7 @@ function SignUpContent() {
   const [signUpConfirmPassword, setSignUpConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (signUpPassword && signUpPassword !== signUpConfirmPassword) {
       addToast({
@@ -41,7 +42,7 @@ function SignUpContent() {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
+    try {
       const stationLabel =
         signUpStation === 'maitri'
           ? 'Maitri Research Station'
@@ -50,7 +51,19 @@ function SignUpContent() {
           : 'NCPOR Operations HQ';
 
       const userName = signUpName.trim() || 'Officer';
-      const userProfile = {
+
+      try {
+        await apiClient.register({
+          name: userName,
+          email: signUpEmail.trim(),
+          password: signUpPassword,
+          role: 'OPERATOR',
+        });
+      } catch (err) {
+        console.warn('Backend API registration skipped or unavailable:', err);
+      }
+
+      const userProfile: UserProfile = {
         name: userName,
         email: signUpEmail.trim(),
         role: `${signUpRole} (${signUpStation === 'bharati' ? 'Bharati' : signUpStation === 'maitri' ? 'Maitri' : 'HQ'})`,
@@ -69,7 +82,9 @@ function SignUpContent() {
         message: `Welcome ${userName}. Clearance active for ${stationLabel} (${signUpRole}).`,
       });
       router.push('/dashboard');
-    }, 800);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDemoLogin = (stationId: 'maitri' | 'bharati') => {

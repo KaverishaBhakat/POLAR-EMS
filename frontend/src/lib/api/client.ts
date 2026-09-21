@@ -26,12 +26,59 @@ import { INITIAL_ALERTS } from '../mock-data/alerts';
 import { ANALYTICS_SUMMARY, generateHistoricalAnalytics } from '../mock-data/analytics';
 
 // Configurable backend base URL (for future FastAPI backend integration)
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 // In-memory alert state to support real interactive acknowledgment and dismissal
 let alertsState: SystemAlert[] = [...INITIAL_ALERTS];
 
 export const apiClient = {
+  // Authentication
+  async login(credentials: { email: string; password: string }) {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Login failed');
+    }
+    return result.data;
+  },
+
+  async register(data: { name: string; email: string; password: string; role?: string }) {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Registration failed');
+    }
+    return result.data;
+  },
+
+  // Backend Dashboard Data
+  async getDashboardData(stationId: StationId) {
+    const response = await fetch(
+      `${API_BASE_URL}/dashboard/${stationId}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch dashboard data');
+    }
+
+    const result = await response.json();
+    return result.data;
+  },
   // Station Metadata
   async getStations(): Promise<Record<StationId, Station>> {
     return { ...STATIONS };
