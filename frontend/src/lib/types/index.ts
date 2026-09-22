@@ -65,6 +65,16 @@ export interface EnergyLoadRecord {
   createdAt?: string | Date;
 }
 
+export interface RenewableRecord {
+  id: string;
+  stationId: StationId | string;
+  timestamp: string | Date;
+  solarPower: number; // kW
+  windPower: number; // kW
+  totalRenewable: number; // kW
+  createdAt?: string | Date;
+}
+
 export interface EnergyData {
   stationId: StationId;
   timestamp: string;

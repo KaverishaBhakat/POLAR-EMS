@@ -9,6 +9,7 @@ import {
   HourlyDispatchPoint,
   HourlyForecastPoint,
   OptimizationMetrics,
+  RenewableRecord,
   SimulationParams,
   SimulationResults,
   Station,
@@ -407,6 +408,79 @@ export const apiClient = {
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
       throw new Error(err.message || `Failed to fetch energy range for ${stationId}`);
+    }
+    const result = await response.json();
+    return result.data || [];
+  },
+
+  // Renewable Generation Telemetry (Live PostgreSQL Integration)
+  async getCurrentRenewable(stationId: StationId | string): Promise<RenewableRecord | null> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/renewable/${stationId}/current`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      });
+      if (response.status === 404) {
+        return null;
+      }
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || `Failed to fetch current renewable generation for ${stationId}`);
+      }
+      const result = await response.json();
+      return result.data || null;
+    } catch (err: any) {
+      if (err.message && (err.message.includes('not found') || err.message.includes('404'))) {
+        return null;
+      }
+      throw err;
+    }
+  },
+
+  async getRenewableHistory(
+    stationId: StationId | string,
+    params?: { limit?: number; page?: number }
+  ): Promise<{ records: RenewableRecord[]; meta: { total: number; page: number; limit: number; totalPages: number } }> {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.page) query.set('page', String(params.page));
+    const qs = query.toString() ? `?${query.toString()}` : '';
+
+    const response = await fetch(`${API_BASE_URL}/renewable/${stationId}/history${qs}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch renewable history for ${stationId}`);
+    }
+    const result = await response.json();
+    return {
+      records: result.data || [],
+      meta: result.meta || { total: (result.data || []).length, page: 1, limit: (result.data || []).length, totalPages: 1 },
+    };
+  },
+
+  async getRenewableRange(
+    stationId: StationId | string,
+    params?: { start?: string; end?: string; limit?: number }
+  ): Promise<RenewableRecord[]> {
+    const query = new URLSearchParams();
+    if (params?.start) query.set('start', params.start);
+    if (params?.end) query.set('end', params.end);
+    if (params?.limit) query.set('limit', String(params.limit));
+    const qs = query.toString() ? `?${query.toString()}` : '';
+
+    const response = await fetch(`${API_BASE_URL}/renewable/${stationId}/range${qs}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch renewable range for ${stationId}`);
     }
     const result = await response.json();
     return result.data || [];
