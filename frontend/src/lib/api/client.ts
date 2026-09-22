@@ -1,4 +1,5 @@
 import {
+  AlertRecord,
   AIInsight,
   BatteryRecord,
   BatteryReadingRecord,
@@ -851,116 +852,121 @@ export const apiClient = {
     return runSimulationCalculation(params, stationId);
   },
 
-  // System Alerts
-  async getAlerts(stationId?: StationId): Promise<SystemAlert[]> {
-    try {
-      if (stationId) {
-        const response = await fetch(`${API_BASE_URL}/alerts/${stationId}`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-          cache: 'no-store',
-        });
-        if (response.ok) {
-          const result = await response.json();
-          if (Array.isArray(result.data) && result.data.length > 0) {
-            return result.data.map((a: any) => ({
-              id: a.id,
-              timestamp: new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              stationId,
-              severity: a.severity as any,
-              title: a.title,
-              description: a.message || a.description,
-              rootCause: a.source || 'Polar SCADA subsystem telemetry anomaly',
-              recommendedAction: 'Inspect telemetry status and acknowledge alarm.',
-              acknowledged: Boolean(a.acknowledgedAt),
-              dismissed: a.status === 'RESOLVED',
-              category: (a.type || 'WEATHER') as any,
-            }));
-          }
-        }
-      } else {
-        const [rMaitri, rBharati] = await Promise.all([
-          fetch(`${API_BASE_URL}/alerts/maitri`, { cache: 'no-store' }),
-          fetch(`${API_BASE_URL}/alerts/bharati`, { cache: 'no-store' }),
-        ]);
-        const dbAlerts: SystemAlert[] = [];
-        if (rMaitri.ok) {
-          const dataM = await rMaitri.json();
-          if (Array.isArray(dataM.data)) {
-            dbAlerts.push(
-              ...dataM.data.map((a: any) => ({
-                id: a.id,
-                timestamp: new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                stationId: 'maitri' as StationId,
-                severity: a.severity as any,
-                title: a.title,
-                description: a.message || a.description,
-                rootCause: a.source || 'Polar SCADA subsystem telemetry anomaly',
-                recommendedAction: 'Inspect telemetry status and acknowledge alarm.',
-                acknowledged: Boolean(a.acknowledgedAt),
-                dismissed: a.status === 'RESOLVED',
-                category: (a.type || 'WEATHER') as any,
-              }))
-            );
-          }
-        }
-        if (rBharati.ok) {
-          const dataB = await rBharati.json();
-          if (Array.isArray(dataB.data)) {
-            dbAlerts.push(
-              ...dataB.data.map((a: any) => ({
-                id: a.id,
-                timestamp: new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                stationId: 'bharati' as StationId,
-                severity: a.severity as any,
-                title: a.title,
-                description: a.message || a.description,
-                rootCause: a.source || 'Polar SCADA subsystem telemetry anomaly',
-                recommendedAction: 'Inspect telemetry status and acknowledge alarm.',
-                acknowledged: Boolean(a.acknowledgedAt),
-                dismissed: a.status === 'RESOLVED',
-                category: (a.type || 'WEATHER') as any,
-              }))
-            );
-          }
-        }
-        if (dbAlerts.length > 0) {
-          return dbAlerts;
-        }
-      }
-    } catch (err) {
-      console.warn(`Falling back to client alerts:`, err);
+  // System Alerts (Live PostgreSQL Integration)
+  async getAlerts(
+    stationId?: StationId | string,
+    params?: { status?: string; severity?: string; limit?: number; page?: number }
+  ): Promise<AlertRecord[]> {
+    const query = new URLSearchParams();
+    if (params?.status && params.status !== 'ALL') query.set('status', params.status);
+    if (params?.severity && params.severity !== 'ALL') query.set('severity', params.severity);
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.page) query.set('page', String(params.page));
+    const qs = query.toString() ? `?${query.toString()}` : '';
+
+    const endpoint = stationId && stationId !== 'ALL' && stationId !== 'all'
+      ? `${API_BASE_URL}/alerts/${stationId}${qs}`
+      : `${API_BASE_URL}/alerts${qs}`;
+
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to fetch alerts from PostgreSQL backend');
     }
-    if (stationId) {
-      return alertsState.filter((a) => a.stationId === stationId && !a.dismissed);
-    }
-    return alertsState.filter((a) => !a.dismissed);
+    const result = await response.json();
+    return result.data || [];
   },
 
-  async acknowledgeAlert(alertId: string): Promise<SystemAlert | null> {
-    try {
-      await fetch(`${API_BASE_URL}/alerts/${alertId}/acknowledge`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-      });
-    } catch (err) {
-      console.warn('Backend alert acknowledgment failed, updating client state:', err);
+  async getActiveAlerts(stationId?: StationId | string): Promise<AlertRecord[]> {
+    const endpoint = stationId && stationId !== 'ALL' && stationId !== 'all'
+      ? `${API_BASE_URL}/alerts/${stationId}/active`
+      : `${API_BASE_URL}/alerts`;
+
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to fetch active alerts');
     }
-    alertsState = alertsState.map((a) => (a.id === alertId ? { ...a, acknowledged: true } : a));
-    return alertsState.find((a) => a.id === alertId) || null;
+    const result = await response.json();
+    return result.data || [];
   },
 
-  async dismissAlert(alertId: string): Promise<boolean> {
-    try {
-      await fetch(`${API_BASE_URL}/alerts/${alertId}/resolve`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-      });
-    } catch (err) {
-      console.warn('Backend alert resolve failed, updating client state:', err);
+  async createAlert(data: {
+    stationId: string;
+    type: string;
+    severity: string;
+    title: string;
+    message: string;
+    source: string;
+    status?: string;
+  }): Promise<AlertRecord> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('polar_ems_token');
+      if (token) headers['Authorization'] = `Bearer ${token}`;
     }
-    alertsState = alertsState.map((a) => (a.id === alertId ? { ...a, dismissed: true } : a));
-    return true;
+
+    const response = await fetch(`${API_BASE_URL}/alerts`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to generate alert');
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
+  async acknowledgeAlert(alertId: string): Promise<AlertRecord> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('polar_ems_token');
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/alerts/${alertId}/acknowledge`, {
+      method: 'PATCH',
+      headers,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to acknowledge alert');
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
+  async resolveAlert(alertId: string): Promise<AlertRecord> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('polar_ems_token');
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/alerts/${alertId}/resolve`, {
+      method: 'PATCH',
+      headers,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to resolve alert');
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
+  async dismissAlert(alertId: string): Promise<AlertRecord> {
+    return this.resolveAlert(alertId);
   },
 
   // Historical Analytics

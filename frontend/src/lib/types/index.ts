@@ -333,6 +333,24 @@ export interface SimulationResults {
 
 export type AlertSeverity = 'CRITICAL' | 'WARNING' | 'INFO' | 'AI_INSIGHT';
 
+export interface AlertRecord {
+  id: string;
+  stationId: string;
+  type: string;
+  severity: 'CRITICAL' | 'WARNING' | 'INFO' | 'AI_INSIGHT' | string;
+  title: string;
+  message: string;
+  status: 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED' | string;
+  source: string;
+  createdAt: string | Date;
+  acknowledgedAt?: string | Date | null;
+  station?: {
+    id: string;
+    name: string;
+    code: string;
+  };
+}
+
 export interface SystemAlert {
   id: string;
   timestamp: string;
@@ -344,7 +362,8 @@ export interface SystemAlert {
   recommendedAction: string;
   acknowledged: boolean;
   dismissed: boolean;
-  category: 'GENERATOR' | 'BATTERY' | 'WEATHER' | 'RENEWABLE' | 'LOAD' | 'COMMUNICATION';
+  category: 'GENERATOR' | 'BATTERY' | 'WEATHER' | 'RENEWABLE' | 'LOAD' | 'COMMUNICATION' | string;
+  createdAt?: string | Date;
 }
 
 export interface HistoricalAnalyticsPoint {

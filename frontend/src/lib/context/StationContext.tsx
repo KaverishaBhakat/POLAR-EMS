@@ -65,7 +65,7 @@ export function StationProvider({ children }: { children: React.ReactNode }) {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [energy, setEnergy] = useState<EnergyData | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('24H');
-  const [unreadAlertCount, setUnreadAlertCount] = useState<number>(3);
+  const [unreadAlertCount, setUnreadAlertCount] = useState<number>(0);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isLiveTelemetry, setIsLiveTelemetry] = useState<boolean>(true);
   const [lastTelemetryTick, setLastTelemetryTick] = useState<Date>(new Date());
@@ -110,8 +110,12 @@ export function StationProvider({ children }: { children: React.ReactNode }) {
   };
 
   const refreshAlertCount = async () => {
-    const alerts = await apiClient.getAlerts(activeStationId);
-    setUnreadAlertCount(alerts.filter((a) => !a.acknowledged).length);
+    try {
+      const activeAlerts = await apiClient.getActiveAlerts(activeStationId);
+      setUnreadAlertCount(activeAlerts.length);
+    } catch {
+      setUnreadAlertCount(0);
+    }
   };
 
   // Load initial station data

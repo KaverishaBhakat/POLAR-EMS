@@ -2,7 +2,8 @@ const alertService = require('../services/alert.service');
 const asyncHandler = require('../utils/asyncHandler');
 
 const getStationAlerts = asyncHandler(async (req, res) => {
-  const alerts = await alertService.getStationAlerts(req.params.stationId, req.query);
+  const stationId = req.params.stationId || req.query.stationId || 'ALL';
+  const alerts = await alertService.getStationAlerts(stationId, req.query);
   res.status(200).json({
     success: true,
     data: alerts.records,
@@ -11,7 +12,8 @@ const getStationAlerts = asyncHandler(async (req, res) => {
 });
 
 const getActiveAlerts = asyncHandler(async (req, res) => {
-  const alerts = await alertService.getActiveStationAlerts(req.params.stationId);
+  const stationId = req.params.stationId || req.query.stationId || 'ALL';
+  const alerts = await alertService.getActiveStationAlerts(stationId);
   res.status(200).json({
     success: true,
     data: alerts,

@@ -10,6 +10,7 @@ const { authenticate, authorize } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
+router.get('/', alertController.getStationAlerts);
 router.get('/:stationId', validate(stationParamSchema), alertController.getStationAlerts);
 router.get('/:stationId/active', validate(stationParamSchema), alertController.getActiveAlerts);
 

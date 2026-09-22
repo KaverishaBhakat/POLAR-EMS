@@ -4,21 +4,34 @@ const ApiError = require('../utils/ApiError');
 
 class AlertService {
   /**
-   * Get all alerts for a station
+   * Get all alerts for a station (or all stations if stationId is ALL / omitted)
    */
-  async getStationAlerts(stationId, { limit = 50, page = 1, status } = {}) {
-    const station = await stationService.getStationById(stationId);
+  async getStationAlerts(stationId, { limit = 100, page = 1, status, severity } = {}) {
     const skip = (page - 1) * limit;
+    const where = {};
 
-    const where = { stationId: station.id };
-    if (status) {
+    if (stationId && stationId !== 'ALL' && stationId !== 'all') {
+      const station = await stationService.getStationById(stationId);
+      where.stationId = station.id;
+    }
+
+    if (status && status !== 'ALL' && status !== 'all') {
       where.status = status;
+    }
+
+    if (severity && severity !== 'ALL' && severity !== 'all') {
+      where.severity = severity;
     }
 
     const [total, records] = await Promise.all([
       prisma.alert.count({ where }),
       prisma.alert.findMany({
         where,
+        include: {
+          station: {
+            select: { id: true, name: true, code: true },
+          },
+        },
         orderBy: { createdAt: 'desc' },
         take: limit,
         skip,
@@ -40,11 +53,18 @@ class AlertService {
    * Get only ACTIVE alerts for a station
    */
   async getActiveStationAlerts(stationId) {
-    const station = await stationService.getStationById(stationId);
+    const where = { status: 'ACTIVE' };
+    if (stationId && stationId !== 'ALL' && stationId !== 'all') {
+      const station = await stationService.getStationById(stationId);
+      where.stationId = station.id;
+    }
+
     return await prisma.alert.findMany({
-      where: {
-        stationId: station.id,
-        status: 'ACTIVE',
+      where,
+      include: {
+        station: {
+          select: { id: true, name: true, code: true },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
