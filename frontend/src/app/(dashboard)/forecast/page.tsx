@@ -38,7 +38,7 @@ export default function ForecastPage() {
     };
   }, [activeStationId]);
 
-  if (loading || !metrics || !weather) {
+  if (loading || !metrics) {
     return (
       <div className="space-y-4">
         <LoadingSkeleton className="h-20" />

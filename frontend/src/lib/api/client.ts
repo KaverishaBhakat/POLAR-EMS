@@ -216,40 +216,126 @@ export const apiClient = {
     return result.data;
   },
 
-  // Meteorology
-  async getWeatherData(stationId: StationId): Promise<WeatherData> {
+  // Meteorology & Weather Telemetry (Live PostgreSQL Integration)
+  async getCurrentWeather(stationId: StationId | string): Promise<WeatherData | null> {
     try {
       const response = await fetch(`${API_BASE_URL}/weather/${stationId}/current`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
       });
-      if (response.ok) {
-        const result = await response.json();
-        const w = result.data;
-        if (w) {
-          const fallback = WEATHER_DATA[stationId] || WEATHER_DATA.maitri;
-          return {
-            stationId,
-            temperature: w.temperature,
-            apparentTemperature: Math.round((w.temperature - (w.windSpeed * 0.7)) * 10) / 10,
-            windSpeed: w.windSpeed,
-            windDirection: w.windDirection || fallback.windDirection,
-            windGust: Math.round(w.windSpeed * 1.35 * 10) / 10,
-            humidity: w.humidity,
-            pressure: w.pressure,
-            solarRadiation: w.solarRadiation,
-            visibility: fallback.visibility,
-            blizzardRisk: w.windSpeed > 22 ? 'HIGH' : w.windSpeed > 15 ? 'ELEVATED' : 'LOW',
-            condition: w.windSpeed > 22 ? 'Katabatic Blizzard' : 'Polar Clear',
-            uvIndex: fallback.uvIndex,
-          };
-        }
+      if (response.status === 404) {
+        return null;
       }
-    } catch (err) {
-      console.warn(`Falling back to client weather for ${stationId}:`, err);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || `Failed to fetch current weather for ${stationId}`);
+      }
+      const result = await response.json();
+      const w = result.data;
+      if (!w) return null;
+      return {
+        id: w.id,
+        stationId,
+        timestamp: w.timestamp,
+        temperature: w.temperature,
+        apparentTemperature: Math.round((w.temperature - (w.windSpeed * 0.7)) * 10) / 10,
+        windSpeed: w.windSpeed,
+        windDirection: w.windDirection || 'N/A',
+        windGust: Math.round(w.windSpeed * 1.35 * 10) / 10,
+        humidity: w.humidity,
+        pressure: w.pressure,
+        solarRadiation: w.solarRadiation,
+        visibility: '15 km (Clear)',
+        blizzardRisk: w.windSpeed > 22 ? 'HIGH' : w.windSpeed > 15 ? 'ELEVATED' : 'LOW',
+        condition: w.windSpeed > 22 ? 'Katabatic Blizzard' : 'Polar Clear',
+        createdAt: w.createdAt,
+      };
+    } catch (err: any) {
+      if (err.message && (err.message.includes('not found') || err.message.includes('404'))) {
+        return null;
+      }
+      throw err;
     }
-    return WEATHER_DATA[stationId] || WEATHER_DATA.maitri;
+  },
+
+  async getWeatherHistory(
+    stationId: StationId | string,
+    params?: { limit?: number; page?: number }
+  ): Promise<{ records: WeatherData[]; meta: { total: number; page: number; limit: number; totalPages: number } }> {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.page) query.set('page', String(params.page));
+    const qs = query.toString() ? `?${query.toString()}` : '';
+
+    const response = await fetch(`${API_BASE_URL}/weather/${stationId}/history${qs}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch weather history for ${stationId}`);
+    }
+    const result = await response.json();
+    const records = (result.data || []).map((w: any) => ({
+      id: w.id,
+      stationId,
+      timestamp: w.timestamp,
+      temperature: w.temperature,
+      apparentTemperature: Math.round((w.temperature - (w.windSpeed * 0.7)) * 10) / 10,
+      windSpeed: w.windSpeed,
+      windDirection: w.windDirection || 'N/A',
+      windGust: Math.round(w.windSpeed * 1.35 * 10) / 10,
+      humidity: w.humidity,
+      pressure: w.pressure,
+      solarRadiation: w.solarRadiation,
+      createdAt: w.createdAt,
+    }));
+    return {
+      records,
+      meta: result.meta || { total: records.length, page: 1, limit: records.length, totalPages: 1 },
+    };
+  },
+
+  async getWeatherRange(
+    stationId: StationId | string,
+    params?: { start?: string; end?: string; limit?: number }
+  ): Promise<WeatherData[]> {
+    const query = new URLSearchParams();
+    if (params?.start) query.set('start', params.start);
+    if (params?.end) query.set('end', params.end);
+    if (params?.limit) query.set('limit', String(params.limit));
+    const qs = query.toString() ? `?${query.toString()}` : '';
+
+    const response = await fetch(`${API_BASE_URL}/weather/${stationId}/range${qs}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch weather range for ${stationId}`);
+    }
+    const result = await response.json();
+    return (result.data || []).map((w: any) => ({
+      id: w.id,
+      stationId,
+      timestamp: w.timestamp,
+      temperature: w.temperature,
+      apparentTemperature: Math.round((w.temperature - (w.windSpeed * 0.7)) * 10) / 10,
+      windSpeed: w.windSpeed,
+      windDirection: w.windDirection || 'N/A',
+      windGust: Math.round(w.windSpeed * 1.35 * 10) / 10,
+      humidity: w.humidity,
+      pressure: w.pressure,
+      solarRadiation: w.solarRadiation,
+      createdAt: w.createdAt,
+    }));
+  },
+
+  async getWeatherData(stationId: StationId | string): Promise<WeatherData | null> {
+    return this.getCurrentWeather(stationId);
   },
 
   // Real-time Energy Telemetry

@@ -33,19 +33,22 @@ export interface Station {
 }
 
 export interface WeatherData {
-  stationId: StationId;
+  id?: string;
+  stationId: StationId | string;
+  timestamp?: string | Date;
   temperature: number; // °C
-  apparentTemperature: number; // °C (wind chill)
+  apparentTemperature?: number; // °C (derived wind chill)
   windSpeed: number; // m/s
   windDirection: string;
-  windGust: number; // m/s
+  windGust?: number; // m/s (derived peak gust)
   humidity: number; // %
   pressure: number; // hPa
   solarRadiation: number; // W/m²
-  visibility: string; // km
-  blizzardRisk: 'LOW' | 'ELEVATED' | 'HIGH' | 'CRITICAL';
-  condition: string;
-  uvIndex: number;
+  visibility?: string; // km
+  blizzardRisk?: 'LOW' | 'ELEVATED' | 'HIGH' | 'CRITICAL' | string;
+  condition?: string;
+  uvIndex?: number;
+  createdAt?: string | Date;
 }
 
 export interface EnergyData {

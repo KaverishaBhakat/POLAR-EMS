@@ -21,10 +21,12 @@ import {
   Compass,
   Zap,
   UploadCloud,
+  CloudSun,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { name: 'Dashboard', href: '/dashboard', icon: Activity, badge: 'LIVE' },
+  { name: 'Weather', href: '/weather', icon: CloudSun, badge: 'AWS' },
   { name: 'Data Ingestion', href: '/data-upload', icon: UploadCloud, badge: 'INGEST' },
   { name: 'Forecast', href: '/forecast', icon: TrendingUp, badge: 'AI' },
   { name: 'Optimization', href: '/optimization', icon: Sliders, badge: 'SAVE 21%' },

@@ -15,10 +15,26 @@ import {
 import { StatusBadge } from '../common/StatusBadge';
 
 interface WeatherTelemetryProps {
-  weather: WeatherData;
+  weather: WeatherData | null;
 }
 
 export const WeatherTelemetry: React.FC<WeatherTelemetryProps> = ({ weather }) => {
+  if (!weather) {
+    return (
+      <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5 font-mono">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
+            <Compass className="w-4 h-4 text-cyan-400" />
+            Antarctic Weather Telemetry & Forecast Inputs
+          </h3>
+          <StatusBadge status="STANDBY" label="NO LIVE SENSORS" size="sm" />
+        </div>
+        <p className="text-xs text-slate-400">
+          No live meteorological telemetry is recorded in PostgreSQL for this station node yet. Ingest AWS observations via Data Ingestion Hub.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5">
       <div className="flex items-center justify-between mb-4 pb-2.5 border-b border-[#1B2C42]/50">
