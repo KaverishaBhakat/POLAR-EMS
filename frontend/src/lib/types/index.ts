@@ -368,6 +368,7 @@ export interface SystemAlert {
 
 export interface HistoricalAnalyticsPoint {
   date: string;
+  dateKey?: string;
   actualFuelL: number;
   baselineFuelL: number;
   fuelSavedL: number;
@@ -376,5 +377,42 @@ export interface HistoricalAnalyticsPoint {
   co2AvoidedKg: number;
   peakLoadKW: number;
   avgLoadKW: number;
-  minTempC: number;
+  minTempC: number | null;
 }
+
+export interface AnalyticsSummary {
+  totalDataPoints: number;
+  fuelSavingsPercent: number;
+  dieselSavedLitres: number;
+  actualFuelLitres: number;
+  baselineFuelLitres: number;
+  renewablePenetrationPercent: number;
+  totalRenewableKWh: number;
+  totalSolarKWh: number;
+  totalWindKWh: number;
+  avgGenEfficiencyPercent: number;
+  totalGenRuntimeHours: number;
+  criticalLoadReliabilityPercent: number;
+  co2AvoidedTonnes: number;
+  financialSavingsINR: number;
+  batteryAvgSOC: number;
+  averageLoadKW: number;
+  peakLoadKW: number;
+  minLoadKW: number;
+}
+
+export interface HistoricalAnalyticsResponse {
+  station: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  range: {
+    start: string | Date;
+    end: string | Date;
+  };
+  hasData: boolean;
+  summary: AnalyticsSummary;
+  timeline: HistoricalAnalyticsPoint[];
+}
+

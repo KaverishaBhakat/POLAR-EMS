@@ -10,12 +10,16 @@ const analyticsQuery = {
     stationId: z.string().min(1, 'Station ID is required'),
   }),
   query: z.object({
-    range: z.enum(['7d', '30d', '90d']).optional().default('7d'),
+    range: z.string().optional().default('7d'),
+    days: z.string().optional(),
     start: z.string().optional(),
     end: z.string().optional(),
   }),
 };
 
+router.get('/:stationId', validate(analyticsQuery), analyticsController.getHistoricalAnalytics);
+router.get('/:stationId/historical', validate(analyticsQuery), analyticsController.getHistoricalAnalytics);
+router.get('/:stationId/overview', validate(analyticsQuery), analyticsController.getHistoricalAnalytics);
 router.get('/:stationId/energy', validate(analyticsQuery), analyticsController.getEnergyAnalytics);
 router.get('/:stationId/fuel', validate(analyticsQuery), analyticsController.getFuelAnalytics);
 router.get('/:stationId/renewable', validate(analyticsQuery), analyticsController.getRenewableAnalytics);
@@ -23,3 +27,4 @@ router.get('/:stationId/generator', validate(analyticsQuery), analyticsControlle
 router.get('/:stationId/battery', validate(analyticsQuery), analyticsController.getBatteryAnalytics);
 
 module.exports = router;
+

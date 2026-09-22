@@ -1,6 +1,14 @@
 const analyticsService = require('../services/analytics.service');
 const asyncHandler = require('../utils/asyncHandler');
 
+const getHistoricalAnalytics = asyncHandler(async (req, res) => {
+  const data = await analyticsService.getHistoricalAnalytics(req.params.stationId, req.query);
+  res.status(200).json({
+    success: true,
+    data,
+  });
+});
+
 const getEnergyAnalytics = asyncHandler(async (req, res) => {
   const data = await analyticsService.getEnergyAnalytics(req.params.stationId, req.query);
   res.status(200).json({
@@ -42,9 +50,11 @@ const getBatteryAnalytics = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  getHistoricalAnalytics,
   getEnergyAnalytics,
   getFuelAnalytics,
   getRenewableAnalytics,
   getGeneratorAnalytics,
   getBatteryAnalytics,
 };
+

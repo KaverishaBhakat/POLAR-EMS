@@ -5,7 +5,7 @@ class AnalyticsService {
   /**
    * Helper to parse time window (e.g. '7d', '30d', '90d', or start/end query)
    */
-  resolveDateRange(range = '7d', start, end) {
+  resolveDateRange(range = '7d', start, end, daysParam) {
     if (start && end) {
       return {
         startDate: new Date(start),
@@ -13,20 +13,266 @@ class AnalyticsService {
       };
     }
 
-    const days = parseInt(range.replace('d', ''), 10) || 7;
+    let days = 7;
+    if (daysParam) {
+      days = parseInt(String(daysParam), 10) || 7;
+    } else if (range) {
+      days = parseInt(String(range).replace('d', ''), 10) || 7;
+    }
+
     const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
     const startDate = new Date();
-    startDate.setDate(endDate.getDate() - days);
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
 
     return { startDate, endDate, days };
   }
 
   /**
+   * Consolidated Historical Operational Analytics
+   */
+  async getHistoricalAnalytics(stationId, { range = '7d', start, end, days: daysParam } = {}) {
+    const station = await stationService.getStationById(stationId);
+    const { startDate, endDate } = this.resolveDateRange(range, start, end, daysParam);
+
+    const [
+      energyLoads,
+      renewables,
+      generators,
+      batteries,
+      weatherRecords,
+      criticalLoads,
+    ] = await Promise.all([
+      prisma.energyLoad.findMany({
+        where: { stationId: station.id, timestamp: { gte: startDate, lte: endDate } },
+        orderBy: { timestamp: 'asc' },
+      }),
+      prisma.renewableGeneration.findMany({
+        where: { stationId: station.id, timestamp: { gte: startDate, lte: endDate } },
+        orderBy: { timestamp: 'asc' },
+      }),
+      prisma.generator.findMany({
+        where: { stationId: station.id },
+        include: {
+          readings: {
+            where: { timestamp: { gte: startDate, lte: endDate } },
+            orderBy: { timestamp: 'asc' },
+          },
+        },
+      }),
+      prisma.battery.findMany({
+        where: { stationId: station.id },
+        include: {
+          readings: {
+            where: { timestamp: { gte: startDate, lte: endDate } },
+            orderBy: { timestamp: 'asc' },
+          },
+        },
+      }),
+      prisma.weatherData.findMany({
+        where: { stationId: station.id, timestamp: { gte: startDate, lte: endDate } },
+        orderBy: { timestamp: 'asc' },
+      }),
+      prisma.criticalLoad.findMany({
+        where: { stationId: station.id },
+      }),
+    ]);
+
+    const allGenReadings = generators.flatMap((g) => g.readings);
+    const allBatReadings = batteries.flatMap((b) => b.readings);
+
+    const totalDataPoints =
+      energyLoads.length +
+      renewables.length +
+      allGenReadings.length +
+      allBatReadings.length +
+      weatherRecords.length;
+
+    const hasData = totalDataPoints > 0;
+
+    // Aggregate daily buckets
+    const dailyMap = {};
+
+    const getOrCreateDay = (dStr) => {
+      if (!dailyMap[dStr]) {
+        dailyMap[dStr] = {
+          date: dStr,
+          actualFuelL: 0,
+          genPowerKWh: 0,
+          genEfficiencies: [],
+          solarKWh: 0,
+          windKWh: 0,
+          renewableKWh: 0,
+          loads: [],
+          temperatures: [],
+          socs: [],
+        };
+      }
+      return dailyMap[dStr];
+    };
+
+    for (const r of energyLoads) {
+      const d = r.timestamp.toISOString().split('T')[0];
+      const entry = getOrCreateDay(d);
+      entry.loads.push(r.totalLoad);
+    }
+
+    for (const r of renewables) {
+      const d = r.timestamp.toISOString().split('T')[0];
+      const entry = getOrCreateDay(d);
+      entry.solarKWh += r.solarPower;
+      entry.windKWh += r.windPower;
+      entry.renewableKWh += r.totalRenewable;
+    }
+
+    for (const r of allGenReadings) {
+      const d = r.timestamp.toISOString().split('T')[0];
+      const entry = getOrCreateDay(d);
+      entry.actualFuelL += r.fuelConsumed;
+      entry.genPowerKWh += r.powerOutput;
+      entry.genEfficiencies.push(r.efficiency);
+    }
+
+    for (const r of allBatReadings) {
+      const d = r.timestamp.toISOString().split('T')[0];
+      const entry = getOrCreateDay(d);
+      entry.socs.push(r.soc);
+    }
+
+    for (const r of weatherRecords) {
+      const d = r.timestamp.toISOString().split('T')[0];
+      const entry = getOrCreateDay(d);
+      entry.temperatures.push(r.temperature);
+    }
+
+    const sortedDates = Object.keys(dailyMap).sort();
+
+    const timeline = sortedDates.map((dateKey) => {
+      const d = dailyMap[dateKey];
+      const actualFuel = Math.round(d.actualFuelL * 10) / 10;
+      // Conventional baseline fuel calculation (displaced renewable energy @ 0.27 L/kWh)
+      const displacedFuel = Math.round(d.renewableKWh * 0.27 * 10) / 10;
+      const baselineFuel = Math.round((actualFuel + displacedFuel) * 10) / 10;
+      const fuelSaved = Math.max(0, Math.round((baselineFuel - actualFuel) * 10) / 10);
+
+      const totalEnergy = d.loads.length > 0
+        ? d.loads.reduce((a, b) => a + b, 0)
+        : d.genPowerKWh + d.renewableKWh;
+
+      const renPen = totalEnergy > 0
+        ? Math.min(100, Math.round((d.renewableKWh / totalEnergy) * 100 * 10) / 10)
+        : 0;
+
+      const avgEff = d.genEfficiencies.length > 0
+        ? Math.round((d.genEfficiencies.reduce((a, b) => a + b, 0) / d.genEfficiencies.length) * 10) / 10
+        : (generators.length > 0 ? generators[0].efficiency : 85);
+
+      const co2Avoided = Math.round(fuelSaved * 2.68 * 10) / 10;
+
+      const avgLoad = d.loads.length > 0
+        ? Math.round((d.loads.reduce((a, b) => a + b, 0) / d.loads.length) * 10) / 10
+        : 0;
+
+      const peakLoad = d.loads.length > 0 ? Math.max(...d.loads) : 0;
+      const minTemp = d.temperatures.length > 0 ? Math.min(...d.temperatures) : null;
+
+      // Format date for UI chart (e.g., "Sep 21")
+      const dateObj = new Date(dateKey);
+      const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      return {
+        date: formattedDate,
+        dateKey,
+        actualFuelL: actualFuel,
+        baselineFuelL: baselineFuel,
+        fuelSavedL: fuelSaved,
+        renewablePenetrationPercent: renPen,
+        avgGenEfficiencyPercent: avgEff,
+        co2AvoidedKg: co2Avoided,
+        avgLoadKW: avgLoad,
+        peakLoadKW: peakLoad,
+        minTempC: minTemp,
+      };
+    });
+
+    // Overall summary calculations
+    const allLoads = energyLoads.map((e) => e.totalLoad);
+    const totalActualFuel = allGenReadings.reduce((s, r) => s + r.fuelConsumed, 0);
+    const totalRenewableKWh = renewables.reduce((s, r) => s + r.totalRenewable, 0);
+    const totalSolarKWh = renewables.reduce((s, r) => s + r.solarPower, 0);
+    const totalWindKWh = renewables.reduce((s, r) => s + r.windPower, 0);
+    const totalGenKWh = allGenReadings.reduce((s, r) => s + r.powerOutput, 0);
+    const totalGenRuntimeMin = allGenReadings.reduce((s, r) => s + r.runtime, 0);
+
+    const totalDisplacedFuel = totalRenewableKWh * 0.27;
+    const totalBaselineFuel = totalActualFuel + totalDisplacedFuel;
+    const totalSavedFuel = Math.max(0, totalBaselineFuel - totalActualFuel);
+
+    const fuelSavingsPercent = totalBaselineFuel > 0
+      ? Math.round((totalSavedFuel / totalBaselineFuel) * 100 * 10) / 10
+      : 0;
+
+    const totalDemandKWh = allLoads.length > 0
+      ? allLoads.reduce((a, b) => a + b, 0)
+      : (totalGenKWh + totalRenewableKWh);
+
+    const renewablePenetrationPercent = totalDemandKWh > 0
+      ? Math.min(100, Math.round((totalRenewableKWh / totalDemandKWh) * 100 * 10) / 10)
+      : 0;
+
+    const allEfficiencies = allGenReadings.map((r) => r.efficiency);
+    const avgGenEfficiencyPercent = allEfficiencies.length > 0
+      ? Math.round((allEfficiencies.reduce((a, b) => a + b, 0) / allEfficiencies.length) * 10) / 10
+      : (generators.length > 0 ? generators[0].efficiency : 0);
+
+    const onlineCritical = criticalLoads.filter((c) => c.status === 'ONLINE').length;
+    const criticalLoadReliabilityPercent = criticalLoads.length > 0
+      ? Math.round((onlineCritical / criticalLoads.length) * 100 * 10) / 10
+      : 100;
+
+    const co2AvoidedTonnes = Math.round((totalSavedFuel * 2.68 / 1000) * 100) / 100;
+    const financialSavingsINR = Math.round(totalSavedFuel * 263.4); // ₹263.4/L Antarctic logistics cost
+
+    const allSOCs = allBatReadings.map((r) => r.soc);
+    const batteryAvgSOC = allSOCs.length > 0
+      ? Math.round((allSOCs.reduce((a, b) => a + b, 0) / allSOCs.length) * 10) / 10
+      : (batteries.length > 0 ? batteries[0].currentSOC : 0);
+
+    return {
+      station: { id: station.id, name: station.name, code: station.code },
+      range: { start: startDate, end: endDate },
+      hasData,
+      summary: {
+        totalDataPoints,
+        fuelSavingsPercent,
+        dieselSavedLitres: Math.round(totalSavedFuel * 10) / 10,
+        actualFuelLitres: Math.round(totalActualFuel * 10) / 10,
+        baselineFuelLitres: Math.round(totalBaselineFuel * 10) / 10,
+        renewablePenetrationPercent,
+        totalRenewableKWh: Math.round(totalRenewableKWh * 10) / 10,
+        totalSolarKWh: Math.round(totalSolarKWh * 10) / 10,
+        totalWindKWh: Math.round(totalWindKWh * 10) / 10,
+        avgGenEfficiencyPercent,
+        totalGenRuntimeHours: Math.round((totalGenRuntimeMin / 60) * 10) / 10,
+        criticalLoadReliabilityPercent,
+        co2AvoidedTonnes,
+        financialSavingsINR,
+        batteryAvgSOC,
+        averageLoadKW: allLoads.length > 0 ? Math.round((allLoads.reduce((a, b) => a + b, 0) / allLoads.length) * 10) / 10 : 0,
+        peakLoadKW: allLoads.length > 0 ? Math.max(...allLoads) : 0,
+        minLoadKW: allLoads.length > 0 ? Math.min(...allLoads) : 0,
+      },
+      timeline,
+    };
+  }
+
+  /**
    * Energy Load Analytics (Aggregated by day)
    */
-  async getEnergyAnalytics(stationId, { range = '7d', start, end } = {}) {
+  async getEnergyAnalytics(stationId, { range = '7d', start, end, days } = {}) {
     const station = await stationService.getStationById(stationId);
-    const { startDate, endDate } = this.resolveDateRange(range, start, end);
+    const { startDate, endDate } = this.resolveDateRange(range, start, end, days);
 
     const records = await prisma.energyLoad.findMany({
       where: {
@@ -91,9 +337,9 @@ class AnalyticsService {
   /**
    * Fuel Consumption Analytics
    */
-  async getFuelAnalytics(stationId, { range = '7d', start, end } = {}) {
+  async getFuelAnalytics(stationId, { range = '7d', start, end, days } = {}) {
     const station = await stationService.getStationById(stationId);
-    const { startDate, endDate } = this.resolveDateRange(range, start, end);
+    const { startDate, endDate } = this.resolveDateRange(range, start, end, days);
 
     const generators = await prisma.generator.findMany({
       where: { stationId: station.id },
@@ -131,7 +377,6 @@ class AnalyticsService {
       fuelConsumedLiters: Math.round(d.fuelConsumed * 10) / 10,
       energyGeneratedKWh: Math.round(d.powerOutput * 10) / 10,
       runtimeHours: Math.round((d.runtimeMinutes / 60) * 10) / 10,
-      // Baseline without renewables (estimated ~0.28 L/kWh for all station demand)
       baselineFuelLiters: Math.round(d.fuelConsumed * 1.35 * 10) / 10,
       fuelSavedLiters: Math.round(d.fuelConsumed * 0.35 * 10) / 10,
     }));
@@ -145,7 +390,7 @@ class AnalyticsService {
       summary: {
         totalFuelConsumedLiters: totalFuel,
         totalRuntimeHours,
-        estimatedFuelSavingsPercent: 26.2,
+        estimatedFuelSavingsPercent: totalFuel > 0 ? 26.2 : 0,
       },
       timeline,
     };
@@ -154,9 +399,9 @@ class AnalyticsService {
   /**
    * Renewable Generation & Penetration Analytics
    */
-  async getRenewableAnalytics(stationId, { range = '7d', start, end } = {}) {
+  async getRenewableAnalytics(stationId, { range = '7d', start, end, days } = {}) {
     const station = await stationService.getStationById(stationId);
-    const { startDate, endDate } = this.resolveDateRange(range, start, end);
+    const { startDate, endDate } = this.resolveDateRange(range, start, end, days);
 
     const [renewables, loads] = await Promise.all([
       prisma.renewableGeneration.findMany({
@@ -230,9 +475,9 @@ class AnalyticsService {
   /**
    * Generator performance metrics
    */
-  async getGeneratorAnalytics(stationId, { range = '7d', start, end } = {}) {
+  async getGeneratorAnalytics(stationId, { range = '7d', start, end, days } = {}) {
     const station = await stationService.getStationById(stationId);
-    const { startDate, endDate } = this.resolveDateRange(range, start, end);
+    const { startDate, endDate } = this.resolveDateRange(range, start, end, days);
 
     const generators = await prisma.generator.findMany({
       where: { stationId: station.id },
@@ -276,9 +521,9 @@ class AnalyticsService {
   /**
    * Battery storage analytics
    */
-  async getBatteryAnalytics(stationId, { range = '7d', start, end } = {}) {
+  async getBatteryAnalytics(stationId, { range = '7d', start, end, days } = {}) {
     const station = await stationService.getStationById(stationId);
-    const { startDate, endDate } = this.resolveDateRange(range, start, end);
+    const { startDate, endDate } = this.resolveDateRange(range, start, end, days);
 
     const batteries = await prisma.battery.findMany({
       where: { stationId: station.id },

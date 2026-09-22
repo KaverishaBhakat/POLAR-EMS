@@ -16,13 +16,30 @@ import {
   Area,
 } from 'recharts';
 import { HistoricalAnalyticsPoint } from '@/lib/types';
-import { Fuel, Leaf, Gauge, Zap, IndianRupee, ShieldCheck } from 'lucide-react';
+import { Fuel, Leaf, Gauge, Database } from 'lucide-react';
 
 interface AnalyticsChartsProps {
   data: HistoricalAnalyticsPoint[];
+  stationName?: string;
 }
 
-export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ data }) => {
+export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ data, stationName }) => {
+  if (!data || data.length === 0) {
+    return (
+      <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-8 text-center font-mono">
+        <div className="inline-flex p-3 rounded-full bg-cyan-950/40 border border-cyan-500/30 text-cyan-400 mb-3">
+          <Database size={24} />
+        </div>
+        <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wider mb-1">
+          No Historical Telemetry Points Recorded
+        </h3>
+        <p className="text-xs text-slate-400 max-w-md mx-auto">
+          No time-series operational records exist for {stationName || 'this station'} within the selected timeframe. Ingest operational telemetry via the Data Ingestion Hub to render longitudinal charts.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* 1. Daily Fuel Consumption: Actual vs Baseline */}
@@ -65,7 +82,7 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ data }) => {
               />
               <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '11px', fontFamily: 'monospace' }} />
               <Bar dataKey="baselineFuelL" name="Conventional Baseline" fill="#475569" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="actualFuelL" name="POLAR-EMS Optimized" fill="#10B981" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="actualFuelL" name="POLAR-EMS Actual" fill="#10B981" radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -92,7 +109,7 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ data }) => {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" vertical={false} />
                 <XAxis dataKey="date" stroke="#64748B" fontSize={10} fontFamily="monospace" tickLine={false} />
-                <YAxis stroke="#64748B" fontSize={10} fontFamily="monospace" tickLine={false} unit="%" />
+                <YAxis stroke="#64748B" fontSize={10} fontFamily="monospace" tickLine={false} unit="%" domain={[0, 100]} />
                 <Tooltip />
                 <Area
                   type="monotone"
@@ -120,7 +137,7 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ data }) => {
               <LineChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" vertical={false} />
                 <XAxis dataKey="date" stroke="#64748B" fontSize={10} fontFamily="monospace" tickLine={false} />
-                <YAxis stroke="#64748B" fontSize={10} fontFamily="monospace" tickLine={false} unit="%" domain={[75, 95]} />
+                <YAxis stroke="#64748B" fontSize={10} fontFamily="monospace" tickLine={false} unit="%" domain={[0, 100]} />
                 <Tooltip />
                 <Line
                   type="monotone"
@@ -138,3 +155,4 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ data }) => {
     </div>
   );
 };
+

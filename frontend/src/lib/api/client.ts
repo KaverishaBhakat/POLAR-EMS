@@ -1,5 +1,6 @@
 import {
   AlertRecord,
+  AnalyticsSummary,
   AIInsight,
   BatteryRecord,
   BatteryReadingRecord,
@@ -12,6 +13,7 @@ import {
   GeneratorRecord,
   GeneratorReadingRecord,
   HistoricalAnalyticsPoint,
+  HistoricalAnalyticsResponse,
   HourlyDispatchPoint,
   HourlyForecastPoint,
   OptimizationMetrics,
@@ -31,7 +33,7 @@ import { AI_INSIGHTS, FORECAST_METRICS, generateHourlyForecast } from '../mock-d
 import { generateDispatchSchedule, OPTIMIZATION_METRICS } from '../mock-data/optimization';
 import { runSimulationCalculation } from '../mock-data/simulation';
 import { INITIAL_ALERTS } from '../mock-data/alerts';
-import { ANALYTICS_SUMMARY, generateHistoricalAnalytics } from '../mock-data/analytics';
+
 
 // Configurable backend base URL (for future FastAPI backend integration)
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -969,14 +971,126 @@ export const apiClient = {
     return this.resolveAlert(alertId);
   },
 
-  // Historical Analytics
-  async getHistoricalAnalytics(days: number, stationId: StationId): Promise<{
-    summary: typeof ANALYTICS_SUMMARY;
-    timeline: HistoricalAnalyticsPoint[];
-  }> {
-    return {
-      summary: ANALYTICS_SUMMARY,
-      timeline: generateHistoricalAnalytics(days, stationId),
-    };
+  // Historical Operational Analytics (Live PostgreSQL Integration)
+  async getHistoricalAnalytics(
+    days: number | string,
+    stationId: StationId | string
+  ): Promise<HistoricalAnalyticsResponse> {
+    const d = typeof days === 'number' ? `${days}d` : days;
+    const response = await fetch(
+      `${API_BASE_URL}/analytics/${stationId}/historical?range=${d}`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      }
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch historical analytics for ${stationId}`);
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
+  async getEnergyAnalytics(
+    stationId: StationId | string,
+    range: string = '7d'
+  ) {
+    const response = await fetch(
+      `${API_BASE_URL}/analytics/${stationId}/energy?range=${range}`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      }
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch energy analytics for ${stationId}`);
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
+  async getFuelAnalytics(
+    stationId: StationId | string,
+    range: string = '7d'
+  ) {
+    const response = await fetch(
+      `${API_BASE_URL}/analytics/${stationId}/fuel?range=${range}`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      }
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch fuel analytics for ${stationId}`);
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
+  async getRenewableAnalytics(
+    stationId: StationId | string,
+    range: string = '7d'
+  ) {
+    const response = await fetch(
+      `${API_BASE_URL}/analytics/${stationId}/renewable?range=${range}`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      }
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch renewable analytics for ${stationId}`);
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
+  async getGeneratorAnalytics(
+    stationId: StationId | string,
+    range: string = '7d'
+  ) {
+    const response = await fetch(
+      `${API_BASE_URL}/analytics/${stationId}/generator?range=${range}`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      }
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch generator analytics for ${stationId}`);
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
+  async getBatteryAnalytics(
+    stationId: StationId | string,
+    range: string = '7d'
+  ) {
+    const response = await fetch(
+      `${API_BASE_URL}/analytics/${stationId}/battery?range=${range}`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      }
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch battery analytics for ${stationId}`);
+    }
+    const result = await response.json();
+    return result.data;
   },
 };
+
