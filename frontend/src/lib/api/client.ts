@@ -2,6 +2,7 @@ import {
   AIInsight,
   CriticalLoadItem,
   EnergyData,
+  EnergyLoadRecord,
   ForecastMetrics,
   Generator,
   HistoricalAnalyticsPoint,
@@ -336,6 +337,79 @@ export const apiClient = {
 
   async getWeatherData(stationId: StationId | string): Promise<WeatherData | null> {
     return this.getCurrentWeather(stationId);
+  },
+
+  // Energy Load Telemetry (Live PostgreSQL Integration)
+  async getCurrentEnergy(stationId: StationId | string): Promise<EnergyLoadRecord | null> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/energy/${stationId}/current`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      });
+      if (response.status === 404) {
+        return null;
+      }
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || `Failed to fetch current energy load for ${stationId}`);
+      }
+      const result = await response.json();
+      return result.data || null;
+    } catch (err: any) {
+      if (err.message && (err.message.includes('not found') || err.message.includes('404'))) {
+        return null;
+      }
+      throw err;
+    }
+  },
+
+  async getEnergyHistory(
+    stationId: StationId | string,
+    params?: { limit?: number; page?: number }
+  ): Promise<{ records: EnergyLoadRecord[]; meta: { total: number; page: number; limit: number; totalPages: number } }> {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.page) query.set('page', String(params.page));
+    const qs = query.toString() ? `?${query.toString()}` : '';
+
+    const response = await fetch(`${API_BASE_URL}/energy/${stationId}/history${qs}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch energy history for ${stationId}`);
+    }
+    const result = await response.json();
+    return {
+      records: result.data || [],
+      meta: result.meta || { total: (result.data || []).length, page: 1, limit: (result.data || []).length, totalPages: 1 },
+    };
+  },
+
+  async getEnergyRange(
+    stationId: StationId | string,
+    params?: { start?: string; end?: string; limit?: number }
+  ): Promise<EnergyLoadRecord[]> {
+    const query = new URLSearchParams();
+    if (params?.start) query.set('start', params.start);
+    if (params?.end) query.set('end', params.end);
+    if (params?.limit) query.set('limit', String(params.limit));
+    const qs = query.toString() ? `?${query.toString()}` : '';
+
+    const response = await fetch(`${API_BASE_URL}/energy/${stationId}/range${qs}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch energy range for ${stationId}`);
+    }
+    const result = await response.json();
+    return result.data || [];
   },
 
   // Real-time Energy Telemetry

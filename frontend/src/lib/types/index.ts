@@ -51,6 +51,20 @@ export interface WeatherData {
   createdAt?: string | Date;
 }
 
+export interface EnergyLoadRecord {
+  id: string;
+  stationId: StationId | string;
+  timestamp: string | Date;
+  totalLoad: number; // kW
+  heatingLoad: number; // kW
+  waterLoad: number; // kW
+  communicationLoad: number; // kW
+  laboratoryLoad: number; // kW
+  refrigerationLoad: number; // kW
+  flexibleLoad: number; // kW
+  createdAt?: string | Date;
+}
+
 export interface EnergyData {
   stationId: StationId;
   timestamp: string;

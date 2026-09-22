@@ -17,6 +17,7 @@ import {
   UserPlus,
   ArrowRight,
   CloudSun,
+  Zap,
 } from 'lucide-react';
 
 interface MobileMenuProps {
@@ -26,6 +27,7 @@ interface MobileMenuProps {
 
 const DASHBOARD_ROUTES = [
   { name: 'Live SCADA Operations', href: '/dashboard', icon: Activity, badge: 'LIVE' },
+  { name: 'Microgrid Energy & Load Ops', href: '/energy', icon: Zap, badge: 'LOAD' },
   { name: 'Polar Meteorology & Weather', href: '/weather', icon: CloudSun, badge: 'AWS' },
   { name: 'Antarctic Stations (Maitri & Bharati)', href: '/stations', icon: MapPin },
   { name: 'AI Load & Weather Forecast', href: '/forecast', icon: TrendingUp, badge: 'AI' },

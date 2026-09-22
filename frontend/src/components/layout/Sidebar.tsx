@@ -26,6 +26,7 @@ import {
 
 const NAV_ITEMS = [
   { name: 'Dashboard', href: '/dashboard', icon: Activity, badge: 'LIVE' },
+  { name: 'Energy', href: '/energy', icon: Zap, badge: 'LOAD' },
   { name: 'Weather', href: '/weather', icon: CloudSun, badge: 'AWS' },
   { name: 'Data Ingestion', href: '/data-upload', icon: UploadCloud, badge: 'INGEST' },
   { name: 'Forecast', href: '/forecast', icon: TrendingUp, badge: 'AI' },
