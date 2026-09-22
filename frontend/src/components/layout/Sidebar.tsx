@@ -23,12 +23,14 @@ import {
   UploadCloud,
   CloudSun,
   Leaf,
+  Cpu,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { name: 'Dashboard', href: '/dashboard', icon: Activity, badge: 'LIVE' },
   { name: 'Energy', href: '/energy', icon: Zap, badge: 'LOAD' },
   { name: 'Renewables', href: '/renewable', icon: Leaf, badge: 'CLEAN' },
+  { name: 'Generators', href: '/generators', icon: Cpu, badge: 'GENSET' },
   { name: 'Weather', href: '/weather', icon: CloudSun, badge: 'AWS' },
   { name: 'Data Ingestion', href: '/data-upload', icon: UploadCloud, badge: 'INGEST' },
   { name: 'Forecast', href: '/forecast', icon: TrendingUp, badge: 'AI' },

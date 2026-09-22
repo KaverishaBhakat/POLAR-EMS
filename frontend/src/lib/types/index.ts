@@ -108,6 +108,33 @@ export interface EnergyData {
   co2AvoidedTotalTonnes: number;
 }
 
+export interface GeneratorReadingRecord {
+  id: string;
+  generatorId: string;
+  timestamp: string | Date;
+  powerOutput: number; // kW
+  fuelConsumed: number; // L
+  efficiency: number; // %
+  runtime: number; // minutes
+  createdAt?: string | Date;
+}
+
+export interface GeneratorRecord {
+  id: string;
+  stationId: string;
+  name: string;
+  capacity: number; // kW
+  minimumOutput: number; // kW
+  efficiency: number; // %
+  fuelType: string;
+  status: 'RUNNING' | 'STOPPED' | 'STANDBY' | 'MAINTENANCE' | 'FAULT' | string;
+  fuelLevel: number; // %
+  totalRuntime: number; // hours
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+  readings?: GeneratorReadingRecord[];
+}
+
 export interface Generator {
   id: string; // 'G1' | 'G2' | 'G3' | 'G4'
   name: string;

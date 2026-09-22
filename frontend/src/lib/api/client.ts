@@ -5,6 +5,8 @@ import {
   EnergyLoadRecord,
   ForecastMetrics,
   Generator,
+  GeneratorRecord,
+  GeneratorReadingRecord,
   HistoricalAnalyticsPoint,
   HourlyDispatchPoint,
   HourlyForecastPoint,
@@ -486,6 +488,74 @@ export const apiClient = {
     return result.data || [];
   },
 
+  // Generator Fleet & SCADA Telemetry (Live PostgreSQL Integration)
+  async getGenerators(stationId: StationId | string): Promise<GeneratorRecord[]> {
+    const response = await fetch(`${API_BASE_URL}/generators/${stationId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch generators for ${stationId}`);
+    }
+    const result = await response.json();
+    return result.data || [];
+  },
+
+  async getGenerator(id: string): Promise<GeneratorRecord> {
+    const response = await fetch(`${API_BASE_URL}/generators/detail/${id}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch generator ${id}`);
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
+  async getGeneratorReadings(
+    generatorId: string,
+    params?: { limit?: number; page?: number }
+  ): Promise<{ records: GeneratorReadingRecord[]; meta: { total: number; page: number; limit: number; totalPages: number } }> {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.page) query.set('page', String(params.page));
+    const qs = query.toString() ? `?${query.toString()}` : '';
+
+    const response = await fetch(`${API_BASE_URL}/generators/${generatorId}/readings${qs}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch generator readings for ${generatorId}`);
+    }
+    const result = await response.json();
+    return {
+      records: result.data || [],
+      meta: result.meta || { total: (result.data || []).length, page: 1, limit: (result.data || []).length, totalPages: 1 },
+    };
+  },
+
+  async updateGeneratorStatus(generatorId: string, status: string): Promise<GeneratorRecord> {
+    const response = await fetch(`${API_BASE_URL}/generators/${generatorId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to update generator status`);
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
   // Real-time Energy Telemetry
   async getEnergyData(stationId: StationId): Promise<EnergyData> {
     try {
@@ -538,45 +608,6 @@ export const apiClient = {
       console.warn(`Falling back to client energy for ${stationId}:`, err);
     }
     return ENERGY_DATA[stationId] || ENERGY_DATA.maitri;
-  },
-
-  // Genset Telemetry
-  async getGenerators(stationId: StationId): Promise<Generator[]> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/generators/${stationId}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-      });
-      if (response.ok) {
-        const result = await response.json();
-        if (Array.isArray(result.data) && result.data.length > 0) {
-          return result.data.map((g: any, idx: number) => {
-            const lastReading = g.readings?.[0];
-            const outKW = lastReading ? lastReading.powerOutput : 0;
-            return {
-              id: `G${idx + 1}`,
-              name: g.name,
-              model: 'Cummins Arctic Polar-VTA28',
-              status: (g.status || (outKW > 0 ? 'RUNNING' : 'STANDBY')) as any,
-              outputKW: outKW,
-              maxOutputKW: g.capacity,
-              efficiencyPercent: g.efficiency || 38.5,
-              fuelConsumptionLh: Math.round(outKW * 0.25 * 10) / 10,
-              runtimeHours: g.totalRuntime || 0,
-              loadPercentage: g.capacity > 0 ? Math.round((outKW / g.capacity) * 100) : 0,
-              temperatureC: outKW > 0 ? 86 : 22,
-              oilPressureBar: outKW > 0 ? 4.6 : 0,
-              frequencyHz: 50.0,
-              voltageV: 415.0,
-            };
-          });
-        }
-      }
-    } catch (err) {
-      console.warn(`Falling back to client generators for ${stationId}:`, err);
-    }
-    return GENERATORS[stationId] || GENERATORS.maitri;
   },
 
   // Critical Life-Support Loads

@@ -19,6 +19,7 @@ import {
   CloudSun,
   Zap,
   Leaf,
+  Cpu,
 } from 'lucide-react';
 
 interface MobileMenuProps {
@@ -30,6 +31,7 @@ const DASHBOARD_ROUTES = [
   { name: 'Live SCADA Operations', href: '/dashboard', icon: Activity, badge: 'LIVE' },
   { name: 'Microgrid Energy & Load Ops', href: '/energy', icon: Zap, badge: 'LOAD' },
   { name: 'Polar Renewable Generation', href: '/renewable', icon: Leaf, badge: 'CLEAN' },
+  { name: 'Diesel Genset Fleet & SCADA', href: '/generators', icon: Cpu, badge: 'GENSET' },
   { name: 'Polar Meteorology & Weather', href: '/weather', icon: CloudSun, badge: 'AWS' },
   { name: 'Antarctic Stations (Maitri & Bharati)', href: '/stations', icon: MapPin },
   { name: 'AI Load & Weather Forecast', href: '/forecast', icon: TrendingUp, badge: 'AI' },
