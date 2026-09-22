@@ -1,5 +1,7 @@
 import {
   AIInsight,
+  BatteryRecord,
+  BatteryReadingRecord,
   CriticalLoadItem,
   EnergyData,
   EnergyLoadRecord,
@@ -551,6 +553,91 @@ export const apiClient = {
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
       throw new Error(err.message || `Failed to update generator status`);
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
+  // Battery Energy Storage System (BESS) (Live PostgreSQL Integration)
+  async getBatteries(stationId: StationId | string): Promise<BatteryRecord[]> {
+    const response = await fetch(`${API_BASE_URL}/battery/${stationId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch batteries for ${stationId}`);
+    }
+    const result = await response.json();
+    return result.data || [];
+  },
+
+  async getBattery(id: string): Promise<BatteryRecord> {
+    const response = await fetch(`${API_BASE_URL}/battery/detail/${id}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch battery ${id}`);
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
+  async getBatteryReadings(
+    batteryId: string,
+    params?: { limit?: number; page?: number }
+  ): Promise<{ records: BatteryReadingRecord[]; meta: { total: number; page: number; limit: number; totalPages: number } }> {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.page) query.set('page', String(params.page));
+    const qs = query.toString() ? `?${query.toString()}` : '';
+
+    const response = await fetch(`${API_BASE_URL}/battery/${batteryId}/readings${qs}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch battery readings for ${batteryId}`);
+    }
+    const result = await response.json();
+    return {
+      records: result.data || [],
+      meta: result.meta || { total: (result.data || []).length, page: 1, limit: (result.data || []).length, totalPages: 1 },
+    };
+  },
+
+  async updateBattery(id: string, data: Partial<BatteryRecord>): Promise<BatteryRecord> {
+    const response = await fetch(`${API_BASE_URL}/battery/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to update battery parameters`);
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
+  async addBatteryReading(
+    batteryId: string,
+    data: { soc: number; chargePower?: number; dischargePower?: number; timestamp?: string }
+  ): Promise<BatteryReadingRecord> {
+    const response = await fetch(`${API_BASE_URL}/battery/${batteryId}/readings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to record battery telemetry`);
     }
     const result = await response.json();
     return result.data;

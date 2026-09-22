@@ -135,6 +135,34 @@ export interface GeneratorRecord {
   readings?: GeneratorReadingRecord[];
 }
 
+export interface BatteryReadingRecord {
+  id: string;
+  batteryId: string;
+  timestamp: string | Date;
+  soc: number; // %
+  chargePower: number; // kW
+  dischargePower: number; // kW
+  createdAt?: string | Date;
+}
+
+export interface BatteryRecord {
+  id: string;
+  stationId: string;
+  name: string;
+  capacity: number; // kWh
+  currentSOC: number; // % (0 - 100)
+  minimumSOC: number; // % (default 20)
+  maximumSOC: number; // % (default 95)
+  maxChargePower: number; // kW
+  maxDischargePower: number; // kW
+  status: 'IDLE' | 'CHARGING' | 'DISCHARGING' | 'ONLINE' | 'STANDBY' | 'MAINTENANCE' | 'FAULT' | string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+  readings?: BatteryReadingRecord[];
+  station?: Station;
+}
+
+
 export interface Generator {
   id: string; // 'G1' | 'G2' | 'G3' | 'G4'
   name: string;
