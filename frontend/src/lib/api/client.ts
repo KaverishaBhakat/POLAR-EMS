@@ -3,6 +3,7 @@ import {
   BatteryRecord,
   BatteryReadingRecord,
   CriticalLoadItem,
+  CriticalLoadRecord,
   EnergyData,
   EnergyLoadRecord,
   ForecastMetrics,
@@ -697,32 +698,106 @@ export const apiClient = {
     return ENERGY_DATA[stationId] || ENERGY_DATA.maitri;
   },
 
-  // Critical Life-Support Loads
-  async getCriticalLoads(stationId: StationId): Promise<CriticalLoadItem[]> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/critical-loads/${stationId}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-      });
-      if (response.ok) {
-        const result = await response.json();
-        if (Array.isArray(result.data) && result.data.length > 0) {
-          return result.data.map((c: any) => ({
-            id: c.id,
-            name: c.name,
-            category: c.category,
-            powerKW: c.currentPower || c.ratedPower,
-            percentage: c.ratedPower > 0 ? Math.round(((c.currentPower || c.ratedPower) / c.ratedPower) * 100) : 100,
-            status: c.status === 'ONLINE' ? 'PROTECTED' : 'OPTIMIZED',
-            subsystem: c.name,
-          }));
-        }
-      }
-    } catch (err) {
-      console.warn(`Falling back to client critical loads for ${stationId}:`, err);
+  // Critical Life-Support Loads (Live PostgreSQL Integration)
+  async getCriticalLoads(stationId: StationId | string): Promise<CriticalLoadRecord[]> {
+    const response = await fetch(`${API_BASE_URL}/critical-loads/${stationId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch critical loads for ${stationId}`);
     }
-    return CRITICAL_LOADS[stationId] || CRITICAL_LOADS.maitri;
+    const result = await response.json();
+    return result.data || [];
+  },
+
+  async getCriticalLoad(id: string): Promise<CriticalLoadRecord> {
+    const response = await fetch(`${API_BASE_URL}/critical-loads/detail/${id}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch critical load ${id}`);
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
+  async createCriticalLoad(
+    stationId: StationId | string,
+    data: {
+      name: string;
+      category: 'CRITICAL' | 'IMPORTANT' | 'FLEXIBLE';
+      priority: number;
+      ratedPower: number;
+      currentPower: number;
+      status?: string;
+    }
+  ): Promise<CriticalLoadRecord> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('polar_ems_token');
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/critical-loads/${stationId}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ ...data, stationId }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to create critical load circuit');
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
+  async updateCriticalLoad(
+    id: string,
+    data: Partial<CriticalLoadRecord>
+  ): Promise<CriticalLoadRecord> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('polar_ems_token');
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/critical-loads/${id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to update critical load ${id}`);
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
+  async updateCriticalLoadStatus(id: string, status: string): Promise<CriticalLoadRecord> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('polar_ems_token');
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/critical-loads/${id}/status`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ status }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to update critical load status`);
+    }
+    const result = await response.json();
+    return result.data;
   },
 
   // AI Forecasts

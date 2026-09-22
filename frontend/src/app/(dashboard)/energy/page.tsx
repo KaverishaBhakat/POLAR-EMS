@@ -3,8 +3,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useStation } from '@/lib/context/StationContext';
 import { apiClient } from '@/lib/api/client';
-import { EnergyLoadRecord } from '@/lib/types';
+import { EnergyLoadRecord, CriticalLoadRecord } from '@/lib/types';
 import { LoadingSkeleton } from '@/components/common/Toast';
+import { CriticalLoads } from '@/components/dashboard/CriticalLoads';
 import {
   Zap,
   Flame,
@@ -39,6 +40,7 @@ export default function EnergyPage() {
 
   const [currentEnergy, setCurrentEnergy] = useState<EnergyLoadRecord | null>(null);
   const [history, setHistory] = useState<EnergyLoadRecord[]>([]);
+  const [criticalLoads, setCriticalLoads] = useState<CriticalLoadRecord[]>([]);
   const [totalRecords, setTotalRecords] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +63,10 @@ export default function EnergyPage() {
       });
       setHistory(sortedHistory);
       setTotalRecords(histData.meta?.total || sortedHistory.length);
+
+      // 3. Fetch real Critical Loads circuits from PostgreSQL
+      const loads = await apiClient.getCriticalLoads(activeStationId);
+      setCriticalLoads(loads);
     } catch (err: any) {
       console.error(`Failed to fetch energy telemetry for ${activeStationId}:`, err);
       setError(err.message || 'Unable to retrieve energy telemetry from PostgreSQL backend');
@@ -490,7 +496,10 @@ export default function EnergyPage() {
             </div>
           )}
 
-          {/* 3. Tabular Log of Energy Load Records from PostgreSQL */}
+          {/* 3. Real Critical Loads Priority & Sheddability Circuit Grid from PostgreSQL */}
+          <CriticalLoads loads={criticalLoads} />
+
+          {/* 4. Tabular Log of Energy Load Records from PostgreSQL */}
           {history.length > 0 && (
             <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5">
               <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#1B2C42]/50">

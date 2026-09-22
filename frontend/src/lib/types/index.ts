@@ -182,14 +182,30 @@ export interface Generator {
 
 export type CriticalityLevel = 'CRITICAL' | 'IMPORTANT' | 'FLEXIBLE';
 
+export interface CriticalLoadRecord {
+  id: string;
+  stationId: string;
+  name: string;
+  category: 'CRITICAL' | 'IMPORTANT' | 'FLEXIBLE';
+  priority: number;
+  ratedPower: number; // kW
+  currentPower: number; // kW
+  status: 'ONLINE' | 'SHED' | 'STANDBY' | 'OFFLINE' | string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+  station?: Station;
+}
+
 export interface CriticalLoadItem {
   id: string;
   name: string;
   category: CriticalityLevel;
   powerKW: number;
   percentage: number;
-  status: 'PROTECTED' | 'OPTIMIZED' | 'SHED';
+  status: 'PROTECTED' | 'OPTIMIZED' | 'SHED' | string;
   subsystem: string;
+  priority?: number;
+  ratedPower?: number;
   minTempRequirementC?: number;
 }
 

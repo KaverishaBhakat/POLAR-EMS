@@ -56,6 +56,18 @@ router.post(
   criticalLoadController.createCriticalLoad
 );
 
+router.post(
+  '/:stationId',
+  authenticate,
+  authorize('ADMIN', 'OPERATOR'),
+  (req, res, next) => {
+    if (!req.body.stationId && req.params.stationId) req.body.stationId = req.params.stationId;
+    next();
+  },
+  validate(createCriticalLoadSchema),
+  criticalLoadController.createCriticalLoad
+);
+
 router.put(
   '/:id',
   authenticate,
@@ -64,8 +76,24 @@ router.put(
   criticalLoadController.updateCriticalLoad
 );
 
+router.put(
+  '/:stationId/:id',
+  authenticate,
+  authorize('ADMIN', 'OPERATOR'),
+  validate(updateCriticalLoadSchema),
+  criticalLoadController.updateCriticalLoad
+);
+
 router.patch(
   '/:id/status',
+  authenticate,
+  authorize('ADMIN', 'OPERATOR'),
+  validate(updateStatusSchema),
+  criticalLoadController.updateCriticalLoadStatus
+);
+
+router.patch(
+  '/:stationId/:id/status',
   authenticate,
   authorize('ADMIN', 'OPERATOR'),
   validate(updateStatusSchema),
