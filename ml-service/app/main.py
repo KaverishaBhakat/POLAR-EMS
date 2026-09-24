@@ -24,6 +24,8 @@ from app.schemas.forecast import (
     HealthResponse
 )
 
+from app.api.data_routes import router as data_router
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
@@ -34,15 +36,15 @@ logger = logging.getLogger("polar_ems_ml.main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Initializing POLAR-EMS ML Service...")
+    logger.info("Initializing POLAR-EMS ML Service Data Pipeline...")
     logger.info(f"Model storage path: {settings.model_dir.absolute()}")
     yield
     logger.info("Shutting down POLAR-EMS ML Service...")
 
 
 app = FastAPI(
-    title="POLAR-EMS Forecasting Service",
-    description="Production-ready tabular time-series AI/ML forecasting service for Antarctic research stations (Maitri & Bharati).",
+    title="POLAR-EMS ML Service & Data Pipeline",
+    description="Production-ready foundational ML data pipeline and tabular time-series forecasting service for Antarctic research stations (Maitri & Bharati).",
     version=__version__,
     lifespan=lifespan
 )
@@ -55,6 +57,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include foundational data pipeline routes (/data/weather, /data/energy, /data/renewable, etc.)
+app.include_router(data_router)
 
 
 @app.get("/", tags=["General"])

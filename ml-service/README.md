@@ -1,179 +1,147 @@
-# POLAR-EMS Machine Learning & Forecasting Service
+# POLAR-EMS ML Data Pipeline
 
-Production-ready time-series AI/ML forecasting service tailored for extreme-environment Antarctic polar station microgrids (**Maitri Station** and **Bharati Station**).
+Foundation data engineering module for the POLAR-EMS Machine Learning service, tailored for extreme-environment Antarctic research stations (**Maitri Station** and **Bharati Station**).
+
+> [!IMPORTANT]
+> **This module prepares historical data for ML; it does not perform forecasting yet.**
+> Forecasting models, optimization algorithms, and automated dispatch will consume the datasets prepared by this pipeline in subsequent phases.
 
 ---
 
 ## 1. Overview & Purpose
 
-In isolated polar microgrids, weather severity and sudden blizzard fronts directly impact human survival, thermal stability, and energy supply. The **POLAR-EMS ML Service** delivers high-reliability 24-hour forecasts for:
-- **Energy Demand (`totalLoad`)**: Critical habitation heating, life support, lab equipment, and base loads.
-- **Renewable Generation (`totalRenewable`)**: Combined solar photovoltaic and wind turbine power generation.
+In remote Antarctic microgrids, raw sensor data from SCADA and Automatic Weather Stations (AWS) arrives with irregular timestamps, packet drops from blizzard interference, and varying physical units.
 
-The service is built as a modular microservice in Python that connects directly to the existing Neon PostgreSQL database via parameterized queries, trains station-specific gradient boosted decision tree models, and serves forecasts via FastAPI.
+The **ML Data Pipeline** establishes a robust, reproducible data foundation:
+```text
+Neon PostgreSQL → Load → Clean & Validate → Time Alignment → Feature Engineering → ML-Ready Dataset
+```
+
+It guarantees that all future machine learning modules (energy demand forecasting, renewable generation forecasting, and battery dispatch optimization) receive high-integrity, chronological, leak-free tabular datasets without mutating the underlying database.
 
 ---
 
-## 2. Architecture
+## 2. Architecture & Directory Structure
 
 ```text
-Next.js Frontend (Port 3000)
-        ↓
-Node/Express Backend (Port 8000)
-        ↓
-Neon PostgreSQL (Relational schema: stations, weather_data, energy_loads, renewable_generation)
-        ↓
-Python ML Service (FastAPI on Port 8001)
-        ↓
-Station Models (HistGradientBoostingRegressor artifacts in trained_models/)
-```
-
-### Direct Database Integration
-The Python ML service communicates directly with PostgreSQL using SQLAlchemy connection pooling and parameterized SQL queries to load historical records without data alteration.
-
----
-
-## 3. Technology Stack & Model Choice
-
-- **Runtime**: Python 3.11+ / Python 3.14
-- **Web Framework**: FastAPI, Uvicorn, Pydantic v2
-- **Data & ML**: pandas, numpy, scikit-learn (`HistGradientBoostingRegressor`), joblib
-- **Database**: SQLAlchemy, psycopg2-binary
-- **Testing**: pytest, httpx
-
-### Why `HistGradientBoostingRegressor`?
-1. **Superior Tabular Time-Series Accuracy**: Gradient-boosted decision trees (GBDTs) consistently outperform LSTMs, Transformers, and deep learning architectures on small-to-medium tabular time-series with engineered lag and rolling statistics.
-2. **Native Missing Value Resilience**: Harsh Antarctic telemetry frequently suffers packet drops due to severe geomagnetic storms and blizzards. `HistGradientBoostingRegressor` natively handles missing values during both training and inference without requiring synthetic or artificial interpolation.
-3. **No Heavy Deep Learning Overhead**: Avoids massive multi-gigabyte TensorFlow or PyTorch runtimes, making the model lightweight and fast to train and deploy.
-4. **Deterministic & Explainable**: Yields reliable bounding and clear feature dependency.
-
----
-
-## 4. Prisma Schema Fields Used
-
-The ML service strictly adheres to the database schema defined in `backend/prisma/schema.prisma`.
-
-| Entity | PostgreSQL Table | Database Columns Extracted / Used |
-| :--- | :--- | :--- |
-| **Station** | `stations` | `id`, `code`, `name`, `latitude`, `longitude`, `status` |
-| **Weather** | `weather_data` | `"stationId"`, `timestamp`, `temperature`, `pressure`, `humidity`, `"windSpeed"`, `"solarRadiation"` |
-| **Energy Load** | `energy_loads` | `"stationId"`, `timestamp`, `"totalLoad"` (*Primary Target*), `"heatingLoad"`, `"waterLoad"`, `"communicationLoad"`, `"laboratoryLoad"`, `"refrigerationLoad"`, `"flexibleLoad"` |
-| **Renewable** | `renewable_generation` | `"stationId"`, `timestamp`, `"solarPower"`, `"windPower"`, `"totalRenewable"` (*Primary Target*) |
-
----
-
-## 5. Feature Engineering Pipeline
-
-For each hourly observation $t$, the feature pipeline generates:
-1. **Calendar / Cyclical Features**:
-   - `hour`, `day_of_week`, `day_of_year`, `month`, `is_weekend`
-   - Continuous cyclical features: $\sin\left(\frac{2\pi \cdot \text{hour}}{24}\right)$, $\cos\left(\frac{2\pi \cdot \text{hour}}{24}\right)$, $\sin\left(\frac{2\pi \cdot (\text{month}-1)}{12}\right)$, $\cos\left(\frac{2\pi \cdot (\text{month}-1)}{12}\right)$
-2. **Autoregressive Lag Features**:
-   - $\text{lag}_1, \text{lag}_2, \text{lag}_3, \text{lag}_6, \text{lag}_{12}, \text{lag}_{24}$
-3. **Rolling Window Statistics** (shifted by 1 step to prevent target leakage):
-   - $\text{rolling\_mean}_3, \text{rolling\_mean}_6, \text{rolling\_mean}_{12}, \text{rolling\_mean}_{24}$
-   - $\text{rolling\_std}_6, \text{rolling\_std}_{24}$
-4. **Exogenous Weather Variables**:
-   - `temperature`, `pressure`, `humidity`, `wind_speed`, `solar_radiation`
-
----
-
-## 6. Chronological Train/Test Split & Metrics
-
-### Why Chronological Splitting?
-Standard random K-Fold cross-validation or random train/test splits cause **temporal data leakage** (using future observations to predict past states), resulting in falsely optimistic validation scores that fail in production. 
-
-The service strictly uses **chronological splitting**:
-- **80% Earliest Records**: Model training
-- **20% Most Recent Records**: Model testing and metric evaluation
-
-### Evaluation Metrics
-- **MAE (Mean Absolute Error)**: $\frac{1}{N} \sum |y_i - \hat{y}_i|$
-- **RMSE (Root Mean Squared Error)**: $\sqrt{\frac{1}{N} \sum (y_i - \hat{y}_i)^2}$
-- **$R^2$ (Coefficient of Determination)**: $1 - \frac{\sum(y_i - \hat{y}_i)^2}{\sum(y_i - \bar{y})^2}$
-- **Zero-Safe MAPE (Mean Absolute Percentage Error)**: Calculated only across records where actual $|y_i| > 0.1$ to prevent division-by-zero errors during periods of zero solar or minimal wind output.
-
----
-
-## 7. Minimum-Data Protection & Data Provenance
-
-### Strict Zero-Fabrication Policy
-The ML service will **never fabricate synthetic observations** or claim artificial accuracy when insufficient real data is available.
-
-- Minimum required observations threshold: **168 hours (1 full week)** by default.
-- Maximum allowable missing target values: **25%**.
-- If a station has fewer than the required observations, the training endpoint returns HTTP `422 Unprocessable Entity` with a clear diagnostic explanation:
-
-```json
-{
-  "status": "insufficient_data",
-  "station": "MAITRI",
-  "target": "total_load",
-  "message": "Not enough historical observations to train a reliable forecasting model. Found 48 valid records, but 168 are required.",
-  "observations": 48,
-  "required_minimum": 168,
-  "missing_pct": 0.0
-}
-```
-
-### Data Provenance Notice
-Operational telemetry in initial test databases may be benchmarked against synthetic baseline scenarios. Operational datasets must be identified according to their actual provenance and must **not** be presented as real NCPOR field measurements unless verified against actual physical station SCADA logs.
-
----
-
-## 8. Installation & Setup
-
-### Prerequisites
-- Python 3.11+
-- Working PostgreSQL database connection (e.g., Neon PostgreSQL)
-
-### 1. Create Virtual Environment
-```bash
-cd ml-service
-python -m venv .venv
-# On Windows PowerShell:
-.\.venv\Scripts\Activate.ps1
-# On Linux/macOS:
-source .venv/bin/activate
-```
-
-### 2. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Environment Configuration
-Copy `.env.example` to `.env`:
-```bash
-cp .env.example .env
-```
-Ensure `DATABASE_URL` matches your PostgreSQL connection string:
-```ini
-DATABASE_URL=postgresql://neondb_owner:password@ep-divine-breeze.aws.neon.tech/neondb?sslmode=require
-ML_SERVICE_PORT=8001
-MIN_TRAINING_OBSERVATIONS=168
-MODEL_STORAGE_PATH=./trained_models
+ml-service/
+├── app/
+│   ├── __init__.py
+│   ├── config.py             # Environment & settings configuration (Pydantic Settings)
+│   ├── db.py                 # SQLAlchemy connection, URL sanitizer & station resolver
+│   ├── data/
+│   │   ├── __init__.py
+│   │   ├── loaders.py        # Parameterized PostgreSQL data loaders
+│   │   ├── cleaning.py       # Timestamp parsing, deduplication, validation reporting
+│   │   ├── alignment.py      # Time-series resampling & frequency alignment (1min, 15min, 1h)
+│   │   ├── features.py       # Calendar, cyclical, configurable lag & rolling statistics
+│   │   └── pipeline.py       # prepare_ml_dataset orchestrator
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   └── data_schemas.py   # Pydantic v2 validation & dataset schemas
+│   ├── api/
+│   │   ├── __init__.py
+│   │   └── data_routes.py    # REST API endpoints for raw & prepared data
+│   └── main.py               # FastAPI application
+├── tests/
+│   ├── test_cleaning.py      # Tests for deduplication, missing values, bounds
+│   ├── test_alignment.py     # Tests for time alignment & resampling
+│   ├── test_features.py      # Tests for calendar, lag, and rolling features
+│   ├── test_pipeline.py      # Tests for prepare_ml_dataset orchestration
+│   └── test_api.py           # Tests for FastAPI endpoints
+├── requirements.txt
+├── .env.example
+├── .gitignore
+└── README.md
 ```
 
 ---
 
-## 9. Running the Service
+## 3. Database Connection & Schema Alignment
 
-Start the FastAPI application with Uvicorn:
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
-```
-Interactive OpenAPI Swagger docs will be available at `http://localhost:8001/docs`.
+The pipeline connects directly to the project's Neon PostgreSQL database using SQLAlchemy and parameterized SQL queries to prevent SQL injection.
+
+### Neon Connection Sanitizer
+PostgreSQL URLs containing Prisma/Neon-specific query options (such as `pgbouncer=true` or `channel_binding=require`) are dynamically sanitized in `app/db.py` to ensure complete compatibility with `psycopg2-binary` and `libpq`.
+
+### PostgreSQL / Prisma Tables Used:
+1. **`weather_data`**: `"stationId"`, `timestamp`, `temperature`, `pressure`, `humidity`, `"windSpeed"`, `"windDirection"`, `"solarRadiation"`
+2. **`energy_loads`**: `"stationId"`, `timestamp`, `"totalLoad"`, `"heatingLoad"`, `"waterLoad"`, `"communicationLoad"`, `"laboratoryLoad"`, `"refrigerationLoad"`, `"flexibleLoad"`
+3. **`renewable_generation`**: `"stationId"`, `timestamp`, `"solarPower"`, `"windPower"`, `"totalRenewable"`
+4. **`stations`**: `id` (UUID), `code` (`'MAITRI'`, `'BHARATI'`), `name`, `latitude`, `longitude`, `status`
 
 ---
 
-## 10. API Endpoints Reference
+## 4. Data Validation & Cleaning
 
-### 1. Health Check
+Every dataset undergoes automated validation without silent data deletion.
+
+### Validation Checks:
+1. **Timestamp Verification & Parsing**: Converts timestamps to UTC-normalized pandas `datetime`.
+2. **Chronological Sorting**: Ensures strict past-to-present ordering.
+3. **Deduplication**: Identifies duplicate timestamps and retains the latest observation.
+4. **Invalid Numeric Detection**: Coerces non-numeric strings and infinite values (`inf`, `-inf`) to `NaN`.
+5. **Physical Bounds Enforcement**: Clamps non-negative physical values (such as `total_load`, `solar_power`, `solar_radiation`) to $\ge 0.0$.
+6. **Detailed Cleaning Report**:
+   ```json
+   {
+     "rows_before": 435,
+     "rows_after": 435,
+     "duplicates": 0,
+     "missing_values": 0,
+     "invalid_rows": 0,
+     "invalid_numeric_values": 0,
+     "start_time": "2016-12-01T10:00:00+00:00",
+     "end_time": "2016-12-19T12:00:00+00:00",
+     "status": "clean"
+   }
+   ```
+
+---
+
+## 5. Time Alignment & Resampling
+
+The `align_time_series(df, frequency)` utility converts irregular readings into regular time-series intervals:
+
+- **Supported Frequencies**: `"1min"`, `"15min"`, `"30min"`, `"1h"`, `"1d"`.
+- **Continuous Physical Measurements**: Resampled using `mean()` aggregation across the interval (e.g. average temperature, average kW load).
+- **Categorical / Station Metadata**: Preserved using `first()` (e.g. `station_id`, `wind_direction`).
+
+---
+
+## 6. Feature Engineering
+
+The feature engine generates structured tabular features for time-series modeling:
+
+1. **Calendar & Temporal Features**:
+   - `hour` (0–23), `day_of_week` (0–6), `day_of_month` (1–31), `day_of_year` (1–366), `month` (1–12), `week_of_year` (1–53), `is_weekend` (0 or 1).
+2. **Continuous Cyclical Features**:
+   - $\text{hour\_sin} = \sin(2\pi \cdot \text{hour} / 24)$, $\text{hour\_cos} = \cos(2\pi \cdot \text{hour} / 24)$
+   - $\text{month\_sin} = \sin(2\pi \cdot (\text{month} - 1) / 12)$, $\text{month\_cos} = \cos(2\pi \cdot (\text{month} - 1) / 12)$
+3. **Autoregressive Lag Features** (Configurable):
+   - e.g. `lag_1`, `lag_2`, `lag_3`, `lag_24`.
+   - *Safeguard*: Lags are only created if sufficient historical records exist.
+4. **Rolling Window Statistics** (Configurable):
+   - e.g. `rolling_mean_3`, `rolling_mean_6`, `rolling_mean_24`, `rolling_std_6`, `rolling_std_24`.
+   - *Data Leakage Prevention*: Targets are shifted by 1 step before rolling window computation so that the current time step's target value is never leaked into input features.
+5. **Exogenous Weather Alignment**:
+   - Joins weather variables (`temperature`, `pressure`, `humidity`, `wind_speed`, `solar_radiation`) onto energy/renewable loads based on nearest-hour timestamps.
+
+---
+
+## 7. Real Data Compatibility & NCPOR Transparency
+
+- The dataset contains real Maitri AWS historical records (e.g., 435 hourly observations from 2016-12-01 10:00:00 through 2016-12-19 12:00:00).
+- **Zero Fabrication Policy**: If a station has no observations (e.g. Bharati Station in a fresh environment) or if a requested date range is empty, the pipeline returns a clean empty dataset with `rows: 0` and `status: "empty"` rather than generating synthetic data.
+
+---
+
+## 8. API Endpoints
+
+### 1. Health & Database Check
 ```http
 GET /health
 ```
-**Response (200 OK):**
 ```json
 {
   "status": "ok",
@@ -186,133 +154,71 @@ GET /health
 }
 ```
 
----
-
-### 2. Train Energy Model
+### 2. Raw Validated Data
 ```http
-POST /train/energy
-Content-Type: application/json
-
-{
-  "station_id": "MAITRI"
-}
+GET /data/weather/{station_id}?start_date=2016-12-01&end_date=2016-12-19&limit=500
+GET /data/energy/{station_id}?limit=500
+GET /data/renewable/{station_id}?limit=500
 ```
-**Response (200 OK on success):**
+
+### 3. ML-Ready Prepared Dataset
+```http
+GET /data/weather/{station_id}/prepared?frequency=1h&lags=1,2,24&rolling_windows=3,6,24
+GET /data/energy/{station_id}/prepared?frequency=1h&include_weather=true&lags=1,2,3,24&rolling_windows=3,6,24
+GET /data/renewable/{station_id}/prepared?frequency=1h&include_weather=true&lags=1,2,3,24&rolling_windows=3,6,24
+```
+
+**Example Prepared Response:**
 ```json
 {
   "status": "success",
-  "station": "MAITRI",
-  "target": "total_load",
-  "unit": "kW",
-  "trained_at": "2026-09-24T00:10:00Z",
-  "training_observations": 250,
-  "test_observations": 62,
-  "features": ["hour", "day_of_week", "hour_sin", "hour_cos", "lag_1", "lag_2", "rolling_mean_3", "temperature"],
-  "metrics": {
-    "mae": 1.84,
-    "rmse": 2.45,
-    "r2": 0.91,
-    "mape": 3.12
+  "metadata": {
+    "station_id": "5e70a9cf-fe6b-4c3a-a615-79fd2e453b60",
+    "station_code": "MAITRI",
+    "station_name": "Maitri Station",
+    "data_type": "weather",
+    "frequency": "1h",
+    "rows": 435,
+    "start_time": "2016-12-01T10:00:00+00:00",
+    "end_time": "2016-12-19T12:00:00+00:00",
+    "features": [
+      "timestamp", "temperature", "pressure", "humidity", "wind_speed",
+      "solar_radiation", "hour", "day_of_week", "day_of_month", "day_of_year",
+      "month", "week_of_year", "is_weekend", "hour_sin", "hour_cos",
+      "month_sin", "month_cos", "lag_1", "lag_2", "lag_24",
+      "rolling_mean_3", "rolling_mean_6", "rolling_mean_24"
+    ],
+    "target_col": "temperature"
   },
-  "artifact_path": "trained_models/MAITRI_energy_model.joblib"
-}
-```
-
----
-
-### 3. Train Renewable Model
-```http
-POST /train/renewable
-Content-Type: application/json
-
-{
-  "station_id": "BHARATI"
-}
-```
-
----
-
-### 4. 24-Hour Energy Forecast
-```http
-GET /forecast/energy/MAITRI
-```
-**Response (200 OK):**
-```json
-{
-  "status": "success",
-  "station": "MAITRI",
-  "target": "energy_load",
-  "unit": "kW",
-  "horizon_hours": 24,
-  "generated_at": "2026-09-24T00:15:00Z",
-  "predictions": [
-    { "timestamp": "2026-09-24T01:00:00Z", "predicted_value": 62.4 },
-    { "timestamp": "2026-09-24T02:00:00Z", "predicted_value": 61.8 }
-  ]
-}
-```
-
----
-
-### 5. 24-Hour Renewable Generation Forecast
-```http
-GET /forecast/renewable/MAITRI
-```
-
----
-
-### 6. Model Status
-```http
-GET /model/status
-```
-**Response (200 OK):**
-```json
-{
-  "energy": {
-    "MAITRI": {
-      "trained": true,
-      "trained_at": "2026-09-24T00:10:00Z",
-      "training_observations": 250,
-      "test_observations": 62,
-      "total_observations": 312,
-      "mae": 1.84,
-      "rmse": 2.45,
-      "r2": 0.91,
-      "mape": 3.12,
-      "feature_count": 18,
-      "target": "total_load",
-      "unit": "kW"
-    },
-    "BHARATI": {
-      "trained": false
-    }
+  "validation_report": {
+    "rows_before": 435,
+    "rows_after": 435,
+    "duplicates": 0,
+    "missing_values": 0,
+    "invalid_rows": 0,
+    "status": "clean"
   },
-  "renewable": {
-    "MAITRI": {
-      "trained": false
-    },
-    "BHARATI": {
-      "trained": false
-    }
-  }
+  "records": [ ... ]
 }
 ```
 
 ---
 
-## 11. Testing
+## 9. Running & Testing
 
-Run the automated test suite:
-```bash
+### 1. Activate Environment
+```powershell
+cd ml-service
+.\.venv\Scripts\Activate.ps1
+```
+
+### 2. Run Test Suite
+```powershell
 pytest tests -v
 ```
 
-The test suite validates:
-- Temporal feature generation and cyclical sine/cosine encoders.
-- Autoregressive lag and rolling window calculation without target leakage.
-- Weather feature alignment with missing value tolerance.
-- Chronological train/test split.
-- `HistGradientBoostingRegressor` model persistence and non-negative output bounds.
-- Multi-step 24-hour recursive feature creation.
-- Strict minimum data protection gates.
-- FastAPI endpoints with mocked and controlled test DataFrames.
+### 3. Start API Service
+```powershell
+uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+```
+Interactive OpenAPI documentation will be accessible at: `http://localhost:8001/docs`.
