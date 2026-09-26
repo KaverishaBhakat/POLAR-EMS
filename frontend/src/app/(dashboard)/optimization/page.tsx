@@ -61,6 +61,13 @@ export default function OptimizationPage() {
             Optimal dispatch strategy for generators, batteries and renewable resources | {station?.name}
           </p>
         </div>
+
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded bg-[#0A1828] border border-emerald-500/40 text-emerald-300 font-mono">
+            <Sparkles className="w-3 h-3 text-emerald-400" />
+            <span>Optimization inputs: demonstration scenario</span>
+          </span>
+        </div>
       </div>
 
       {/* Interactive Solver Execution Runner */}

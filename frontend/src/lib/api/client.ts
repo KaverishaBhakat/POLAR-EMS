@@ -846,10 +846,32 @@ export const apiClient = {
   async getOptimizationResult(stationId: StationId): Promise<{
     metrics: OptimizationMetrics;
     dispatchSchedule: HourlyDispatchPoint[];
+    source?: string;
+    isDemonstrationScenario?: boolean;
+    recommendation?: string;
   }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/optimization/${stationId}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.data && result.data.metrics && result.data.dispatchSchedule) {
+          return {
+            metrics: result.data.metrics,
+            dispatchSchedule: result.data.dispatchSchedule,
+            source: result.data.source || 'OR_TOOLS_MILP',
+            isDemonstrationScenario: result.data.isDemonstrationScenario ?? true,
+            recommendation: result.data.recommendation,
+          };
+        }
+      }
+    } catch {
+      // Fallback gracefully if microservice is offline
+    }
     return {
       metrics: OPTIMIZATION_METRICS[stationId] || OPTIMIZATION_METRICS.maitri,
       dispatchSchedule: generateDispatchSchedule(stationId),
+      source: 'MOCK_FALLBACK',
+      isDemonstrationScenario: true,
     };
   },
 
@@ -857,19 +879,39 @@ export const apiClient = {
     metrics: OptimizationMetrics;
     dispatchSchedule: HourlyDispatchPoint[];
     message: string;
+    source?: string;
+    isDemonstrationScenario?: boolean;
   }> {
-    // Simulate solver execution time
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    try {
+      const response = await fetch(`${API_BASE_URL}/optimization/${stationId}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.data && result.data.metrics && result.data.dispatchSchedule) {
+          return {
+            metrics: result.data.metrics,
+            dispatchSchedule: result.data.dispatchSchedule,
+            message: result.data.recommendation || 'Optimal dispatch schedule computed with OR-Tools MILP solver. All critical loads guaranteed.',
+            source: result.data.source || 'OR_TOOLS_MILP',
+            isDemonstrationScenario: result.data.isDemonstrationScenario ?? true,
+          };
+        }
+      }
+    } catch {
+      // Fallback
+    }
+
     const base = OPTIMIZATION_METRICS[stationId] || OPTIMIZATION_METRICS.maitri;
     return {
       metrics: {
         ...base,
         fuelSavedL: base.fuelSavedL + Math.round((Math.random() * 8 - 4)),
-        solverExecutionTimeMs: Math.round(380 + Math.random() * 50),
+        solverExecutionTimeMs: Math.round(120 + Math.random() * 30),
         solverStatus: 'OPTIMAL',
       },
       dispatchSchedule: generateDispatchSchedule(stationId),
       message: 'Optimal dispatch schedule computed with MILP solver. All critical loads guaranteed.',
+      source: 'MOCK_FALLBACK',
+      isDemonstrationScenario: true,
     };
   },
 

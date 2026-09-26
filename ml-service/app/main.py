@@ -351,3 +351,54 @@ def get_model_status():
         "energy": energy_status,
         "renewable": renewable_status
     }
+
+
+# 24-Hour MILP Energy Dispatch Optimization Endpoint
+@app.get("/optimization/dispatch/{station_id}", tags=["Optimization"])
+def get_optimization_dispatch(
+    station_id: str,
+    horizon_hours: int = 24,
+    initial_soc: float = 75.0,
+):
+    """
+    Computes 24-Hour MILP optimal generator unit commitment and battery dispatch
+    using Google OR-Tools based on demonstration scenario inputs.
+    """
+    from app.optimization.dispatcher import (
+        build_demonstration_scenario_inputs,
+        optimize_24h_dispatch
+    )
+
+    station = resolve_station(station_id)
+    station_code = station["code"] if station else station_id.upper()
+
+    # 1. Build demonstration scenario inputs
+    scenario_inputs = build_demonstration_scenario_inputs(
+        station_identifier=station_code,
+        horizon_hours=horizon_hours,
+        initial_soc=initial_soc,
+    )
+
+    # 2. Run OR-Tools MILP optimizer
+    result = optimize_24h_dispatch(
+        demand=scenario_inputs["demand"],
+        solar=scenario_inputs["solar"],
+        wind=scenario_inputs["wind"],
+        initial_soc=scenario_inputs["initialSOC"],
+        station_id=station_code,
+        timestamps=scenario_inputs["timestamps"],
+        hours_labels=scenario_inputs["hours"],
+    )
+
+    if result.get("status") == "ERROR":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result.get("message", "Optimization execution failed.")
+        )
+    elif result.get("status") == "INFEASIBLE":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=result.get("message", "Optimization problem is infeasible.")
+        )
+
+    return result
