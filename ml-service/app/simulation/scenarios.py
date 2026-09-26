@@ -67,7 +67,44 @@ SCENARIO_REGISTRY: Dict[str, ScenarioMetadata] = {
             },
             "critical_load_protection": True
         }
-    )
+    ),
+    ScenarioId.GENERATOR_FAILURE.value: ScenarioMetadata(
+        scenario_id=ScenarioId.GENERATOR_FAILURE.value,
+        scenario_type="GENERATOR_FAILURE",
+        scenario_name="Primary Generator Failure",
+        description="Simulates the unavailability of the primary diesel generator for the full 24-hour horizon.",
+        category="RESILIENCE",
+        is_active=True,
+        provenance={
+            "scenario_type": "GENERATOR_FAILURE",
+            "data_classification": "SCENARIO",
+            "failed_generator_id": "GEN-01",
+            "failed_generator_name": "Primary Genset (100 kW)",
+            "failed_generator_rating_kw": 100.0,
+            "failure_rationale": "GEN-01 represents the primary and largest single generator unit (100 kW vs 80 kW GEN-02). Its total outage represents the single most severe N-1 generation contingency for the Maitri microgrid.",
+            "pv_source": "Historical December climatology scenario (100 kW capacity, PR=0.80).",
+            "wind_source": "Maitri 2019 observed wind speed converted to modeled turbine power via scenario power curve.",
+            "demand_source": "Deterministic scenario demand model (base 65 kW, diurnal 55.2–83.6 kW).",
+            "battery_source": "Scenario initial SOC (75.0%) and physical limits [20%, 95%].",
+            "generator_source": "Scenario generator fleet with GEN-01 forced offline and GEN-02 (80 kW) remaining operational.",
+            "is_demonstration_scenario": True,
+            "disclaimer": "All Generator Failure results are modeled what-if results and are not measurements of an actual Maitri generator failure."
+        },
+        assumptions={
+            "failed_generator_id": "GEN-01",
+            "g1_available": False,
+            "g2_available": True,
+            "generator_availability": {
+                "GEN-01": False,
+                "GEN-02": True
+            },
+            "pv_availability_multiplier": 1.0,
+            "wind_availability_multiplier": 1.0,
+            "demand_multiplier": 1.0,
+            "initial_soc_override": None,
+            "critical_load_protection": True
+        }
+    ),
 }
 
 

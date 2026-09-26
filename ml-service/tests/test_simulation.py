@@ -23,7 +23,7 @@ client = TestClient(app)
 def test_scenario_registry_contains_polar_night():
     """Verify Polar Night is properly registered in master registry."""
     scenarios = get_registered_scenarios()
-    assert len(scenarios) >= 1
+    assert len(scenarios) >= 2
     scen_ids = [s["scenario_id"] for s in scenarios]
     assert "polar-night" in scen_ids
 
@@ -34,6 +34,25 @@ def test_scenario_registry_contains_polar_night():
     assert scen.category == "ENVIRONMENTAL_STRESS"
     assert scen.provenance["data_classification"] == "SCENARIO"
     assert scen.provenance["is_demonstration_scenario"] is True
+
+
+def test_scenario_registry_contains_generator_failure():
+    """Verify Generator Failure is properly registered with required metadata and provenance."""
+    scenarios = get_registered_scenarios()
+    scen_ids = [s["scenario_id"] for s in scenarios]
+    assert "generator-failure" in scen_ids
+
+    scen = get_scenario_definition("generator-failure")
+    assert scen is not None
+    assert scen.scenario_name == "Primary Generator Failure"
+    assert scen.scenario_type == "GENERATOR_FAILURE"
+    assert scen.category == "RESILIENCE"
+    assert scen.provenance["data_classification"] == "SCENARIO"
+    assert scen.provenance["failed_generator_id"] == "GEN-01"
+    assert scen.provenance["failed_generator_rating_kw"] == 100.0
+    assert scen.assumptions["g1_available"] is False
+    assert scen.assumptions["g2_available"] is True
+    assert scen.assumptions["critical_load_protection"] is True
 
 
 # =========================================================================
@@ -83,7 +102,7 @@ def test_polar_night_pv_forced_to_zero_and_inputs_preserved():
 
 
 def test_polar_night_resilience_metrics():
-    """Verify resilience metrics calculations and transparent status rules."""
+    """Verify resilience metrics calculations and transparent status rules for Polar Night."""
     sim_result = run_resilience_simulation(station_id="MAITRI", scenario_id="polar-night", horizon_hours=24)
     metrics = sim_result["resilienceMetrics"]
 
@@ -152,18 +171,166 @@ def test_polar_night_deterministic_repeatability():
 
 
 # =========================================================================
-# 3. FastAPI Simulation Endpoint Tests
+# 3. Generator Failure Transformation & Physics Constraints Tests
+# =========================================================================
+
+def test_generator_failure_g1_strictly_zero_and_inputs_preserved():
+    """
+    Validation Test for Generator Failure:
+    1. Failed generator (GEN-01 / G1) output is strictly 0.0 kW for all 24 hours.
+    2. Remaining generator (GEN-02 / G2) is available and operates.
+    3. PV input matches baseline PV.
+    4. Wind input matches baseline wind.
+    5. Demand input matches baseline demand.
+    6. Battery configuration and limits are preserved.
+    7. Critical load remains protected with 0 kWh shedding.
+    """
+    baseline_inputs = build_demonstration_scenario_inputs("MAITRI", horizon_hours=24)
+    sim_result = run_resilience_simulation(station_id="MAITRI", scenario_id="generator-failure", horizon_hours=24)
+
+    assert sim_result["status"] == "SUCCESS"
+    dispatch = sim_result["dispatch"]
+    assert len(dispatch) == 24
+
+    # 1. GEN-01 power is strictly 0.0 kW for every hour
+    for step in dispatch:
+        assert step["generator1Power"] == 0.0, f"GEN-01 produced non-zero power at hour {step['hour']}: {step['generator1Power']}"
+        assert step["generator_output_kW"] == step["generator2Power"]
+
+    # 2. GEN-02 picked up the generator load
+    total_g2 = sum(step["generator2Power"] for step in dispatch)
+    assert total_g2 > 0.0, "Remaining generator GEN-02 produced no power"
+
+    # 3. PV input is preserved and matches baseline
+    sim_pv = [step["pv_available_kW"] for step in dispatch]
+    assert sim_pv == baseline_inputs["solar"]
+
+    # 4. Wind input is preserved and matches baseline
+    sim_wind = [step["wind_available_kW"] for step in dispatch]
+    assert sim_wind == baseline_inputs["wind"]
+
+    # 5. Demand input is preserved and matches baseline
+    sim_demand = [step["load_kW"] for step in dispatch]
+    assert sim_demand == baseline_inputs["demand"]
+
+    # 6. Battery SOC limits respected
+    for step in dispatch:
+        assert 20.0 - 1e-2 <= step["battery_soc_percent"] <= 95.0 + 1e-2
+
+    # 7. Critical load is protected
+    for step in dispatch:
+        assert step["critical_load_kW"] == 42.5
+        assert step["critical_load_shed_kW"] == 0.0
+        assert step["criticalLoadProtected"] is True
+
+
+def test_generator_failure_resilience_metrics():
+    """Verify all 20 required resilience metrics in Generator Failure output."""
+    sim_result = run_resilience_simulation(station_id="MAITRI", scenario_id="generator-failure", horizon_hours=24)
+    metrics = sim_result["resilienceMetrics"]
+
+    assert metrics["scenario_id"] == "generator-failure"
+    assert metrics["scenario_type"] == "GENERATOR_FAILURE"
+    assert metrics["data_classification"] == "SCENARIO"
+    assert metrics["is_demonstration_scenario"] is True
+    assert metrics["failed_generator_identifier"] == "GEN-01"
+    assert metrics["failed_generator_energy_kwh"] == 0.0
+    assert metrics["remaining_generator_energy_kwh"] > 0.0
+    assert metrics["remaining_generator_runtime_hours"] > 0
+    assert math.isclose(metrics["total_generator_energy_kwh"], metrics["remaining_generator_energy_kwh"], abs_tol=0.1)
+    assert metrics["total_pv_available_kwh"] > 0.0
+    assert metrics["total_wind_available_kwh"] > 0.0
+    assert metrics["total_demand_kwh"] > 1000.0
+    assert metrics["estimated_fuel_liters"] > 0.0
+    assert metrics["total_critical_load_shed_kwh"] == 0.0
+    assert metrics["critical_load_reliability_percent"] == 100.0
+    assert metrics["resilience_status"] == "PROTECTED"
+    assert metrics["critical_load_status"] == "PROTECTED"
+
+
+def test_generator_failure_baseline_comparison():
+    """Verify baseline comparison table under Generator Failure."""
+    sim_result = run_resilience_simulation(station_id="MAITRI", scenario_id="generator-failure", horizon_hours=24)
+    comp = sim_result["comparison"]
+
+    # Failed generator comparison: -100%
+    failed_comp = comp["failed_generator_energy_kwh"]
+    assert failed_comp["baseline"] > 0.0
+    assert failed_comp["scenario"] == 0.0
+    assert failed_comp["percent_delta"] == -100.0
+
+    # Remaining generator comparison: G2 takes over
+    rem_comp = comp["remaining_generator_energy_kwh"]
+    assert rem_comp["baseline"] == 0.0
+    assert rem_comp["scenario"] > 0.0
+
+    # Fuel comparison: G2 has slightly higher slope (0.25 vs 0.23 L/kWh), so fuel increases moderately
+    fuel_comp = comp["fuel_consumption_liters"]
+    assert fuel_comp["scenario"] > 0.0
+    assert fuel_comp["baseline"] > 0.0
+
+    # Renewables and demand unchanged
+    assert comp["pv_available_kwh"]["absolute_delta"] == 0.0
+    assert comp["wind_available_kwh"]["absolute_delta"] == 0.0
+    assert comp["critical_load_shed_kwh"]["scenario"] == 0.0
+    assert comp["critical_load_reliability_percent"]["scenario"] == 100.0
+
+
+def test_generator_failure_deterministic_repeatability():
+    """Verify running Generator Failure simulation twice produces strictly identical results."""
+    run1 = run_resilience_simulation(station_id="MAITRI", scenario_id="generator-failure", horizon_hours=24)
+    run2 = run_resilience_simulation(station_id="MAITRI", scenario_id="generator-failure", horizon_hours=24)
+
+    assert run1["objectiveValue"] == run2["objectiveValue"]
+    assert run1["resilienceMetrics"] == run2["resilienceMetrics"]
+    assert run1["comparison"] == run2["comparison"]
+    assert len(run1["dispatch"]) == len(run2["dispatch"]) == 24
+
+
+def test_generator_failure_insufficient_capacity_edge_case():
+    """
+    Edge Case Test (Case B):
+    When extreme demand exceeds the maximum remaining microgrid capacity (GEN-02 80 kW + Battery 80 kW + Renewables),
+    verify the optimizer uses flexible load shedding, respects the critical load floor, and reports status.
+    """
+    # Create an extreme demand profile (e.g., 250 kW per hour)
+    extreme_demand = [250.0] * 24
+    zero_solar = [0.0] * 24
+    low_wind = [10.0] * 24
+
+    result = optimize_24h_dispatch(
+        demand=extreme_demand,
+        solar=zero_solar,
+        wind=low_wind,
+        initial_soc=50.0,
+        station_id="MAITRI",
+        critical_load_kw=42.5,
+        g1_available=False,
+        g2_available=True,
+    )
+
+    assert result["status"] == "SUCCESS"
+    assert result["g1_available" if "g1_available" in result else "totalFlexibleLoadShed"] > 0.0
+    # GEN-01 must still be strictly 0
+    for pt in result["dispatch"]:
+        assert pt["generator1Power"] == 0.0
+        assert pt["critical_load_kW"] == 42.5
+
+
+# =========================================================================
+# 4. FastAPI Simulation Endpoint Tests
 # =========================================================================
 
 def test_api_get_simulation_scenarios():
-    """Test GET /simulation/scenarios endpoint returns active scenario list."""
+    """Test GET /simulation/scenarios endpoint returns active scenario list containing both scenarios."""
     response = client.get("/simulation/scenarios")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "SUCCESS"
-    assert data["count"] >= 1
+    assert data["count"] >= 2
     scen_ids = [s["scenario_id"] for s in data["scenarios"]]
     assert "polar-night" in scen_ids
+    assert "generator-failure" in scen_ids
 
 
 def test_api_get_simulation_run_polar_night():
@@ -180,6 +347,25 @@ def test_api_get_simulation_run_polar_night():
     assert len(data["dispatch"]) == 24
     assert "comparison" in data
     assert "recommendation" in data
+
+
+def test_api_get_simulation_run_generator_failure():
+    """Test GET /simulation/run/MAITRI/generator-failure endpoint executes successfully."""
+    response = client.get("/simulation/run/MAITRI/generator-failure?horizon_hours=24")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "SUCCESS"
+    assert data["stationId"] == "MAITRI"
+    assert data["horizonHours"] == 24
+    assert data["scenario"]["scenario_id"] == "generator-failure"
+    assert data["resilienceMetrics"]["resilience_status"] == "PROTECTED"
+    assert data["resilienceMetrics"]["failed_generator_identifier"] == "GEN-01"
+    assert data["resilienceMetrics"]["failed_generator_energy_kwh"] == 0.0
+    assert data["resilienceMetrics"]["remaining_generator_energy_kwh"] > 0.0
+    assert len(data["dispatch"]) == 24
+    assert "comparison" in data
+    assert "recommendation" in data
+    assert "Primary Generator Failure" in data["recommendation"]
 
 
 def test_api_simulation_unknown_scenario_returns_404():

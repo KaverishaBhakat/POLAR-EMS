@@ -78,6 +78,8 @@ def run_resilience_simulation(
     # 3. Apply Scenario Transformations
     scenario_inputs = copy.deepcopy(baseline_inputs)
     meta = dict(scenario_inputs.get("scenarioMetadata", {}))
+    g1_avail = True
+    g2_avail = True
 
     if norm_scenario_id == ScenarioId.POLAR_NIGHT.value:
         # Polar Night Transformation: Solar PV forced to 0.0 kW for all 24 hours
@@ -93,6 +95,22 @@ def run_resilience_simulation(
             "and primary diesel unit commitment."
         )
 
+    elif norm_scenario_id == ScenarioId.GENERATOR_FAILURE.value:
+        # Generator Failure Transformation: Primary Generator GEN-01 (100 kW) forced offline for all 24 hours
+        g1_avail = False
+        g2_avail = True
+
+        meta["scenario_type"] = "GENERATOR_FAILURE"
+        meta["scenario_id"] = ScenarioId.GENERATOR_FAILURE.value
+        meta["failed_generator_id"] = "GEN-01"
+        meta["failed_generator_name"] = "Primary Genset (100 kW)"
+        meta["failed_generator_rating_kw"] = 100.0
+        meta["remaining_generators"] = ["GEN-02 (80 kW)"]
+        meta["source_description"] = (
+            "Primary Generator Failure What-If Simulation: GEN-01 (100 kW) offline for 24 hours. "
+            "Remaining GEN-02 (80 kW), solar PV, wind turbine, and BESS maintain microgrid stability."
+        )
+
     scenario_inputs["scenarioMetadata"] = meta
 
     # 4. Run Scenario Optimization
@@ -106,6 +124,8 @@ def run_resilience_simulation(
         hours_labels=scenario_inputs["hours"],
         scenario_metadata=scenario_inputs.get("scenarioMetadata"),
         critical_load_kw=scenario_inputs.get("criticalLoadKW", 42.5),
+        g1_available=g1_avail,
+        g2_available=g2_avail,
     )
 
     if scenario_result.get("status") not in ["SUCCESS"]:
@@ -113,7 +133,7 @@ def run_resilience_simulation(
             "status": "ERROR",
             "message": f"Scenario optimization failed: {scenario_result.get('message')}",
             "stationId": station_id.upper(),
-            "scenario": scenario_def.dict(),
+            "scenario": scenario_def.model_dump() if hasattr(scenario_def, "model_dump") else scenario_def.dict(),
         }
 
     # 5. Calculate Standard Resilience Metrics
@@ -123,6 +143,13 @@ def run_resilience_simulation(
     total_renew_avail = round(total_pv_avail + total_wind_avail, 2)
     total_renew_used = float(scenario_result.get("totalRenewableUsed", 0.0))
     total_gen_energy = float(scenario_result.get("totalGeneratorEnergy", 0.0))
+    
+    # Generator breakdown
+    dispatch_list = scenario_result.get("dispatch", [])
+    g1_energy = round(float(sum(pt.get("generator1Power", 0.0) for pt in dispatch_list)), 1)
+    g2_energy = round(float(sum(pt.get("generator2Power", 0.0) for pt in dispatch_list)), 1)
+    g2_runtime_hours = sum(1 for pt in dispatch_list if pt.get("generator2Power", 0.0) > 0.01)
+
     total_batt_chg = float(scenario_result.get("totalBatteryCharge", 0.0))
     total_batt_dis = float(scenario_result.get("totalBatteryDischarge", 0.0))
     fuel_liters = float(scenario_result.get("totalEstimatedFuel", 0.0))
@@ -138,6 +165,11 @@ def run_resilience_simulation(
     critical_load_status = "PROTECTED" if crit_shed <= 1e-3 else "AT_RISK"
     resilience_status = critical_load_status
 
+    failed_gen_id = "GEN-01" if norm_scenario_id == ScenarioId.GENERATOR_FAILURE.value else None
+    failed_gen_energy = g1_energy if norm_scenario_id == ScenarioId.GENERATOR_FAILURE.value else 0.0
+    remaining_gen_energy = g2_energy if norm_scenario_id == ScenarioId.GENERATOR_FAILURE.value else total_gen_energy
+    remaining_gen_runtime = g2_runtime_hours if norm_scenario_id == ScenarioId.GENERATOR_FAILURE.value else gen_hours
+
     resilience_metrics = {
         "scenario_name": scenario_def.scenario_name,
         "scenario_id": scenario_def.scenario_id,
@@ -146,6 +178,10 @@ def run_resilience_simulation(
         "is_demonstration_scenario": True,
         "resilience_status": resilience_status,
         "critical_load_status": critical_load_status,
+        "failed_generator_identifier": failed_gen_id,
+        "failed_generator_energy_kwh": failed_gen_energy,
+        "remaining_generator_energy_kwh": remaining_gen_energy,
+        "remaining_generator_runtime_hours": remaining_gen_runtime,
         "total_demand_kwh": total_demand_kwh,
         "total_renewable_available_kwh": total_renew_avail,
         "total_renewable_used_kwh": total_renew_used,
@@ -166,14 +202,22 @@ def run_resilience_simulation(
     # 6. Side-by-Side Comparison against Baseline
     b_fuel = float(baseline_result.get("totalEstimatedFuel", 0.0))
     b_gen = float(baseline_result.get("totalGeneratorEnergy", 0.0))
+    b_dispatch = baseline_result.get("dispatch", [])
+    b_g1_energy = round(float(sum(pt.get("generator1Power", 0.0) for pt in b_dispatch)), 2)
+    b_g2_energy = round(float(sum(pt.get("generator2Power", 0.0) for pt in b_dispatch)), 2)
     b_dis = float(baseline_result.get("totalBatteryDischarge", 0.0))
     b_chg = float(baseline_result.get("totalBatteryCharge", 0.0))
+    b_min_soc = float(baseline_result.get("minimumBatterySOC", 20.0))
+    b_max_soc = float(baseline_result.get("maximumBatterySOC", 95.0))
     b_renew = float(baseline_result.get("totalRenewableGenerated", 0.0))
+    b_renew_util = float(baseline_result.get("renewableUtilizationPercent", 100.0))
     b_pv = float(baseline_result.get("totalPVAvailableKWh", 0.0))
     b_wind = round(float(sum(baseline_inputs["wind"])), 2)
     b_shed = float(baseline_result.get("criticalLoadShedTotalKWh", 0.0))
     b_rel = float(baseline_result.get("criticalLoadReliabilityPercent", 100.0))
     b_gen_hours = int(baseline_result.get("generatorCommittedHours", 0))
+    b_obj = float(baseline_result.get("objectiveValue", 0.0))
+    scen_obj = float(scenario_result.get("objectiveValue", 0.0))
 
     def _calc_pct_delta(scen_val: float, base_val: float) -> Optional[float]:
         if abs(base_val) > 1e-4:
@@ -193,6 +237,18 @@ def run_resilience_simulation(
             "absolute_delta": round(total_gen_energy - b_gen, 2),
             "percent_delta": _calc_pct_delta(total_gen_energy, b_gen),
         },
+        "failed_generator_energy_kwh": {
+            "baseline": b_g1_energy if norm_scenario_id == ScenarioId.GENERATOR_FAILURE.value else 0.0,
+            "scenario": g1_energy if norm_scenario_id == ScenarioId.GENERATOR_FAILURE.value else 0.0,
+            "absolute_delta": round((g1_energy - b_g1_energy) if norm_scenario_id == ScenarioId.GENERATOR_FAILURE.value else 0.0, 2),
+            "percent_delta": -100.0 if (norm_scenario_id == ScenarioId.GENERATOR_FAILURE.value and b_g1_energy > 0) else 0.0,
+        },
+        "remaining_generator_energy_kwh": {
+            "baseline": b_g2_energy if norm_scenario_id == ScenarioId.GENERATOR_FAILURE.value else b_gen,
+            "scenario": g2_energy if norm_scenario_id == ScenarioId.GENERATOR_FAILURE.value else total_gen_energy,
+            "absolute_delta": round((g2_energy - b_g2_energy) if norm_scenario_id == ScenarioId.GENERATOR_FAILURE.value else (total_gen_energy - b_gen), 2),
+            "percent_delta": _calc_pct_delta(g2_energy, b_g2_energy) if norm_scenario_id == ScenarioId.GENERATOR_FAILURE.value else _calc_pct_delta(total_gen_energy, b_gen),
+        },
         "generator_runtime_hours": {
             "baseline": b_gen_hours,
             "scenario": gen_hours,
@@ -210,6 +266,18 @@ def run_resilience_simulation(
             "scenario": total_batt_chg,
             "absolute_delta": round(total_batt_chg - b_chg, 2),
             "percent_delta": _calc_pct_delta(total_batt_chg, b_chg),
+        },
+        "minimum_battery_soc_percent": {
+            "baseline": b_min_soc,
+            "scenario": min_soc,
+            "absolute_delta": round(min_soc - b_min_soc, 1),
+            "percent_delta": _calc_pct_delta(min_soc, b_min_soc),
+        },
+        "maximum_battery_soc_percent": {
+            "baseline": b_max_soc,
+            "scenario": max_soc,
+            "absolute_delta": round(max_soc - b_max_soc, 1),
+            "percent_delta": _calc_pct_delta(max_soc, b_max_soc),
         },
         "pv_available_kwh": {
             "baseline": b_pv,
@@ -229,6 +297,12 @@ def run_resilience_simulation(
             "absolute_delta": round(total_renew_avail - b_renew, 2),
             "percent_delta": _calc_pct_delta(total_renew_avail, b_renew),
         },
+        "renewable_utilization_percent": {
+            "baseline": b_renew_util,
+            "scenario": renew_util_pct,
+            "absolute_delta": round(renew_util_pct - b_renew_util, 1),
+            "percent_delta": _calc_pct_delta(renew_util_pct, b_renew_util),
+        },
         "critical_load_shed_kwh": {
             "baseline": b_shed,
             "scenario": crit_shed,
@@ -240,8 +314,32 @@ def run_resilience_simulation(
             "scenario": crit_reliability,
             "absolute_delta": round(crit_reliability - b_rel, 1),
             "percent_delta": _calc_pct_delta(crit_reliability, b_rel),
+        },
+        "objective_value": {
+            "baseline": b_obj,
+            "scenario": scen_obj,
+            "absolute_delta": round(scen_obj - b_obj, 2),
+            "percent_delta": _calc_pct_delta(scen_obj, b_obj),
         }
     }
+
+    # Formatted recommendation / conclusion based on scenario type
+    if norm_scenario_id == ScenarioId.GENERATOR_FAILURE.value:
+        recommendation = (
+            f"Under the modeled Primary Generator Failure scenario (GEN-01 100 kW offline for 24 hours), "
+            f"the microgrid remains {critical_load_status} with {crit_reliability}% critical-load reliability. "
+            f"Remaining generator GEN-02 (80 kW) supplies {remaining_gen_energy:.1f} kWh across {remaining_gen_runtime} committed runtime hours "
+            f"with estimated fuel consumption of {fuel_liters:.1f} L (compared to {b_fuel:.1f} L in baseline). "
+            f"Solar PV ({total_pv_avail:.1f} kWh) and wind generation ({total_wind_avail:.1f} kWh) with BESS buffer "
+            f"prevent any critical life-support load shedding."
+        )
+    else:
+        recommendation = (
+            f"Under the modeled {scenario_def.scenario_name} scenario with 0 kW solar generation, "
+            f"the microgrid remains {critical_load_status} with {crit_reliability}% critical-load reliability. "
+            f"Diesel generator fuel consumption increases from {b_fuel:.1f} L to {fuel_liters:.1f} L "
+            f"(+{fuel_liters - b_fuel:.1f} L) across {gen_hours} committed runtime hours to compensate for the solar deficit."
+        )
 
     return {
         "status": "SUCCESS",
@@ -254,10 +352,5 @@ def run_resilience_simulation(
         "dispatch": scenario_result.get("dispatch", []),
         "objectiveValue": scenario_result.get("objectiveValue"),
         "solverStatus": scenario_result.get("solverStatus"),
-        "recommendation": (
-            f"Under the modeled {scenario_def.scenario_name} scenario with 0 kW solar generation, "
-            f"the microgrid remains {critical_load_status} with {crit_reliability}% critical-load reliability. "
-            f"Diesel generator fuel consumption increases from {b_fuel:.1f} L to {fuel_liters:.1f} L "
-            f"(+{fuel_liters - b_fuel:.1f} L) across {gen_hours} committed runtime hours to compensate for the solar deficit."
-        )
+        "recommendation": recommendation,
     }

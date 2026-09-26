@@ -50,9 +50,10 @@ def execute_resilience_simulation(
     # Validate scenario existence
     scenario_def = get_scenario_definition(scenario_id)
     if not scenario_def:
+        available_ids = [s["scenario_id"] for s in get_registered_scenarios()]
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Unknown or unsupported simulation scenario '{scenario_id}'. Available: ['polar-night']"
+            detail=f"Unknown or unsupported simulation scenario '{scenario_id}'. Available: {available_ids}"
         )
 
     result = run_resilience_simulation(

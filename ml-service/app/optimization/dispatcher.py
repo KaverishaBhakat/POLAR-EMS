@@ -202,6 +202,8 @@ def optimize_24h_dispatch(
     hours_labels: Optional[List[str]] = None,
     scenario_metadata: Optional[Dict[str, Any]] = None,
     critical_load_kw: float = 42.5,
+    g1_available: bool = True,
+    g2_available: bool = True,
 ) -> Dict[str, Any]:
     """
     Solves the 24-Hour Microgrid Unit Commitment & Economic Dispatch MILP using OR-Tools.
@@ -209,7 +211,7 @@ def optimize_24h_dispatch(
     Explicitly accounts for:
     - Modeled PV generation availability (kW)
     - Wind generation availability (kW)
-    - Generator unit commitment (G1: 100 kW, G2: 80 kW)
+    - Generator unit commitment (G1: 100 kW, G2: 80 kW) with availability controls
     - Battery energy storage (350 kWh, 20%-95% SOC, 80 kW max charge/discharge)
     - Non-sheddable critical life-support load (42.5 kW)
     """
@@ -272,10 +274,10 @@ def optimize_24h_dispatch(
 
     # Decision Variables
     u1 = [solver.BoolVar(f"u1_{t}") for t in range(horizon)]
-    p1 = [solver.NumVar(0.0, G1_CAP, f"p1_{t}") for t in range(horizon)]
+    p1 = [solver.NumVar(0.0, G1_CAP if g1_available else 0.0, f"p1_{t}") for t in range(horizon)]
 
     u2 = [solver.BoolVar(f"u2_{t}") for t in range(horizon)]
-    p2 = [solver.NumVar(0.0, G2_CAP, f"p2_{t}") for t in range(horizon)]
+    p2 = [solver.NumVar(0.0, G2_CAP if g2_available else 0.0, f"p2_{t}") for t in range(horizon)]
 
     p_chg = [solver.NumVar(0.0, BATT_MAX_POWER, f"p_chg_{t}") for t in range(horizon)]
     p_dis = [solver.NumVar(0.0, BATT_MAX_POWER, f"p_dis_{t}") for t in range(horizon)]
@@ -291,13 +293,21 @@ def optimize_24h_dispatch(
         s_t = max(0.0, float(solar[t])) if not np.isnan(solar[t]) else 0.0
         w_t = max(0.0, float(wind[t])) if not np.isnan(wind[t]) else 0.0
 
-        # 1. Generator 1 limits
-        solver.Add(p1[t] >= u1[t] * G1_MIN)
-        solver.Add(p1[t] <= u1[t] * G1_CAP)
+        # 1. Generator 1 limits (if unavailable: commitment=0 and power=0)
+        if g1_available:
+            solver.Add(p1[t] >= u1[t] * G1_MIN)
+            solver.Add(p1[t] <= u1[t] * G1_CAP)
+        else:
+            solver.Add(u1[t] == 0)
+            solver.Add(p1[t] == 0.0)
 
-        # 2. Generator 2 limits
-        solver.Add(p2[t] >= u2[t] * G2_MIN)
-        solver.Add(p2[t] <= u2[t] * G2_CAP)
+        # 2. Generator 2 limits (if unavailable: commitment=0 and power=0)
+        if g2_available:
+            solver.Add(p2[t] >= u2[t] * G2_MIN)
+            solver.Add(p2[t] <= u2[t] * G2_CAP)
+        else:
+            solver.Add(u2[t] == 0)
+            solver.Add(p2[t] == 0.0)
 
         # 3. Renewable curtailment bounded by individual generation availability
         solver.Add(p_pv_curt[t] <= s_t)
