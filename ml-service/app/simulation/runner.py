@@ -10,6 +10,7 @@ import logging
 from typing import Dict, Any, Optional
 import numpy as np
 
+from app.models.wind_model import wind_speed_to_power
 from app.optimization.dispatcher import (
     build_demonstration_scenario_inputs,
     optimize_24h_dispatch,
@@ -44,7 +45,7 @@ def run_resilience_simulation(
     if not scenario_def:
         return {
             "status": "ERROR",
-            "message": f"Unknown or unregistered scenario: '{scenario_id}'. Available: ['polar-night']",
+            "message": f"Unknown or unregistered scenario: '{scenario_id}'. Available: ['polar-night', 'generator-failure', 'low-battery', 'renewable-drop', 'severe-blizzard']",
             "stationId": station_id.upper(),
         }
 
@@ -140,6 +141,40 @@ def run_resilience_simulation(
             "Microgrid relies on remaining 20% renewables, BESS, and generator fleet."
         )
 
+    elif norm_scenario_id == ScenarioId.SEVERE_BLIZZARD.value:
+        # Severe Blizzard Transformation (Compound Polar Weather Stress):
+        # 1. Solar PV reduction: 70% reduction (30% retained)
+        scenario_inputs["solar"] = [round(float(v) * 0.30, 2) for v in baseline_inputs["solar"]]
+        scenario_inputs["pvAvailable"] = scenario_inputs["solar"]
+
+        # 2. Electrical demand surge: 20% increase (thermal / heating demand)
+        scenario_inputs["demand"] = [round(float(v) * 1.20, 1) for v in baseline_inputs["demand"]]
+
+        # 3. Elevated wind speed: 25% increase passed through existing nonlinear turbine power curve
+        base_ws = baseline_inputs.get("windSpeedMS", [6.91] * horizon_hours)
+        blizzard_ws = [round(float(ws) * 1.25, 2) for ws in base_ws]
+        scenario_inputs["windSpeedMS"] = blizzard_ws
+        scenario_inputs["wind"] = [
+            round(float(wind_speed_to_power(ws)["modeled_wind_power_kw"]), 2)
+            for ws in blizzard_ws
+        ]
+
+        meta["scenario_type"] = "SEVERE_BLIZZARD"
+        meta["scenario_id"] = ScenarioId.SEVERE_BLIZZARD.value
+        meta["blizzard_mode"] = "COMPOUND_WEATHER_STRESS"
+        meta["solar_reduction"] = 0.70
+        meta["pv_retention_multiplier"] = 0.30
+        meta["demand_multiplier"] = 1.20
+        meta["wind_speed_multiplier"] = 1.25
+        meta["wind_power_model"] = "existing_maitri_turbine_power_curve"
+        meta["battery_mutation"] = "none"
+        meta["generator_mutation"] = "none"
+        meta["source_description"] = (
+            "Severe Blizzard What-If Simulation: Compound weather stress combining 70% solar PV reduction, "
+            "20% station electrical demand surge (heating/thermal load), and 25% elevated wind speeds evaluated "
+            "through the existing piecewise aerodynamic turbine power curve."
+        )
+
     scenario_inputs["scenarioMetadata"] = meta
 
     # 4. Run Scenario Optimization
@@ -201,6 +236,21 @@ def run_resilience_simulation(
 
     scen_initial_soc = float(scenario_inputs.get("initialSOC", initial_soc))
 
+    # Weather-specific calculations
+    base_ws_vec = baseline_inputs.get("windSpeedMS", [6.91] * horizon_hours)
+    scen_ws_vec = scenario_inputs.get("windSpeedMS", base_ws_vec)
+    base_wg_vec = baseline_inputs.get("wind", [])
+    scen_wg_vec = scenario_inputs.get("wind", [])
+
+    b_avg_ws = round(float(np.mean(base_ws_vec)), 2) if base_ws_vec else 0.0
+    scen_avg_ws = round(float(np.mean(scen_ws_vec)), 2) if scen_ws_vec else 0.0
+    b_max_ws = round(float(np.max(base_ws_vec)), 2) if base_ws_vec else 0.0
+    scen_max_ws = round(float(np.max(scen_ws_vec)), 2) if scen_ws_vec else 0.0
+    b_cutout_hrs = sum(1 for ws in base_ws_vec if ws >= 25.0)
+    scen_cutout_hrs = sum(1 for ws in scen_ws_vec if ws >= 25.0)
+    b_zero_wind_hrs = sum(1 for wg in base_wg_vec if wg <= 1e-3)
+    scen_zero_wind_hrs = sum(1 for wg in scen_wg_vec if wg <= 1e-3)
+
     resilience_metrics = {
         "scenario_name": scenario_def.scenario_name,
         "scenario_id": scenario_def.scenario_id,
@@ -229,9 +279,18 @@ def run_resilience_simulation(
         "total_critical_load_shed_kwh": crit_shed,
         "critical_load_reliability_percent": crit_reliability,
         "renewable_utilization_percent": renew_util_pct,
+        "baseline_average_wind_speed_ms": b_avg_ws,
+        "scenario_average_wind_speed_ms": scen_avg_ws,
+        "baseline_maximum_wind_speed_ms": b_max_ws,
+        "scenario_maximum_wind_speed_ms": scen_max_ws,
+        "baseline_hours_above_cut_out": b_cutout_hrs,
+        "scenario_hours_above_cut_out": scen_cutout_hrs,
+        "baseline_hours_zero_wind_generation": b_zero_wind_hrs,
+        "scenario_hours_zero_wind_generation": scen_zero_wind_hrs,
     }
 
     # 6. Side-by-Side Comparison against Baseline
+    b_demand = round(float(sum(baseline_inputs["demand"])), 2)
     b_fuel = float(baseline_result.get("totalEstimatedFuel", 0.0))
     b_gen = float(baseline_result.get("totalGeneratorEnergy", 0.0))
     b_dispatch = baseline_result.get("dispatch", [])
@@ -258,6 +317,12 @@ def run_resilience_simulation(
         return None
 
     comparison = {
+        "total_demand_kwh": {
+            "baseline": b_demand,
+            "scenario": total_demand_kwh,
+            "absolute_delta": round(total_demand_kwh - b_demand, 2),
+            "percent_delta": _calc_pct_delta(total_demand_kwh, b_demand),
+        },
         "fuel_consumption_liters": {
             "baseline": b_fuel,
             "scenario": fuel_liters,
@@ -342,6 +407,30 @@ def run_resilience_simulation(
             "absolute_delta": round(renew_util_pct - b_renew_util, 1),
             "percent_delta": _calc_pct_delta(renew_util_pct, b_renew_util),
         },
+        "average_wind_speed_ms": {
+            "baseline": b_avg_ws,
+            "scenario": scen_avg_ws,
+            "absolute_delta": round(scen_avg_ws - b_avg_ws, 2),
+            "percent_delta": _calc_pct_delta(scen_avg_ws, b_avg_ws),
+        },
+        "maximum_wind_speed_ms": {
+            "baseline": b_max_ws,
+            "scenario": scen_max_ws,
+            "absolute_delta": round(scen_max_ws - b_max_ws, 2),
+            "percent_delta": _calc_pct_delta(scen_max_ws, b_max_ws),
+        },
+        "hours_above_cut_out": {
+            "baseline": b_cutout_hrs,
+            "scenario": scen_cutout_hrs,
+            "absolute_delta": scen_cutout_hrs - b_cutout_hrs,
+            "percent_delta": _calc_pct_delta(float(scen_cutout_hrs), float(b_cutout_hrs)) if b_cutout_hrs > 0 else 0.0,
+        },
+        "hours_zero_wind_generation": {
+            "baseline": b_zero_wind_hrs,
+            "scenario": scen_zero_wind_hrs,
+            "absolute_delta": scen_zero_wind_hrs - b_zero_wind_hrs,
+            "percent_delta": _calc_pct_delta(float(scen_zero_wind_hrs), float(b_zero_wind_hrs)) if b_zero_wind_hrs > 0 else 0.0,
+        },
         "critical_load_shed_kwh": {
             "baseline": b_shed,
             "scenario": crit_shed,
@@ -387,6 +476,14 @@ def run_resilience_simulation(
             f"Remaining renewable generation ({total_renew_avail:.1f} kWh) is utilized at {renew_util_pct:.1f}% efficiency. "
             f"Primary generator GEN-01 supplies {total_gen_energy:.1f} kWh across {gen_hours} committed runtime hours "
             f"with estimated fuel consumption of {fuel_liters:.1f} L (+{fuel_liters - b_fuel:.1f} L vs baseline) to maintain microgrid equilibrium."
+        )
+    elif norm_scenario_id == ScenarioId.SEVERE_BLIZZARD.value:
+        recommendation = (
+            f"Under the modeled Severe Blizzard scenario (compound stress: 70% solar PV reduction, 20% demand increase, "
+            f"and 25% elevated wind speeds), the microgrid remains {critical_load_status} with {crit_reliability}% critical-load reliability. "
+            f"Elevated wind generation ({total_wind_avail:.1f} kWh vs {b_wind:.1f} kWh baseline) partially offsets the solar loss ({total_pv_avail:.1f} kWh vs {b_pv:.1f} kWh). "
+            f"Primary generator GEN-01 supplies {total_gen_energy:.1f} kWh across {gen_hours} committed runtime hours "
+            f"with estimated fuel consumption of {fuel_liters:.1f} L ({fuel_liters - b_fuel:+.1f} L vs baseline) to safely meet increased station demand ({total_demand_kwh:.1f} kWh)."
         )
     else:
         recommendation = (

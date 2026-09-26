@@ -183,6 +183,52 @@ SCENARIO_REGISTRY: Dict[str, ScenarioMetadata] = {
             "critical_load_protection": True
         }
     ),
+    ScenarioId.SEVERE_BLIZZARD.value: ScenarioMetadata(
+        scenario_id=ScenarioId.SEVERE_BLIZZARD.value,
+        scenario_type="SEVERE_BLIZZARD",
+        scenario_name="Severe Blizzard",
+        description=(
+            "A modeled polar-weather contingency combining reduced solar availability, "
+            "increased station electrical demand, and elevated wind conditions over the 24-hour horizon."
+        ),
+        category="RESILIENCE",
+        is_active=True,
+        provenance={
+            "scenario_type": "SEVERE_BLIZZARD",
+            "data_classification": "SCENARIO",
+            "solar_reduction": 0.70,
+            "demand_multiplier": 1.20,
+            "wind_speed_multiplier": 1.25,
+            "wind_power_model": "existing_maitri_turbine_power_curve",
+            "battery_mutation": "none",
+            "generator_mutation": "none",
+            "pv_source": "Historical December climatology scenario (100 kW baseline capacity, PR=0.80) with 70% solar reduction (30% retained).",
+            "wind_source": "Maitri 2019 observed wind speed multiplied by 1.25 and evaluated through the existing piecewise aerodynamic turbine power curve.",
+            "demand_source": "Deterministic baseline demand increased by 20% to represent severe weather thermal/heating load surge.",
+            "battery_source": "Baseline initial SOC (75.0%) and physical limits [20%, 95%].",
+            "generator_source": "Baseline generator fleet (GEN-01 100 kW, GEN-02 80 kW, both available).",
+            "is_demonstration_scenario": True,
+            "disclaimer": "This is a scenario assumption for resilience testing. It is NOT a claim that a particular blizzard occurred at Maitri during the modeled period."
+        },
+        assumptions={
+            "solar_reduction": 0.70,
+            "pv_retention_multiplier": 0.30,
+            "pv_availability_multiplier": 0.30,
+            "demand_multiplier": 1.20,
+            "wind_speed_multiplier": 1.25,
+            "wind_power_model": "existing_maitri_turbine_power_curve",
+            "battery_mutation": "none",
+            "generator_mutation": "none",
+            "initial_soc_override": None,
+            "g1_available": True,
+            "g2_available": True,
+            "generator_availability": {
+                "GEN-01": True,
+                "GEN-02": True
+            },
+            "critical_load_protection": True
+        }
+    ),
 }
 
 

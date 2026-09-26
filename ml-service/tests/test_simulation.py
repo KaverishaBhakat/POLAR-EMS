@@ -565,21 +565,193 @@ def test_renewable_drop_deterministic_repeatability():
 
 
 # =========================================================================
-# 5. FastAPI Simulation Endpoint Tests
+# 5. Severe Blizzard Transformation & Compound Stress Tests
+# =========================================================================
+
+def test_scenario_registry_contains_severe_blizzard():
+    """Verify Severe Blizzard is properly registered with required metadata, assumptions, and provenance."""
+    scenarios = get_registered_scenarios()
+    scen_ids = [s["scenario_id"] for s in scenarios]
+    assert "severe-blizzard" in scen_ids
+
+    scen = get_scenario_definition("severe-blizzard")
+    assert scen is not None
+    assert scen.scenario_name == "Severe Blizzard"
+    assert scen.scenario_type == "SEVERE_BLIZZARD"
+    assert scen.category == "RESILIENCE"
+    assert scen.provenance["data_classification"] == "SCENARIO"
+    assert scen.provenance["solar_reduction"] == 0.70
+    assert scen.provenance["demand_multiplier"] == 1.20
+    assert scen.provenance["wind_speed_multiplier"] == 1.25
+    assert scen.assumptions["solar_reduction"] == 0.70
+    assert scen.assumptions["pv_retention_multiplier"] == 0.30
+    assert scen.assumptions["demand_multiplier"] == 1.20
+    assert scen.assumptions["wind_speed_multiplier"] == 1.25
+    assert scen.assumptions["g1_available"] is True
+    assert scen.assumptions["g2_available"] is True
+    assert scen.assumptions["critical_load_protection"] is True
+
+
+def test_severe_blizzard_transformations_and_physics_preservation():
+    """
+    Validation Test for Severe Blizzard:
+    1. Solar PV vector is exactly 30% of baseline (70% reduction) for every hour.
+    2. Demand vector is exactly 120% of baseline (+20% thermal surge) for every hour.
+    3. Wind speed vector is exactly 125% of baseline (+25% storm elevation).
+    4. Wind generation vector is derived from passing elevated wind speed through the turbine power curve.
+    5. Normal baseline initial SOC (75.0%) and physical limits [20%, 95%] are preserved.
+    6. Both generators remain available.
+    7. Critical load remains protected with 0 kWh shedding.
+    """
+    from app.models.wind_model import wind_speed_to_power
+
+    baseline_inputs = build_demonstration_scenario_inputs("MAITRI", horizon_hours=24)
+    sim_result = run_resilience_simulation(station_id="MAITRI", scenario_id="severe-blizzard", horizon_hours=24)
+
+    assert sim_result["status"] == "SUCCESS"
+    dispatch = sim_result["dispatch"]
+    assert len(dispatch) == 24
+
+    base_ws = baseline_inputs.get("windSpeedMS", [6.91] * 24)
+
+    for t, step in enumerate(dispatch):
+        # 1. Solar PV is 30% of baseline
+        expected_pv = round(baseline_inputs["solar"][t] * 0.30, 2)
+        assert math.isclose(step["pv_available_kW"], expected_pv, abs_tol=1e-2)
+
+        # 2. Demand is 120% of baseline
+        expected_demand = round(baseline_inputs["demand"][t] * 1.20, 1)
+        assert math.isclose(step["load_kW"], expected_demand, abs_tol=1e-1)
+
+        # 3. Wind speed is 125% of baseline
+        expected_ws = round(base_ws[t] * 1.25, 2)
+        
+        # 4. Wind power comes from existing turbine power curve
+        expected_wp = round(float(wind_speed_to_power(expected_ws)["modeled_wind_power_kw"]), 2)
+        assert math.isclose(step["wind_available_kW"], expected_wp, abs_tol=1e-2)
+
+        # 5. Battery SOC limits respected
+        assert 20.0 - 1e-2 <= step["battery_soc_percent"] <= 95.0 + 1e-2
+
+        # 7. Critical load protected
+        assert step["critical_load_kW"] == 42.5
+        assert step["critical_load_shed_kW"] == 0.0
+        assert step["criticalLoadProtected"] is True
+
+    # 5. Initial SOC is 75.0%
+    assert sim_result["resilienceMetrics"]["initial_battery_soc_percent"] == 75.0
+
+
+def test_severe_blizzard_wind_cut_out_enforcement():
+    """
+    Critical Physics Test:
+    Verify that elevated blizzard wind speed does NOT bypass turbine high-wind cut-out.
+    When a baseline wind speed is below cut-out (e.g. 21.0 m/s < 25.0 m/s)
+    but the blizzard-elevated wind speed exceeds cut-out (21.0 * 1.25 = 26.25 m/s >= 25.0 m/s),
+    the modeled turbine generation must strictly shut down to 0.0 kW (STORM_CUT_OUT).
+    """
+    from app.models.wind_model import wind_speed_to_power
+
+    v_baseline = 21.0  # < 25.0 m/s cut-out -> rated power 45.0 kW
+    v_blizzard = round(v_baseline * 1.25, 2)  # 26.25 m/s >= 25.0 m/s cut-out -> 0.0 kW
+
+    baseline_power_eval = wind_speed_to_power(v_baseline)
+    blizzard_power_eval = wind_speed_to_power(v_blizzard)
+
+    assert baseline_power_eval["is_cut_out"] is False
+    assert baseline_power_eval["is_rated"] is True
+    assert baseline_power_eval["modeled_wind_power_kw"] == 45.0
+
+    assert blizzard_power_eval["is_cut_out"] is True
+    assert blizzard_power_eval["modeled_wind_power_kw"] == 0.0
+    assert blizzard_power_eval["status"] == "STORM_CUT_OUT"
+
+
+def test_severe_blizzard_resilience_metrics():
+    """Verify all standard and weather-specific resilience metrics in Severe Blizzard output."""
+    sim_result = run_resilience_simulation(station_id="MAITRI", scenario_id="severe-blizzard", horizon_hours=24)
+    metrics = sim_result["resilienceMetrics"]
+
+    assert metrics["scenario_id"] == "severe-blizzard"
+    assert metrics["scenario_type"] == "SEVERE_BLIZZARD"
+    assert metrics["data_classification"] == "SCENARIO"
+    assert metrics["is_demonstration_scenario"] is True
+    assert math.isclose(metrics["total_demand_kwh"], 1944.1, abs_tol=0.5)
+    assert math.isclose(metrics["total_pv_available_kwh"], 197.1, abs_tol=0.5)
+    assert math.isclose(metrics["total_wind_available_kwh"], 403.55, abs_tol=1.0)
+    assert metrics["total_generator_energy_kwh"] > 1000.0
+    assert metrics["generator_runtime_hours"] > 10
+    assert metrics["estimated_fuel_liters"] > 250.0
+    assert metrics["total_critical_load_shed_kwh"] == 0.0
+    assert metrics["critical_load_reliability_percent"] == 100.0
+    assert metrics["resilience_status"] == "PROTECTED"
+    assert metrics["critical_load_status"] == "PROTECTED"
+
+    # Weather-specific metrics
+    assert math.isclose(metrics["baseline_average_wind_speed_ms"], 6.90, abs_tol=0.1)
+    assert math.isclose(metrics["scenario_average_wind_speed_ms"], 8.63, abs_tol=0.1)
+    assert math.isclose(metrics["baseline_maximum_wind_speed_ms"], 10.64, abs_tol=0.1)
+    assert math.isclose(metrics["scenario_maximum_wind_speed_ms"], 13.30, abs_tol=0.1)
+    assert metrics["baseline_hours_above_cut_out"] == 0
+    assert metrics["scenario_hours_above_cut_out"] == 0
+    assert metrics["scenario_hours_zero_wind_generation"] <= metrics["baseline_hours_zero_wind_generation"]
+
+
+def test_severe_blizzard_baseline_comparison():
+    """Verify baseline comparison table under Severe Blizzard."""
+    sim_result = run_resilience_simulation(station_id="MAITRI", scenario_id="severe-blizzard", horizon_hours=24)
+    comp = sim_result["comparison"]
+
+    # Demand comparison: +20%
+    assert math.isclose(comp["total_demand_kwh"]["percent_delta"], 20.0, abs_tol=0.1)
+
+    # PV comparison: -70%
+    assert math.isclose(comp["pv_available_kwh"]["percent_delta"], -70.0, abs_tol=0.1)
+
+    # Wind speed comparison: +25%
+    assert math.isclose(comp["average_wind_speed_ms"]["percent_delta"], 25.1, abs_tol=0.2)
+    assert math.isclose(comp["maximum_wind_speed_ms"]["percent_delta"], 25.0, abs_tol=0.2)
+
+    # Wind energy increases due to elevated speeds
+    assert comp["wind_available_kwh"]["scenario"] > comp["wind_available_kwh"]["baseline"]
+
+    # Generator energy and fuel increase to meet 20% demand surge and cover 70% solar loss
+    assert comp["generator_energy_kwh"]["scenario"] > comp["generator_energy_kwh"]["baseline"]
+    assert comp["fuel_consumption_liters"]["scenario"] > comp["fuel_consumption_liters"]["baseline"]
+
+    # Critical load shedding: 0 on both
+    assert comp["critical_load_shed_kwh"]["scenario"] == 0.0
+    assert comp["critical_load_reliability_percent"]["scenario"] == 100.0
+
+
+def test_severe_blizzard_deterministic_repeatability():
+    """Verify running Severe Blizzard simulation twice produces strictly identical results."""
+    run1 = run_resilience_simulation(station_id="MAITRI", scenario_id="severe-blizzard", horizon_hours=24)
+    run2 = run_resilience_simulation(station_id="MAITRI", scenario_id="severe-blizzard", horizon_hours=24)
+
+    assert run1["objectiveValue"] == run2["objectiveValue"]
+    assert run1["resilienceMetrics"] == run2["resilienceMetrics"]
+    assert run1["comparison"] == run2["comparison"]
+    assert len(run1["dispatch"]) == len(run2["dispatch"]) == 24
+
+
+# =========================================================================
+# 6. FastAPI Simulation Endpoint Tests
 # =========================================================================
 
 def test_api_get_simulation_scenarios():
-    """Test GET /simulation/scenarios endpoint returns active scenario list containing all four scenarios."""
+    """Test GET /simulation/scenarios endpoint returns active scenario list containing all five scenarios."""
     response = client.get("/simulation/scenarios")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "SUCCESS"
-    assert data["count"] >= 4
+    assert data["count"] >= 5
     scen_ids = [s["scenario_id"] for s in data["scenarios"]]
     assert "polar-night" in scen_ids
     assert "generator-failure" in scen_ids
     assert "low-battery" in scen_ids
     assert "renewable-drop" in scen_ids
+    assert "severe-blizzard" in scen_ids
 
 
 def test_api_get_simulation_run_polar_night():
@@ -651,7 +823,26 @@ def test_api_get_simulation_run_renewable_drop():
     assert "Renewable Generation Drop" in data["recommendation"]
 
 
+def test_api_get_simulation_run_severe_blizzard():
+    """Test GET /simulation/run/MAITRI/severe-blizzard endpoint executes successfully."""
+    response = client.get("/simulation/run/MAITRI/severe-blizzard?horizon_hours=24")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "SUCCESS"
+    assert data["stationId"] == "MAITRI"
+    assert data["horizonHours"] == 24
+    assert data["scenario"]["scenario_id"] == "severe-blizzard"
+    assert data["resilienceMetrics"]["resilience_status"] == "PROTECTED"
+    assert math.isclose(data["resilienceMetrics"]["total_demand_kwh"], 1944.1, abs_tol=0.5)
+    assert math.isclose(data["resilienceMetrics"]["total_pv_available_kwh"], 197.1, abs_tol=0.5)
+    assert len(data["dispatch"]) == 24
+    assert "comparison" in data
+    assert "recommendation" in data
+    assert "Severe Blizzard" in data["recommendation"]
+
+
 def test_api_simulation_unknown_scenario_returns_404():
     """Test GET /simulation/run/MAITRI/unknown-scenario returns HTTP 404."""
     response = client.get("/simulation/run/MAITRI/non-existent-scenario")
     assert response.status_code == 404
+

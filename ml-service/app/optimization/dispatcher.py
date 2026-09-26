@@ -106,6 +106,7 @@ def build_demonstration_scenario_inputs(
     wind_availability = 0.90
     wind_mode = "SYNTHETIC"
     wind_source = "Synthetic demonstration scenario."
+    wind_speeds: List[float] = []
 
     if station_identifier.upper() == "MAITRI" and os.path.exists(SCENARIO_WIND_CSV) and horizon_hours == 24:
         try:
@@ -116,6 +117,8 @@ def build_demonstration_scenario_inputs(
             df_dec1 = df_wind_all[mask_dec1].sort_values("dt").reset_index(drop=True)
             if len(df_dec1) == 24 and "modeled_wind_power_kw" in df_dec1.columns:
                 wind = [round(float(v), 2) for v in df_dec1["modeled_wind_power_kw"].values]
+                if "wind_speed_ms" in df_dec1.columns:
+                    wind_speeds = [round(float(v), 2) for v in df_dec1["wind_speed_ms"].values]
                 wind_mode = "MAITRI_2019_OBSERVED_WIND_SPEED_MODELED_POWER"
                 wind_source = "Real Maitri 2019 hourly wind-speed observations converted to modeled electrical generation using the POLAR-EMS scenario turbine power curve."
                 maitri_wind_loaded = True
@@ -151,6 +154,7 @@ def build_demonstration_scenario_inputs(
         if not maitri_wind_loaded:
             w_val = round(max(5.0, wind_mean_kw + 10.0 * np.sin(h * 0.4 + 1.2) + 5.0 * np.cos(h * 0.8)), 2)
             wind.append(w_val)
+            wind_speeds.append(round(6.9 + 2.0 * np.sin(h * 0.4), 2))
 
     scenario_metadata = {
         "scenario_type": scenario_type,
@@ -188,6 +192,7 @@ def build_demonstration_scenario_inputs(
         "solar": solar,
         "pvAvailable": solar,
         "wind": wind,
+        "windSpeedMS": wind_speeds if wind_speeds else [6.91] * horizon_hours,
         "criticalLoadKW": 42.5,
     }
 
