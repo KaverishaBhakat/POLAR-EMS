@@ -1,0 +1,188 @@
+"""
+Unit and Integration Tests for POLAR-EMS Simulation & Resilience Engine (Polar Night Scenario).
+Verifies scenario transformations, resilience metrics calculation, comparative baseline accounting,
+FastAPI simulation endpoints, and deterministic repeatability.
+"""
+
+import math
+import pytest
+from fastapi.testclient import TestClient
+
+from app.main import app
+from app.optimization.dispatcher import build_demonstration_scenario_inputs, optimize_24h_dispatch
+from app.simulation.scenarios import get_registered_scenarios, get_scenario_definition, ScenarioId
+from app.simulation.runner import run_resilience_simulation
+
+client = TestClient(app)
+
+
+# =========================================================================
+# 1. Scenario Registry & Metadata Tests
+# =========================================================================
+
+def test_scenario_registry_contains_polar_night():
+    """Verify Polar Night is properly registered in master registry."""
+    scenarios = get_registered_scenarios()
+    assert len(scenarios) >= 1
+    scen_ids = [s["scenario_id"] for s in scenarios]
+    assert "polar-night" in scen_ids
+
+    scen = get_scenario_definition("polar-night")
+    assert scen is not None
+    assert scen.scenario_name == "Polar Night"
+    assert scen.scenario_type == "POLAR_NIGHT"
+    assert scen.category == "ENVIRONMENTAL_STRESS"
+    assert scen.provenance["data_classification"] == "SCENARIO"
+    assert scen.provenance["is_demonstration_scenario"] is True
+
+
+# =========================================================================
+# 2. Polar Night Transformation & Physics Constraints Tests
+# =========================================================================
+
+def test_polar_night_pv_forced_to_zero_and_inputs_preserved():
+    """
+    Validation Test:
+    1. Polar Night PV vector contains 24 zeros.
+    2. Baseline PV input remains unchanged (> 0).
+    3. Wind generation remains identical to baseline.
+    4. Electrical demand remains identical to baseline.
+    5. Initial battery SOC remains identical to baseline.
+    6. Critical-load floor (42.5 kW) remains enabled.
+    """
+    baseline_inputs = build_demonstration_scenario_inputs("MAITRI", horizon_hours=24)
+    sim_result = run_resilience_simulation(station_id="MAITRI", scenario_id="polar-night", horizon_hours=24)
+
+    assert sim_result["status"] == "SUCCESS"
+    dispatch = sim_result["dispatch"]
+    assert len(dispatch) == 24
+
+    # 1. Polar Night PV is 0.0 kW for all 24 hours
+    for step in dispatch:
+        assert step["pv_available_kW"] == 0.0, f"Non-zero PV at hour {step['hour']}: {step['pv_available_kW']}"
+        assert step["pv_used_kW"] == 0.0
+        assert step["pv_curtailed_kW"] == 0.0
+
+    # 2. Baseline PV input remains intact
+    assert sum(baseline_inputs["solar"]) > 0.0, "Baseline PV was mutated to 0 unexpectedly"
+    assert math.isclose(sum(baseline_inputs["solar"]), 657.11, abs_tol=1e-1)
+
+    # 3. Wind generation vector matches baseline
+    sim_wind = [step["wind_available_kW"] for step in dispatch]
+    assert sim_wind == baseline_inputs["wind"], "Wind input was mutated in Polar Night"
+
+    # 4. Demand vector matches baseline
+    sim_demand = [step["load_kW"] for step in dispatch]
+    assert sim_demand == baseline_inputs["demand"], "Demand input was mutated in Polar Night"
+
+    # 5. Critical load protection matches
+    for step in dispatch:
+        assert step["critical_load_kW"] == 42.5
+        assert step["critical_load_shed_kW"] == 0.0
+        assert step["criticalLoadProtected"] is True
+
+
+def test_polar_night_resilience_metrics():
+    """Verify resilience metrics calculations and transparent status rules."""
+    sim_result = run_resilience_simulation(station_id="MAITRI", scenario_id="polar-night", horizon_hours=24)
+    metrics = sim_result["resilienceMetrics"]
+
+    assert metrics["scenario_id"] == "polar-night"
+    assert metrics["scenario_type"] == "POLAR_NIGHT"
+    assert metrics["data_classification"] == "SCENARIO"
+    assert metrics["is_demonstration_scenario"] is True
+    assert metrics["total_pv_available_kwh"] == 0.0
+    assert metrics["total_demand_kwh"] > 1000.0
+    assert metrics["total_wind_available_kwh"] > 0.0
+    assert metrics["total_generator_energy_kwh"] > 0.0
+    assert metrics["generator_runtime_hours"] > 0
+    assert metrics["estimated_fuel_liters"] > 0.0
+    assert metrics["minimum_battery_soc_percent"] >= 20.0 - 1e-2
+    assert metrics["maximum_battery_soc_percent"] <= 95.0 + 1e-2
+
+    # Zero critical load shed -> PROTECTED
+    assert metrics["total_critical_load_shed_kwh"] == 0.0
+    assert metrics["critical_load_reliability_percent"] == 100.0
+    assert metrics["resilience_status"] == "PROTECTED"
+    assert metrics["critical_load_status"] == "PROTECTED"
+
+
+def test_polar_night_baseline_comparison():
+    """Verify comparative metrics table between baseline and Polar Night."""
+    sim_result = run_resilience_simulation(station_id="MAITRI", scenario_id="polar-night", horizon_hours=24)
+    comp = sim_result["comparison"]
+
+    # Fuel comparison: Polar Night must consume more fuel due to zero solar
+    fuel_comp = comp["fuel_consumption_liters"]
+    assert fuel_comp["scenario"] > fuel_comp["baseline"]
+    assert fuel_comp["absolute_delta"] > 0.0
+    assert fuel_comp["percent_delta"] > 0.0
+
+    # Generator energy comparison: Generator produces more energy
+    gen_comp = comp["generator_energy_kwh"]
+    assert gen_comp["scenario"] > gen_comp["baseline"]
+    assert gen_comp["absolute_delta"] > 0.0
+
+    # PV comparison: Scenario PV = 0
+    pv_comp = comp["pv_available_kwh"]
+    assert pv_comp["scenario"] == 0.0
+    assert pv_comp["baseline"] > 0.0
+    assert pv_comp["percent_delta"] == -100.0
+
+    # Wind comparison: Identical
+    wind_comp = comp["wind_available_kwh"]
+    assert wind_comp["scenario"] == wind_comp["baseline"]
+    assert wind_comp["absolute_delta"] == 0.0
+
+    # Critical load shedding: 0 on both
+    shed_comp = comp["critical_load_shed_kwh"]
+    assert shed_comp["baseline"] == 0.0
+    assert shed_comp["scenario"] == 0.0
+
+
+def test_polar_night_deterministic_repeatability():
+    """Verify running Polar Night simulation twice produces strictly identical results."""
+    run1 = run_resilience_simulation(station_id="MAITRI", scenario_id="polar-night", horizon_hours=24)
+    run2 = run_resilience_simulation(station_id="MAITRI", scenario_id="polar-night", horizon_hours=24)
+
+    assert run1["objectiveValue"] == run2["objectiveValue"]
+    assert run1["resilienceMetrics"] == run2["resilienceMetrics"]
+    assert run1["comparison"] == run2["comparison"]
+    assert len(run1["dispatch"]) == len(run2["dispatch"]) == 24
+
+
+# =========================================================================
+# 3. FastAPI Simulation Endpoint Tests
+# =========================================================================
+
+def test_api_get_simulation_scenarios():
+    """Test GET /simulation/scenarios endpoint returns active scenario list."""
+    response = client.get("/simulation/scenarios")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "SUCCESS"
+    assert data["count"] >= 1
+    scen_ids = [s["scenario_id"] for s in data["scenarios"]]
+    assert "polar-night" in scen_ids
+
+
+def test_api_get_simulation_run_polar_night():
+    """Test GET /simulation/run/MAITRI/polar-night endpoint executes successfully."""
+    response = client.get("/simulation/run/MAITRI/polar-night?horizon_hours=24")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "SUCCESS"
+    assert data["stationId"] == "MAITRI"
+    assert data["horizonHours"] == 24
+    assert data["scenario"]["scenario_id"] == "polar-night"
+    assert data["resilienceMetrics"]["resilience_status"] == "PROTECTED"
+    assert data["resilienceMetrics"]["total_pv_available_kwh"] == 0.0
+    assert len(data["dispatch"]) == 24
+    assert "comparison" in data
+    assert "recommendation" in data
+
+
+def test_api_simulation_unknown_scenario_returns_404():
+    """Test GET /simulation/run/MAITRI/unknown-scenario returns HTTP 404."""
+    response = client.get("/simulation/run/MAITRI/non-existent-scenario")
+    assert response.status_code == 404

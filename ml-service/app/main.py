@@ -33,6 +33,7 @@ from app.schemas.forecast import (
 )
 
 from app.api.data_routes import router as data_router
+from app.api.simulation_routes import router as simulation_router
 
 # Configure logging
 logging.basicConfig(
@@ -74,6 +75,7 @@ app.add_middleware(
 
 # Include foundational data pipeline routes (/data/weather, /data/energy, /data/renewable, etc.)
 app.include_router(data_router)
+app.include_router(simulation_router)
 
 
 @app.get("/", tags=["General"])
