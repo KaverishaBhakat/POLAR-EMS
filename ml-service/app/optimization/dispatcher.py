@@ -29,6 +29,27 @@ CONFIG_PV_JSON = os.path.abspath(
         "maitri_pv_config.json"
     )
 )
+# Path to Maitri 2019 Wind Generation dataset
+SCENARIO_WIND_CSV = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "datasets",
+        "processed",
+        "weather",
+        "maitri_2019_wind_power_hourly.csv"
+    )
+)
+CONFIG_WIND_JSON = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "config",
+        "maitri_wind_config.json"
+    )
+)
 
 
 def build_demonstration_scenario_inputs(
@@ -43,12 +64,13 @@ def build_demonstration_scenario_inputs(
     Builds a 24-hour lookahead demonstration scenario input vector
     for polar station demand and renewable co-generation.
     
-    For MAITRI, loads the historical December climatological PV generation scenario
-    (100 kW capacity, PR=0.80) from `maitri_pv_24h_scenario.csv`.
+    For MAITRI:
+    - Loads the historical December climatological PV generation scenario (100 kW capacity, PR=0.80).
+    - Loads the December 1, 2019 real-observed wind generation scenario (50 kW capacity, PR=0.90).
     """
-    now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
-    timestamps = [(now + timedelta(hours=i)).isoformat() for i in range(horizon_hours)]
-    hours_labels = [(now + timedelta(hours=i)).strftime("%H:00") for i in range(horizon_hours)]
+    ref_time = datetime(2026, 12, 1, 0, 0, 0, tzinfo=timezone.utc)
+    timestamps = [(ref_time + timedelta(hours=i)).isoformat() for i in range(horizon_hours)]
+    hours_labels = [f"{i:02d}:00" for i in range(horizon_hours)]
 
     # 24-Hour Diurnal Demand Curve (Base + Morning Lab Cycle + Evening Galley & Expedition Peak)
     # Critical life-support load base is guaranteed at 42.5 kW
@@ -75,8 +97,34 @@ def build_demonstration_scenario_inputs(
         except Exception as e:
             logger.warning(f"Could not load Maitri PV scenario from {SCENARIO_PV_CSV}: {e}. Using synthetic fallback.")
 
+    # Check for real Maitri 2019 December wind-derived generation scenario
+    maitri_wind_loaded = False
+    wind_capacity_kw = 50.0
+    wind_cut_in = 3.5
+    wind_rated = 12.0
+    wind_cut_out = 25.0
+    wind_availability = 0.90
+    wind_mode = "SYNTHETIC"
+    wind_source = "Synthetic demonstration scenario."
+
+    if station_identifier.upper() == "MAITRI" and os.path.exists(SCENARIO_WIND_CSV) and horizon_hours == 24:
+        try:
+            df_wind_all = pd.read_csv(SCENARIO_WIND_CSV)
+            df_wind_all["dt"] = pd.to_datetime(df_wind_all["timestamp"])
+            # Exact deterministic mapping: 2019-12-01 00:00 to 2019-12-01 23:00 -> scenario hours 0 to 23
+            mask_dec1 = (df_wind_all["dt"] >= "2019-12-01 00:00:00") & (df_wind_all["dt"] <= "2019-12-01 23:00:00")
+            df_dec1 = df_wind_all[mask_dec1].sort_values("dt").reset_index(drop=True)
+            if len(df_dec1) == 24 and "modeled_wind_power_kw" in df_dec1.columns:
+                wind = [round(float(v), 2) for v in df_dec1["modeled_wind_power_kw"].values]
+                wind_mode = "MAITRI_2019_OBSERVED_WIND_SPEED_MODELED_POWER"
+                wind_source = "Real Maitri 2019 hourly wind-speed observations converted to modeled electrical generation using the POLAR-EMS scenario turbine power curve."
+                maitri_wind_loaded = True
+                logger.info(f"Loaded {len(wind)} hours from Maitri 2019 wind generation dataset ({SCENARIO_WIND_CSV})")
+        except Exception as e:
+            logger.warning(f"Could not load Maitri wind dataset from {SCENARIO_WIND_CSV}: {e}. Using synthetic fallback.")
+
     for h in range(horizon_hours):
-        hour_of_day = (now.hour + h) % 24
+        hour_of_day = h % 24
 
         # Demand profile: lower at night, spikes at 07:00-09:00 (morning prep) and 18:00-21:00 (evening shift)
         diurnal_factor = (
@@ -99,9 +147,10 @@ def build_demonstration_scenario_inputs(
                 s_val = 0.0
             solar.append(s_val)
 
-        # Katabatic Wind Turbine generation: Continuous polar wind with episodic gusts
-        w_val = round(max(5.0, wind_mean_kw + 10.0 * np.sin(h * 0.4 + 1.2) + 5.0 * np.cos(h * 0.8)), 2)
-        wind.append(w_val)
+        # Wind turbine generation fallback if not loaded from real Maitri dataset
+        if not maitri_wind_loaded:
+            w_val = round(max(5.0, wind_mean_kw + 10.0 * np.sin(h * 0.4 + 1.2) + 5.0 * np.cos(h * 0.8)), 2)
+            wind.append(w_val)
 
     scenario_metadata = {
         "scenario_type": scenario_type,
@@ -109,8 +158,17 @@ def build_demonstration_scenario_inputs(
         "pv_mode": "SCENARIO",
         "pv_capacity_kw": pv_capacity_kw,
         "performance_ratio": performance_ratio,
-        "scenario_month": "December" if maitri_pv_loaded else "Synthetic",
+        "scenario_month": "December" if (maitri_pv_loaded or maitri_wind_loaded) else "Synthetic",
+        "wind_mode": wind_mode,
+        "wind_source": wind_source,
+        "wind_capacity_kw": wind_capacity_kw,
+        "wind_cut_in_speed_ms": wind_cut_in,
+        "wind_rated_speed_ms": wind_rated,
+        "wind_cut_out_speed_ms": wind_cut_out,
+        "wind_availability_factor": wind_availability,
         "source_description": (
+            "Historical climatological solar resource and 2019 observed wind speeds converted to modeled renewable generation."
+            if (maitri_pv_loaded and maitri_wind_loaded) else
             "Historical climatological solar resource (1985-2000) parameterized with 100 kW PV capacity baseline."
             if maitri_pv_loaded else
             "Synthetic demonstration scenario."
@@ -120,7 +178,7 @@ def build_demonstration_scenario_inputs(
     return {
         "stationId": station_identifier.upper(),
         "isDemonstrationScenario": True,
-        "scenarioSource": "POLAR_EMS_HISTORICAL_CLIMATOLOGY_SCENARIO" if maitri_pv_loaded else "POLAR_EMS_SCENARIO_GENERATOR",
+        "scenarioSource": "POLAR_EMS_HISTORICAL_CLIMATOLOGY_SCENARIO" if (maitri_pv_loaded or maitri_wind_loaded) else "POLAR_EMS_SCENARIO_GENERATOR",
         "scenarioMetadata": scenario_metadata,
         "horizonHours": horizon_hours,
         "initialSOC": initial_soc,
@@ -170,8 +228,8 @@ def optimize_24h_dispatch(
         return {"status": "ERROR", "message": "Empty demand vector provided.", "stationId": station_id}
 
     if timestamps is None or len(timestamps) != horizon:
-        now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
-        timestamps = [(now + timedelta(hours=i)).isoformat() for i in range(horizon)]
+        ref_time = datetime(2026, 12, 1, 0, 0, 0, tzinfo=timezone.utc)
+        timestamps = [(ref_time + timedelta(hours=i)).isoformat() for i in range(horizon)]
 
     if hours_labels is None or len(hours_labels) != horizon:
         hours_labels = [f"{i:02d}:00" for i in range(horizon)]
@@ -182,6 +240,8 @@ def optimize_24h_dispatch(
         solver = pywraplp.Solver.CreateSolver("GLOP")
         if not solver:
             return {"status": "ERROR", "message": "Could not initialize OR-Tools linear solver.", "stationId": station_id}
+
+    solver.SetTimeLimit(5000)  # 5-second time limit for deterministic response time
 
     # Parameters & Limits
     G1_CAP = 100.0
@@ -369,7 +429,7 @@ def optimize_24h_dispatch(
             "generator_output_kW": tot_gen_val,
             "battery_soc_percent": soc_val,
             "critical_load_kW": CRITICAL_LOAD,
-            "critical_load_shed_kW": 0.0,
+            "critical_load_shed_kW": shed_val,
             # Backwards-compatible fields
             "demand": d_val,
             "solar": s_val,
@@ -384,7 +444,7 @@ def optimize_24h_dispatch(
             "flexibleLoadShedding": shed_val,
             "renewableCurtailment": r_curt,
             "netDeficit": round(net_deficit, 2),
-            "criticalLoadProtected": True,
+            "criticalLoadProtected": shed_val == 0.0,
         })
 
     # Summary metrics
@@ -405,8 +465,25 @@ def optimize_24h_dispatch(
         "pv_capacity_kw": 100.0,
         "performance_ratio": 0.80,
         "scenario_month": "December",
-        "source_description": "Historical climatological solar resource parameterized with 100 kW PV capacity baseline."
+        "wind_mode": "MAITRI_2019_OBSERVED_WIND_SPEED_MODELED_POWER" if station_id.upper() == "MAITRI" else "SCENARIO",
+        "wind_source": (
+            "Real Maitri 2019 hourly wind-speed observations converted to modeled electrical generation using the POLAR-EMS scenario turbine power curve."
+            if station_id.upper() == "MAITRI" else "Synthetic demonstration scenario."
+        ),
+        "wind_capacity_kw": 50.0,
+        "wind_cut_in_speed_ms": 3.5,
+        "wind_rated_speed_ms": 12.0,
+        "wind_cut_out_speed_ms": 25.0,
+        "wind_availability_factor": 0.90,
+        "source_description": (
+            "Historical climatological solar resource and 2019 observed wind speeds parameterized with 100 kW PV and 50 kW wind baseline."
+            if station_id.upper() == "MAITRI" else
+            "Synthetic demonstration scenario."
+        ),
     }
+
+    total_shed = round(sum(pt["critical_load_shed_kW"] for pt in dispatch_points), 1)
+    critical_rel_pct = 100.0 if total_shed == 0.0 else round(max(0.0, 100.0 - (total_shed / max(1e-6, sum(demand))) * 100.0), 1)
 
     return {
         "status": "SUCCESS",
@@ -438,9 +515,9 @@ def optimize_24h_dispatch(
         "totalBatteryDischarge": round(total_batt_dis, 1),
         "minimumBatterySOC": min(soc_values) if soc_values else BATT_MIN_SOC,
         "maximumBatterySOC": max(soc_values) if soc_values else BATT_MAX_SOC,
-        "criticalLoadReliabilityPercent": 100.0,
-        "criticalLoadShedTotalKWh": 0.0,
-        "totalFlexibleLoadShed": round(sum(pt["flexibleLoadShedding"] for pt in dispatch_points), 1),
+        "criticalLoadReliabilityPercent": critical_rel_pct,
+        "criticalLoadShedTotalKWh": total_shed,
+        "totalFlexibleLoadShed": total_shed,
         "recommendation": (
             "Modeled PV generation from historical December climatology serves daytime base load with high priority; "
             "BESS battery stores mid-day solar surplus, "

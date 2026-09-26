@@ -1,0 +1,30 @@
+{
+  "dataset": "Maitri AWS 2019 Hourly Wind Power Generation",
+  "station": "MAITRI",
+  "source_data": "C:\\Users\\Asus\\.cache\\tooling\\Coding\\SIH61\\ml-service\\datasets\\processed\\weather\\maitri_2019_hourly.csv",
+  "source_provenance": "REAL_MEASURED_DATA (IMD 2019 Surface AWS)",
+  "modeled_provenance": "MODELED_DATA (Piecewise Aerodynamic Power Curve)",
+  "scenario_assumptions": {
+    "wind_capacity_kw": 50.0,
+    "cut_in_speed_ms": 3.5,
+    "rated_speed_ms": 12.0,
+    "cut_out_speed_ms": 25.0,
+    "availability_factor": 0.9
+  },
+  "number_of_observations": 8760,
+  "date_range": [
+    "2019-01-01 00:00:00+00:00",
+    "2019-12-31 23:00:00+00:00"
+  ],
+  "min_wind_speed_ms": 0.75,
+  "max_wind_speed_ms": 47.56,
+  "mean_wind_speed_ms": 15.12,
+  "mean_modeled_power_kw": 26.28,
+  "maximum_modeled_power_kw": 45.0,
+  "total_modeled_annual_energy_kwh": 230185.1,
+  "number_of_below_cut_in_hours": 773,
+  "number_of_cut_out_hours": 1032,
+  "number_of_rated_output_hours": 4491,
+  "percentage_of_hours_producing_power": 79.11,
+  "capacity_factor_percent": 58.39
+}

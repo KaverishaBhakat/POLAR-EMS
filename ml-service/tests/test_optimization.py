@@ -274,9 +274,138 @@ def test_fastapi_optimization_endpoint():
     assert "pv_available_kW" in first_pt
     assert "pv_used_kW" in first_pt
     assert "pv_curtailed_kW" in first_pt
+    assert "wind_available_kW" in first_pt
+    assert "wind_used_kW" in first_pt
+    assert "wind_curtailed_kW" in first_pt
     assert "battery_charge_kW" in first_pt
     assert "battery_discharge_kW" in first_pt
     assert "generator_output_kW" in first_pt
     assert "battery_soc_percent" in first_pt
     assert "critical_load_kW" in first_pt
     assert "critical_load_shed_kW" in first_pt
+
+
+def test_maitri_wind_scenario_loading_and_properties():
+    """
+    Validation Test for Maitri Wind Integration:
+    1. Exactly 24 wind values are supplied.
+    2. All values are >= 0.
+    3. No value exceeds 45 kW (50 kW capacity * 0.90 availability).
+    4. The vector exactly matches the December 1 (00:00-23:00) rows of maitri_2019_wind_power_hourly.csv.
+    5. Scenario metadata accurately reflects real wind observation provenance and scenario model.
+    """
+    inputs = build_demonstration_scenario_inputs("MAITRI", horizon_hours=24)
+    wind_vec = inputs["wind"]
+
+    # 1. Exactly 24 values
+    assert len(wind_vec) == 24, f"Expected 24 wind values, found {len(wind_vec)}"
+
+    # 2. All values >= 0
+    assert all(w >= 0.0 for w in wind_vec), f"Found negative wind value in: {wind_vec}"
+
+    # 3. Max bound 45 kW
+    assert all(w <= 45.0 + 1e-4 for w in wind_vec), f"Found wind value exceeding 45 kW: {max(wind_vec)}"
+
+    # 4. Compare against raw processed CSV for December 1, 2019
+    csv_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "datasets",
+            "processed",
+            "weather",
+            "maitri_2019_wind_power_hourly.csv"
+        )
+    )
+    assert os.path.exists(csv_path), f"Processed wind CSV not found at {csv_path}"
+    df_wind = pd.read_csv(csv_path)
+    df_wind["dt"] = pd.to_datetime(df_wind["timestamp"])
+    mask_dec1 = (df_wind["dt"] >= "2019-12-01 00:00:00") & (df_wind["dt"] <= "2019-12-01 23:00:00")
+    df_dec1 = df_wind[mask_dec1].sort_values("dt").reset_index(drop=True)
+
+    assert len(df_dec1) == 24
+    expected_wind = [round(float(v), 2) for v in df_dec1["modeled_wind_power_kw"].values]
+    assert wind_vec == expected_wind, f"Wind vector mismatch: {wind_vec} vs {expected_wind}"
+
+    # 5. Metadata verification
+    meta = inputs["scenarioMetadata"]
+    assert meta["wind_mode"] == "MAITRI_2019_OBSERVED_WIND_SPEED_MODELED_POWER"
+    assert "Real Maitri 2019 hourly wind-speed observations" in meta["wind_source"]
+    assert meta["wind_capacity_kw"] == 50.0
+    assert meta["wind_availability_factor"] == 0.90
+    assert inputs["isDemonstrationScenario"] is True
+
+
+def test_optimization_repeatability_deterministic():
+    """Verify that running the scenario builder and optimizer twice produces strictly identical results."""
+    inputs1 = build_demonstration_scenario_inputs("MAITRI", horizon_hours=24)
+    inputs2 = build_demonstration_scenario_inputs("MAITRI", horizon_hours=24)
+
+    assert inputs1["wind"] == inputs2["wind"]
+    assert inputs1["solar"] == inputs2["solar"]
+    assert inputs1["demand"] == inputs2["demand"]
+
+    res1 = optimize_24h_dispatch(
+        demand=inputs1["demand"],
+        solar=inputs1["solar"],
+        wind=inputs1["wind"],
+        initial_soc=inputs1["initialSOC"],
+        station_id=inputs1["stationId"],
+    )
+    res2 = optimize_24h_dispatch(
+        demand=inputs2["demand"],
+        solar=inputs2["solar"],
+        wind=inputs2["wind"],
+        initial_soc=inputs2["initialSOC"],
+        station_id=inputs2["stationId"],
+    )
+
+    assert res1["objectiveValue"] == res2["objectiveValue"]
+    assert res1["totalEstimatedFuel"] == res2["totalEstimatedFuel"]
+    assert res1["totalGeneratorEnergy"] == res2["totalGeneratorEnergy"]
+    assert len(res1["dispatch"]) == len(res2["dispatch"]) == 24
+
+
+def test_wind_dispatch_constraints_and_accounting():
+    """
+    Validation of Wind Dispatch Balance & Curtailment:
+    1. Wind available is never negative
+    2. Wind used <= Wind available
+    3. Wind curtailed = Wind available - Wind used
+    4. Total Wind used + Total Wind curtailed == Total Wind available
+    """
+    inputs = build_demonstration_scenario_inputs("MAITRI", horizon_hours=24)
+    res = optimize_24h_dispatch(
+        demand=inputs["demand"],
+        solar=inputs["solar"],
+        wind=inputs["wind"],
+        initial_soc=inputs["initialSOC"],
+        station_id=inputs["stationId"],
+    )
+
+    sum_wind_used = 0.0
+    sum_wind_curt = 0.0
+
+    for step in res["dispatch"]:
+        w_avail = step["wind_available_kW"]
+        w_used = step["wind_used_kW"]
+        w_curt = step["wind_curtailed_kW"]
+
+        assert w_avail >= 0.0, f"Negative wind available at hour {step['hour']}: {w_avail}"
+        assert w_used <= w_avail + 1e-2, f"Wind used ({w_used}) exceeded available ({w_avail}) at hour {step['hour']}"
+        assert w_used >= 0.0, f"Negative wind used at hour {step['hour']}: {w_used}"
+        assert w_curt >= 0.0, f"Negative wind curtailed at hour {step['hour']}: {w_curt}"
+
+        assert abs(w_curt - (w_avail - w_used)) < 1e-2, (
+            f"Wind curtailment mismatch at hour {step['hour']}: {w_curt} vs {w_avail - w_used}"
+        )
+        assert abs((w_used + w_curt) - w_avail) < 1e-2, (
+            f"Wind sum mismatch at hour {step['hour']}: {w_used + w_curt} vs {w_avail}"
+        )
+
+        sum_wind_used += w_used
+        sum_wind_curt += w_curt
+
+    expected_total_wind = sum(inputs["wind"])
+    assert abs((sum_wind_used + sum_wind_curt) - expected_total_wind) < 1e-1
+
