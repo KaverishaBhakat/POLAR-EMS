@@ -247,6 +247,27 @@ export interface ForecastMetrics {
   lastUpdated: string;
 }
 
+export interface WeatherPredictionPoint {
+  timestamp: string;
+  predictedTemperature: number;
+}
+
+export interface WeatherForecastData {
+  status: string;
+  stationId: string;
+  target: string;
+  unit: string;
+  horizonHours: number;
+  generatedAt: string;
+  predictions: WeatherPredictionPoint[];
+  model: {
+    name: string;
+    mae: number;
+    rmse: number;
+    r2: number;
+  };
+}
+
 export interface HourlyDispatchPoint {
   time: string;
   solarKW: number;

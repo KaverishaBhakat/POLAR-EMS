@@ -4,7 +4,7 @@ FastAPI Main Application for POLAR-EMS ML & Forecasting Service.
 
 import logging
 from contextlib import asynccontextmanager
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -14,11 +14,19 @@ from app.config import settings
 from app.database.postgres import check_database_connection, resolve_station, get_db_engine
 from app.models.energy_forecaster import EnergyForecaster
 from app.models.renewable_forecaster import RenewableForecaster
+from app.models.weather_forecaster import WeatherForecaster
 from app.training.trainer import train_energy_model, train_renewable_model
-from app.forecasting.predictor import forecast_energy, forecast_renewable
+from app.forecasting.predictor import (
+    forecast_energy,
+    forecast_renewable,
+    forecast_weather,
+    get_weather_forecaster
+)
 from app.schemas.forecast import (
     TrainRequest,
     ForecastResponse,
+    WeatherForecastRequest,
+    WeatherForecastResponse,
     ModelStatusResponse,
     StationModelStatus,
     HealthResponse
@@ -38,6 +46,12 @@ logger = logging.getLogger("polar_ems_ml.main")
 async def lifespan(app: FastAPI):
     logger.info("Initializing POLAR-EMS ML Service Data Pipeline...")
     logger.info(f"Model storage path: {settings.model_dir.absolute()}")
+    # Pre-load the saved real-data weather forecaster model once into memory
+    wf = get_weather_forecaster()
+    if wf.is_fitted:
+        logger.info(f"Weather model ready for inference (target={wf.target_name}, features={len(wf.feature_names)}).")
+    else:
+        logger.warning("Weather model weights not yet found in trained_models/.")
     yield
     logger.info("Shutting down POLAR-EMS ML Service...")
 
@@ -65,12 +79,18 @@ app.include_router(data_router)
 @app.get("/", tags=["General"])
 def root():
     """Service metadata and basic endpoints overview."""
+    wf = get_weather_forecaster()
     return {
         "service": "POLAR-EMS ML & Forecasting Service",
         "version": __version__,
         "status": "operational",
         "docs_url": "/docs",
         "models": {
+            "weather_forecaster": {
+                "model": "HistGradientBoostingRegressor",
+                "target": "ambient_temperature",
+                "status": "loaded" if wf.is_fitted else "unloaded"
+            },
             "energy_forecaster": "HistGradientBoostingRegressor (Target: totalLoad)",
             "renewable_forecaster": "HistGradientBoostingRegressor (Target: totalRenewable)",
         }
@@ -88,6 +108,70 @@ def health_check():
         "version": __version__,
         "database": db_status
     }
+
+
+# Weather Forecast Endpoints
+@app.post("/forecast/weather", response_model=WeatherForecastResponse, tags=["Forecasting"])
+def post_weather_forecast(payload: WeatherForecastRequest):
+    """
+    Generate 24-hour ahead ambient temperature forecast for a station using the real trained ML model.
+    Accepts optional inline temperature history or pulls from station historical readings.
+    """
+    result = forecast_weather(
+        station_identifier=payload.station_id,
+        horizon_hours=payload.horizon_hours or 24,
+        temperature_history=payload.temperature_history,
+        timestamps=payload.timestamps,
+        humidity=payload.humidity,
+        wind_speed=payload.wind_speed,
+        wind_direction=payload.wind_direction,
+        pressure=payload.pressure,
+    )
+
+    if result.get("status") == "not_trained":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=result["message"]
+        )
+    elif result.get("status") == "insufficient_data":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=result.get("message", "INSUFFICIENT_HISTORY_FOR_FORECAST")
+        )
+    elif result.get("status") == "error":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result["message"]
+        )
+
+    return result
+
+
+@app.get("/forecast/weather/{station_id}", response_model=WeatherForecastResponse, tags=["Forecasting"])
+def get_weather_forecast(station_id: str, horizon_hours: int = 24):
+    """
+    Generate 24-hour forward ambient temperature forecast for the specified station.
+    Uses recursive forward autoregression based on the saved real-data weather model.
+    """
+    result = forecast_weather(station_identifier=station_id, horizon_hours=horizon_hours)
+
+    if result.get("status") == "not_trained":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=result["message"]
+        )
+    elif result.get("status") == "insufficient_data":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=result.get("message", "INSUFFICIENT_HISTORY_FOR_FORECAST")
+        )
+    elif result.get("status") == "error":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result["message"]
+        )
+
+    return result
 
 
 @app.post("/train/energy", tags=["Training"])
@@ -187,11 +271,33 @@ def get_renewable_forecast(station_id: str, horizon_hours: int = 24):
 @app.get("/model/status", response_model=ModelStatusResponse, tags=["Model Status"])
 def get_model_status():
     """
-    Returns the training and metric status for all station models.
+    Returns the training and metric status for all station models (weather, energy, renewable).
     """
     stations = ["MAITRI", "BHARATI"]
     energy_status: Dict[str, StationModelStatus] = {}
     renewable_status: Dict[str, StationModelStatus] = {}
+    weather_status: Dict[str, StationModelStatus] = {}
+
+    # Weather Forecaster status
+    wf = get_weather_forecaster()
+    if wf.is_fitted and wf.metadata:
+        m = wf.metadata
+        metrics = m.get("ml_metrics", {})
+        weather_status["MAITRI"] = StationModelStatus(
+            trained=True,
+            trained_at=m.get("training_timestamp") or m.get("saved_at"),
+            training_observations=m.get("training_rows"),
+            test_observations=m.get("testing_rows"),
+            total_observations=m.get("total_hourly_observations"),
+            mae=metrics.get("mae"),
+            rmse=metrics.get("rmse"),
+            r2=metrics.get("r2"),
+            feature_count=m.get("feature_count"),
+            target=m.get("target_variable"),
+            unit=m.get("target_unit", "°C")
+        )
+    else:
+        weather_status["MAITRI"] = StationModelStatus(trained=False)
 
     for st in stations:
         # Energy forecaster status
@@ -241,6 +347,7 @@ def get_model_status():
             renewable_status[st] = StationModelStatus(trained=False)
 
     return {
+        "weather": weather_status,
         "energy": energy_status,
         "renewable": renewable_status
     }

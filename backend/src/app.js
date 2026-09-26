@@ -91,7 +91,13 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/simulation', simulationRoutes);
 app.use('/api/ingest', ingestRoutes);
 
-// Conceptual Future AI/ML Placeholders (Phase 2 integration routes)
+// AI / ML Forecasting microservice integration routes
+app.get('/api/forecast/:stationId/weather', async (req, res) => {
+  const horizon = parseInt(req.query.horizon, 10) || 24;
+  const response = await forecastService.getWeatherForecast(req.params.stationId, horizon);
+  res.status(200).json({ success: true, data: response });
+});
+
 app.get('/api/forecast/:stationId', async (req, res) => {
   const response = await forecastService.getLoadForecast(req.params.stationId);
   res.status(200).json({ success: true, data: response });

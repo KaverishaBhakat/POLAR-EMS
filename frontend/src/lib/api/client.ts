@@ -24,6 +24,7 @@ import {
   StationId,
   SystemAlert,
   WeatherData,
+  WeatherForecastData,
 } from '../types';
 import { STATIONS } from '../mock-data/stations';
 import { WEATHER_DATA } from '../mock-data/weather';
@@ -814,6 +815,20 @@ export const apiClient = {
       metrics: FORECAST_METRICS[stationId] || FORECAST_METRICS.maitri,
       insights: AI_INSIGHTS[stationId] || AI_INSIGHTS.maitri,
     };
+  },
+
+  // Real ML Weather (Temperature) Forecast
+  async getWeatherForecast(stationId: StationId, horizonHours: number = 24): Promise<WeatherForecastData | null> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/forecast/${stationId}/weather?horizon=${horizonHours}`);
+      if (response.ok) {
+        const result = await response.json();
+        return result.data;
+      }
+    } catch {
+      // Fallback silently if offline or microservice not reached
+    }
+    return null;
   },
 
   // AI Optimization

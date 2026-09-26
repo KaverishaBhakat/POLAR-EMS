@@ -18,6 +18,7 @@ def test_root_endpoint():
     data = response.json()
     assert "POLAR-EMS" in data["service"]
     assert "version" in data
+    assert "weather_forecaster" in data["models"]
 
 
 def test_health_endpoint():
@@ -86,3 +87,62 @@ def test_data_weather_prepared_endpoint():
         assert "lag_1" in data["metadata"]["features"]
         assert "rolling_mean_3" in data["metadata"]["features"]
         assert len(data["records"]) == 30
+
+
+def test_forecast_weather_get_endpoint():
+    """Test GET /forecast/weather/MAITRI returns valid 24h temperature forecast."""
+    response = client.get("/forecast/weather/MAITRI?horizon_hours=24")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["stationId"] == "MAITRI"
+    assert data["target"] == "temperature"
+    assert data["unit"] == "°C"
+    assert len(data["predictions"]) == 24
+    assert "model" in data
+    assert data["model"]["name"] == "HistGradientBoostingRegressor"
+    assert "mae" in data["model"]
+    assert "rmse" in data["model"]
+    assert "r2" in data["model"]
+
+
+def test_forecast_weather_post_endpoint():
+    """Test POST /forecast/weather with custom historical telemetry."""
+    history = [-10.0 - i * 0.1 for i in range(24)]
+    payload = {
+        "station_id": "MAITRI",
+        "horizon_hours": 12,
+        "temperature_history": history,
+        "humidity": 70.0,
+        "wind_speed": 15.0,
+        "wind_direction": 130.0,
+        "pressure": 965.0
+    }
+    response = client.post("/forecast/weather", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert len(data["predictions"]) == 12
+    assert data["horizonHours"] == 12
+
+
+def test_forecast_weather_insufficient_history():
+    """Test POST /forecast/weather with < 24 observations returns 422."""
+    payload = {
+        "station_id": "MAITRI",
+        "horizon_hours": 24,
+        "temperature_history": [-10.0, -11.0]
+    }
+    response = client.post("/forecast/weather", json=payload)
+    assert response.status_code == 422
+
+
+def test_model_status_includes_weather():
+    """Test GET /model/status returns weather model status."""
+    response = client.get("/model/status")
+    assert response.status_code == 200
+    data = response.json()
+    assert "weather" in data
+    assert "MAITRI" in data["weather"]
+    assert data["weather"]["MAITRI"]["trained"] is True
+    assert data["weather"]["MAITRI"]["target"] == "temperature"

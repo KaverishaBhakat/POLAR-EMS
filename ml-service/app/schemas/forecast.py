@@ -28,6 +28,41 @@ class ForecastResponse(BaseModel):
     predictions: List[PredictionPoint]
 
 
+# Weather Forecast Schema Models
+class WeatherForecastRequest(BaseModel):
+    station_id: str = Field(..., description="Station code (e.g. 'MAITRI') or Station UUID")
+    horizon_hours: Optional[int] = Field(24, description="Forecast horizon in hours (default 24)")
+    temperature_history: Optional[List[float]] = Field(None, description="Optional recent temperature observations list (minimum 24 required)")
+    timestamps: Optional[List[str]] = Field(None, description="Optional ISO timestamps corresponding to temperature_history")
+    humidity: Optional[float] = Field(None, description="Latest ambient relative humidity (%)")
+    wind_speed: Optional[float] = Field(None, description="Latest wind speed (m/s)")
+    wind_direction: Optional[float] = Field(None, description="Latest wind direction (degrees)")
+    pressure: Optional[float] = Field(None, description="Latest atmospheric pressure (hPa)")
+
+
+class WeatherPredictionPoint(BaseModel):
+    timestamp: str
+    predictedTemperature: float
+
+
+class ModelEvaluationMetadata(BaseModel):
+    name: str = "HistGradientBoostingRegressor"
+    mae: float
+    rmse: float
+    r2: float
+
+
+class WeatherForecastResponse(BaseModel):
+    status: str = "success"
+    stationId: str
+    target: str = "temperature"
+    unit: str = "°C"
+    horizonHours: int = 24
+    generatedAt: str
+    predictions: List[WeatherPredictionPoint]
+    model: ModelEvaluationMetadata
+
+
 class StationModelStatus(BaseModel):
     trained: bool
     trained_at: Optional[str] = None
@@ -44,6 +79,7 @@ class StationModelStatus(BaseModel):
 
 
 class ModelStatusResponse(BaseModel):
+    weather: Optional[Dict[str, StationModelStatus]] = None
     energy: Dict[str, StationModelStatus]
     renewable: Dict[str, StationModelStatus]
 
