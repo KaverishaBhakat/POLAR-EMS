@@ -1,16 +1,34 @@
-"""
-POLAR-EMS 24-Hour Microgrid Energy Dispatch Optimizer.
-Uses Google OR-Tools Mixed-Integer Linear Programming (MILP) to solve optimal
-unit commitment, battery charge/discharge cycling, and renewable priority dispatch
-under strict Antarctic life-support safety constraints.
-"""
-
+import os
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional
 import numpy as np
+import pandas as pd
 
 logger = logging.getLogger("polar_ems_ml.optimization")
+
+# Path to December PV climatology scenario
+SCENARIO_PV_CSV = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "datasets",
+        "processed",
+        "maitri",
+        "solar",
+        "maitri_pv_24h_scenario.csv"
+    )
+)
+CONFIG_PV_JSON = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "config",
+        "maitri_pv_config.json"
+    )
+)
 
 
 def build_demonstration_scenario_inputs(
@@ -22,10 +40,11 @@ def build_demonstration_scenario_inputs(
     wind_mean_kw: float = 25.0,
 ) -> Dict[str, Any]:
     """
-    Builds a 24-hour lookahead deterministic demonstration scenario input vector
+    Builds a 24-hour lookahead demonstration scenario input vector
     for polar station demand and renewable co-generation.
     
-    Explicitly labeled as DEMONSTRATION / SCENARIO INPUTS.
+    For MAITRI, loads the historical December climatological PV generation scenario
+    (100 kW capacity, PR=0.80) from `maitri_pv_24h_scenario.csv`.
     """
     now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     timestamps = [(now + timedelta(hours=i)).isoformat() for i in range(horizon_hours)]
@@ -36,6 +55,25 @@ def build_demonstration_scenario_inputs(
     demand: List[float] = []
     solar: List[float] = []
     wind: List[float] = []
+
+    # Check for historical Maitri December PV scenario
+    maitri_pv_loaded = False
+    pv_capacity_kw = 100.0
+    performance_ratio = 0.80
+    scenario_type = "DEMONSTRATION_SYNTHETIC"
+
+    if station_identifier.upper() == "MAITRI" and os.path.exists(SCENARIO_PV_CSV) and horizon_hours == 24:
+        try:
+            df_scenario = pd.read_csv(SCENARIO_PV_CSV)
+            if len(df_scenario) == 24 and "pv_generation_kw" in df_scenario.columns:
+                solar = [round(float(v), 2) for v in df_scenario["pv_generation_kw"].values]
+                pv_capacity_kw = float(df_scenario["pv_capacity_kw"].iloc[0]) if "pv_capacity_kw" in df_scenario.columns else 100.0
+                performance_ratio = float(df_scenario["performance_ratio"].iloc[0]) if "performance_ratio" in df_scenario.columns else 0.80
+                scenario_type = "HISTORICAL_CLIMATOLOGY_SCENARIO"
+                maitri_pv_loaded = True
+                logger.info(f"Loaded {len(solar)} hours from historical Maitri PV scenario ({SCENARIO_PV_CSV})")
+        except Exception as e:
+            logger.warning(f"Could not load Maitri PV scenario from {SCENARIO_PV_CSV}: {e}. Using synthetic fallback.")
 
     for h in range(horizon_hours):
         hour_of_day = (now.hour + h) % 24
@@ -48,34 +86,49 @@ def build_demonstration_scenario_inputs(
             1.25 if 17 <= hour_of_day < 22 else
             0.90
         )
-        # Small deterministic fluctuation
         wave = 3.0 * np.sin(h * 0.5)
         d_val = round(max(45.0, base_load_kw * diurnal_factor + wave), 1)
         demand.append(d_val)
 
-        # Solar PV: Antarctic summer daylight window (06:00 to 20:00 with peak around 12:00-14:00)
-        if 6 <= hour_of_day <= 19:
-            # Solar half-sine peak
-            solar_frac = np.sin((hour_of_day - 6) / 13.0 * np.pi)
-            s_val = round(max(0.0, solar_peak_kw * solar_frac * (0.9 + 0.1 * np.cos(h))), 1)
-        else:
-            s_val = 0.0
-        solar.append(s_val)
+        # Solar PV fallback if not loaded from historical scenario
+        if not maitri_pv_loaded:
+            if 6 <= hour_of_day <= 19:
+                solar_frac = np.sin((hour_of_day - 6) / 13.0 * np.pi)
+                s_val = round(max(0.0, solar_peak_kw * solar_frac * (0.9 + 0.1 * np.cos(h))), 2)
+            else:
+                s_val = 0.0
+            solar.append(s_val)
 
         # Katabatic Wind Turbine generation: Continuous polar wind with episodic gusts
-        w_val = round(max(5.0, wind_mean_kw + 10.0 * np.sin(h * 0.4 + 1.2) + 5.0 * np.cos(h * 0.8)), 1)
+        w_val = round(max(5.0, wind_mean_kw + 10.0 * np.sin(h * 0.4 + 1.2) + 5.0 * np.cos(h * 0.8)), 2)
         wind.append(w_val)
+
+    scenario_metadata = {
+        "scenario_type": scenario_type,
+        "station": station_identifier.upper(),
+        "pv_mode": "SCENARIO",
+        "pv_capacity_kw": pv_capacity_kw,
+        "performance_ratio": performance_ratio,
+        "scenario_month": "December" if maitri_pv_loaded else "Synthetic",
+        "source_description": (
+            "Historical climatological solar resource (1985-2000) parameterized with 100 kW PV capacity baseline."
+            if maitri_pv_loaded else
+            "Synthetic demonstration scenario."
+        )
+    }
 
     return {
         "stationId": station_identifier.upper(),
         "isDemonstrationScenario": True,
-        "scenarioSource": "POLAR_EMS_SCENARIO_GENERATOR",
+        "scenarioSource": "POLAR_EMS_HISTORICAL_CLIMATOLOGY_SCENARIO" if maitri_pv_loaded else "POLAR_EMS_SCENARIO_GENERATOR",
+        "scenarioMetadata": scenario_metadata,
         "horizonHours": horizon_hours,
         "initialSOC": initial_soc,
         "timestamps": timestamps,
         "hours": hours_labels,
         "demand": demand,
         "solar": solar,
+        "pvAvailable": solar,
         "wind": wind,
         "criticalLoadKW": 42.5,
     }
@@ -89,15 +142,18 @@ def optimize_24h_dispatch(
     station_id: str = "MAITRI",
     timestamps: Optional[List[str]] = None,
     hours_labels: Optional[List[str]] = None,
+    scenario_metadata: Optional[Dict[str, Any]] = None,
+    critical_load_kw: float = 42.5,
 ) -> Dict[str, Any]:
     """
     Solves the 24-Hour Microgrid Unit Commitment & Economic Dispatch MILP using OR-Tools.
     
-    Specifications:
-    - G1: Capacity 100 kW, Min Output 20 kW, Fuel slope 0.23 L/kWh, Idle 3.5 L/h
-    - G2: Capacity 80 kW, Min Output 15 kW, Fuel slope 0.25 L/kWh, Idle 3.0 L/h
-    - Battery: Capacity 350 kWh, Min SOC 20%, Max SOC 95%, Max Charge/Discharge 80 kW, Eff 95%
-    - Critical Load: 42.5 kW non-sheddable
+    Explicitly accounts for:
+    - Modeled PV generation availability (kW)
+    - Wind generation availability (kW)
+    - Generator unit commitment (G1: 100 kW, G2: 80 kW)
+    - Battery energy storage (350 kWh, 20%-95% SOC, 80 kW max charge/discharge)
+    - Non-sheddable critical life-support load (42.5 kW)
     """
     try:
         from ortools.linear_solver import pywraplp
@@ -120,10 +176,9 @@ def optimize_24h_dispatch(
     if hours_labels is None or len(hours_labels) != horizon:
         hours_labels = [f"{i:02d}:00" for i in range(horizon)]
 
-    # Solver initialization (CBC or SCIP)
+    # Solver initialization (SCIP or CBC)
     solver = pywraplp.Solver.CreateSolver("SCIP") or pywraplp.Solver.CreateSolver("CBC")
     if not solver:
-        # Fallback to GLOP / CLP for continuous relaxation or fail gracefully
         solver = pywraplp.Solver.CreateSolver("GLOP")
         if not solver:
             return {"status": "ERROR", "message": "Could not initialize OR-Tools linear solver.", "stationId": station_id}
@@ -148,8 +203,8 @@ def optimize_24h_dispatch(
     ETA_CHG = 0.95
     ETA_DIS = 0.95
 
-    CRITICAL_LOAD = 42.5  # kW (Strictly Non-Sheddable)
-    PENALTY_CURTAIL = 50.0   # Strong penalty per kWh curtailed
+    CRITICAL_LOAD = float(critical_load_kw)  # kW (Strictly Non-Sheddable)
+    PENALTY_CURTAIL = 50.0   # Strong penalty per kWh curtailed to prioritize renewable utilization
     PENALTY_SHED = 500.0     # Severe penalty per kWh flexible load shed
     BATT_WEAR_COST = 0.001   # Minimal tie-breaker penalty to prevent simultaneous charge/discharge
 
@@ -166,15 +221,15 @@ def optimize_24h_dispatch(
     p_dis = [solver.NumVar(0.0, BATT_MAX_POWER, f"p_dis_{t}") for t in range(horizon)]
     e_batt = [solver.NumVar(BATT_E_MIN, BATT_E_MAX, f"e_batt_{t}") for t in range(horizon)]
 
-    p_curt = [solver.NumVar(0.0, solver.infinity(), f"p_curt_{t}") for t in range(horizon)]
+    p_pv_curt = [solver.NumVar(0.0, solver.infinity(), f"p_pv_curt_{t}") for t in range(horizon)]
+    p_wind_curt = [solver.NumVar(0.0, solver.infinity(), f"p_wind_curt_{t}") for t in range(horizon)]
     p_shed = [solver.NumVar(0.0, solver.infinity(), f"p_shed_{t}") for t in range(horizon)]
 
     # Constraints
     for t in range(horizon):
         d_t = float(demand[t])
-        s_t = float(solar[t])
-        w_t = float(wind[t])
-        r_t = s_t + w_t
+        s_t = max(0.0, float(solar[t])) if not np.isnan(solar[t]) else 0.0
+        w_t = max(0.0, float(wind[t])) if not np.isnan(wind[t]) else 0.0
 
         # 1. Generator 1 limits
         solver.Add(p1[t] >= u1[t] * G1_MIN)
@@ -184,17 +239,19 @@ def optimize_24h_dispatch(
         solver.Add(p2[t] >= u2[t] * G2_MIN)
         solver.Add(p2[t] <= u2[t] * G2_CAP)
 
-        # 3. Renewable curtailment bounded by total generation
-        solver.Add(p_curt[t] <= r_t)
+        # 3. Renewable curtailment bounded by individual generation availability
+        solver.Add(p_pv_curt[t] <= s_t)
+        solver.Add(p_wind_curt[t] <= w_t)
 
-        # 4. Flexible load shedding bounded (Critical load is NEVER sheddable)
+        # 4. Flexible load shedding bounded (Critical load is strictly non-sheddable)
         max_sheddable = max(0.0, d_t - CRITICAL_LOAD)
         solver.Add(p_shed[t] <= max_sheddable)
 
-        # 5. Power Balance Constraint
-        # Generation + Renewable + Battery Discharge = Demand - Shed + Battery Charge + Curtailment
+        # 5. Power Balance Constraint:
+        # p1 + p2 + (s_t - p_pv_curt) + (w_t - p_wind_curt) + p_dis = (d_t - p_shed) + p_chg
+        # -> p1 + p2 + s_t + w_t + p_dis - p_chg - p_pv_curt - p_wind_curt == d_t - p_shed
         solver.Add(
-            p1[t] + p2[t] + r_t + p_dis[t] - p_chg[t] - p_curt[t] == d_t - p_shed[t]
+            p1[t] + p2[t] + (s_t - p_pv_curt[t]) + (w_t - p_wind_curt[t]) + p_dis[t] - p_chg[t] == d_t - p_shed[t]
         )
 
         # 6. Battery Energy Storage Dynamic Equation
@@ -214,8 +271,9 @@ def optimize_24h_dispatch(
         objective.SetCoefficient(u2[t], G2_FUEL_IDLE)
         objective.SetCoefficient(p2[t], G2_FUEL_SLOPE)
 
-        # Penalties
-        objective.SetCoefficient(p_curt[t], PENALTY_CURTAIL)
+        # Curtailment & Shedding Penalties
+        objective.SetCoefficient(p_pv_curt[t], PENALTY_CURTAIL)
+        objective.SetCoefficient(p_wind_curt[t], PENALTY_CURTAIL)
         objective.SetCoefficient(p_shed[t], PENALTY_SHED)
         objective.SetCoefficient(p_chg[t], BATT_WEAR_COST)
         objective.SetCoefficient(p_dis[t], BATT_WEAR_COST)
@@ -237,17 +295,21 @@ def optimize_24h_dispatch(
     dispatch_points: List[Dict[str, Any]] = []
     total_fuel = 0.0
     total_gen_energy = 0.0
-    total_renew_used = 0.0
-    total_renew_curt = 0.0
+    total_pv_avail = 0.0
+    total_pv_used = 0.0
+    total_pv_curt = 0.0
+    total_wind_avail = 0.0
+    total_wind_used = 0.0
+    total_wind_curt = 0.0
     total_batt_chg = 0.0
     total_batt_dis = 0.0
     soc_values: List[float] = []
+    gen_committed_hours = 0
 
     for t in range(horizon):
         d_val = float(demand[t])
-        s_val = float(solar[t])
-        w_val = float(wind[t])
-        r_val = round(s_val + w_val, 2)
+        s_val = max(0.0, float(solar[t])) if not np.isnan(solar[t]) else 0.0
+        w_val = max(0.0, float(wind[t])) if not np.isnan(wind[t]) else 0.0
 
         p1_val = round(float(p1[t].solution_value()), 2)
         p2_val = round(float(p2[t].solution_value()), 2)
@@ -260,8 +322,15 @@ def optimize_24h_dispatch(
         soc_val = round((e_val / BATT_CAP) * 100.0, 1)
         soc_values.append(soc_val)
 
-        curt_val = round(float(p_curt[t].solution_value()), 2)
+        pv_curt_val = round(float(p_pv_curt[t].solution_value()), 2)
+        wind_curt_val = round(float(p_wind_curt[t].solution_value()), 2)
+        pv_used_val = round(max(0.0, s_val - pv_curt_val), 2)
+        wind_used_val = round(max(0.0, w_val - wind_curt_val), 2)
         shed_val = round(float(p_shed[t].solution_value()), 2)
+
+        tot_gen_val = round(p1_val + p2_val, 2)
+        if tot_gen_val > 0.01:
+            gen_committed_hours += 1
 
         # Fuel calculation for hour
         fuel_h = (
@@ -269,29 +338,51 @@ def optimize_24h_dispatch(
             (G2_FUEL_IDLE * u2_val + G2_FUEL_SLOPE * p2_val)
         )
         total_fuel += fuel_h
-        total_gen_energy += (p1_val + p2_val)
-        total_renew_curt += curt_val
-        total_renew_used += max(0.0, r_val - curt_val)
+        total_gen_energy += tot_gen_val
+        total_pv_avail += s_val
+        total_pv_used += pv_used_val
+        total_pv_curt += pv_curt_val
+        total_wind_avail += w_val
+        total_wind_used += wind_used_val
+        total_wind_curt += wind_curt_val
         total_batt_chg += chg_val
         total_batt_dis += dis_val
 
-        net_deficit = max(0.0, d_val - (r_val - curt_val))
+        r_avail = round(s_val + w_val, 2)
+        r_used = round(pv_used_val + wind_used_val, 2)
+        r_curt = round(pv_curt_val + wind_curt_val, 2)
+        net_deficit = max(0.0, d_val - r_used)
 
         dispatch_points.append({
+            "hour": t + 1,
             "timestamp": timestamps[t],
             "time": hours_labels[t],
+            "load_kW": d_val,
+            "pv_available_kW": s_val,
+            "pv_used_kW": pv_used_val,
+            "pv_curtailed_kW": pv_curt_val,
+            "wind_available_kW": w_val,
+            "wind_used_kW": wind_used_val,
+            "wind_curtailed_kW": wind_curt_val,
+            "battery_charge_kW": chg_val,
+            "battery_discharge_kW": dis_val,
+            "generator_output_kW": tot_gen_val,
+            "battery_soc_percent": soc_val,
+            "critical_load_kW": CRITICAL_LOAD,
+            "critical_load_shed_kW": 0.0,
+            # Backwards-compatible fields
             "demand": d_val,
             "solar": s_val,
             "wind": w_val,
-            "renewable": r_val,
+            "renewable": r_avail,
             "generator1Power": p1_val,
             "generator2Power": p2_val,
-            "totalGeneratorPower": round(p1_val + p2_val, 2),
+            "totalGeneratorPower": tot_gen_val,
             "batteryCharge": chg_val,
             "batteryDischarge": dis_val,
             "batterySOC": soc_val,
             "flexibleLoadShedding": shed_val,
-            "renewableCurtailment": curt_val,
+            "renewableCurtailment": r_curt,
             "netDeficit": round(net_deficit, 2),
             "criticalLoadProtected": True,
         })
@@ -301,6 +392,22 @@ def optimize_24h_dispatch(
     fuel_saved = round(baseline_fuel - total_fuel, 1)
     fuel_saved_pct = round((fuel_saved / baseline_fuel) * 100.0, 1) if baseline_fuel > 0 else 0.0
 
+    pv_util_pct = round((total_pv_used / max(1e-6, total_pv_avail)) * 100.0, 1) if total_pv_avail > 0 else 100.0
+    tot_renew_avail = total_pv_avail + total_wind_avail
+    tot_renew_used = total_pv_used + total_wind_used
+    tot_renew_curt = total_pv_curt + total_wind_curt
+    renew_util_pct = round((tot_renew_used / max(1e-6, tot_renew_avail)) * 100.0, 1) if tot_renew_avail > 0 else 100.0
+
+    meta = scenario_metadata or {
+        "scenario_type": "HISTORICAL_CLIMATOLOGY_SCENARIO" if station_id.upper() == "MAITRI" else "SCENARIO",
+        "station": station_id.upper(),
+        "pv_mode": "SCENARIO",
+        "pv_capacity_kw": 100.0,
+        "performance_ratio": 0.80,
+        "scenario_month": "December",
+        "source_description": "Historical climatological solar resource parameterized with 100 kW PV capacity baseline."
+    }
+
     return {
         "status": "SUCCESS",
         "solverStatus": "OPTIMAL" if solver_status == pywraplp.Solver.OPTIMAL else "FEASIBLE",
@@ -308,28 +415,37 @@ def optimize_24h_dispatch(
         "horizonHours": horizon,
         "solverEngine": "Google OR-Tools (MILP/SCIP)",
         "isDemonstrationScenario": True,
+        "scenarioMetadata": meta,
         "objectiveValue": round(float(solver.Objective().Value()), 2),
         "totalEstimatedFuel": round(total_fuel, 1),
         "baselineFuel": baseline_fuel,
         "fuelSavedLiters": fuel_saved,
         "fuelSavedPercent": fuel_saved_pct,
-        "totalRenewableGenerated": round(sum(solar) + sum(wind), 1),
-        "totalRenewableUsed": round(total_renew_used, 1),
-        "totalRenewableCurtailed": round(total_renew_curt, 1),
-        "renewableUtilizationPercent": round(
-            (total_renew_used / max(1.0, sum(solar) + sum(wind))) * 100.0, 1
-        ),
+        # PV Explicit Summary Metrics
+        "totalPVAvailableKWh": round(total_pv_avail, 1),
+        "totalPVUsedKWh": round(total_pv_used, 1),
+        "totalPVCurtailedKWh": round(total_pv_curt, 1),
+        "pvUtilizationPercent": pv_util_pct,
+        # Total Renewable Summary Metrics
+        "totalRenewableGenerated": round(tot_renew_avail, 1),
+        "totalRenewableUsed": round(tot_renew_used, 1),
+        "totalRenewableCurtailed": round(tot_renew_curt, 1),
+        "renewableUtilizationPercent": renew_util_pct,
+        # Generator & Battery Metrics
         "totalGeneratorEnergy": round(total_gen_energy, 1),
+        "generatorCommittedHours": gen_committed_hours,
         "totalBatteryCharge": round(total_batt_chg, 1),
         "totalBatteryDischarge": round(total_batt_dis, 1),
         "minimumBatterySOC": min(soc_values) if soc_values else BATT_MIN_SOC,
         "maximumBatterySOC": max(soc_values) if soc_values else BATT_MAX_SOC,
         "criticalLoadReliabilityPercent": 100.0,
+        "criticalLoadShedTotalKWh": 0.0,
         "totalFlexibleLoadShed": round(sum(pt["flexibleLoadShedding"] for pt in dispatch_points), 1),
         "recommendation": (
-            "Renewable generation is prioritized for instantaneous load; "
-            "BESS battery absorption captures mid-day solar surplus, "
-            "and Primary Genset GEN-01 is committed only during renewable deficits with 0% critical load shedding."
+            "Modeled PV generation from historical December climatology serves daytime base load with high priority; "
+            "BESS battery stores mid-day solar surplus, "
+            "and Primary Genset GEN-01 is dispatched during nocturnal deficit windows with 0% critical load shedding."
         ),
         "dispatch": dispatch_points,
     }
+

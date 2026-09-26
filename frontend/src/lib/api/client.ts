@@ -17,7 +17,9 @@ import {
   HourlyDispatchPoint,
   HourlyForecastPoint,
   OptimizationMetrics,
+  OptimizationResultData,
   RenewableRecord,
+  ScenarioMetadata,
   SimulationParams,
   SimulationResults,
   Station,
@@ -843,56 +845,110 @@ export const apiClient = {
   },
 
   // AI Optimization
-  async getOptimizationResult(stationId: StationId): Promise<{
-    metrics: OptimizationMetrics;
-    dispatchSchedule: HourlyDispatchPoint[];
-    source?: string;
-    isDemonstrationScenario?: boolean;
-    recommendation?: string;
-  }> {
+  async getOptimizationResult(stationId: StationId): Promise<OptimizationResultData> {
     try {
       const response = await fetch(`${API_BASE_URL}/optimization/${stationId}`);
       if (response.ok) {
         const result = await response.json();
         if (result.data && result.data.metrics && result.data.dispatchSchedule) {
           return {
+            status: result.data.status || 'SUCCESS',
             metrics: result.data.metrics,
             dispatchSchedule: result.data.dispatchSchedule,
+            scenarioMetadata: result.data.scenarioMetadata || null,
             source: result.data.source || 'OR_TOOLS_MILP',
+            solverEngine: result.data.solverEngine || 'Google OR-Tools (MILP/SCIP)',
             isDemonstrationScenario: result.data.isDemonstrationScenario ?? true,
             recommendation: result.data.recommendation,
+            stationId: result.data.stationId || stationId,
+            horizonHours: result.data.horizonHours || 24,
+            objectiveValue: result.data.objectiveValue,
+            totalEstimatedFuel: result.data.totalEstimatedFuel,
+            baselineFuel: result.data.baselineFuel,
+            fuelSavedLiters: result.data.fuelSavedLiters,
+            fuelSavedPercent: result.data.fuelSavedPercent,
+            totalPVAvailableKWh: result.data.totalPVAvailableKWh,
+            totalPVUsedKWh: result.data.totalPVUsedKWh,
+            totalPVCurtailedKWh: result.data.totalPVCurtailedKWh,
+            pvUtilizationPercent: result.data.pvUtilizationPercent,
+            totalRenewableGenerated: result.data.totalRenewableGenerated,
+            totalRenewableUsed: result.data.totalRenewableUsed,
+            totalRenewableCurtailed: result.data.totalRenewableCurtailed,
+            renewableUtilizationPercent: result.data.renewableUtilizationPercent,
+            totalGeneratorEnergy: result.data.totalGeneratorEnergy,
+            generatorCommittedHours: result.data.generatorCommittedHours,
+            totalBatteryCharge: result.data.totalBatteryCharge,
+            totalBatteryDischarge: result.data.totalBatteryDischarge,
+            minimumBatterySOC: result.data.minimumBatterySOC,
+            maximumBatterySOC: result.data.maximumBatterySOC,
+            criticalLoadReliabilityPercent: result.data.criticalLoadReliabilityPercent ?? 100,
+            criticalLoadShedTotalKWh: result.data.criticalLoadShedTotalKWh ?? 0,
+            rawResult: result.data.rawResult || result.data,
+          };
+        } else if (result.data && result.data.status === 'ERROR') {
+          return {
+            status: 'ERROR',
+            message: result.data.message || 'Optimization data unavailable for station.',
+            metrics: OPTIMIZATION_METRICS[stationId] || OPTIMIZATION_METRICS.maitri,
+            dispatchSchedule: [],
+            source: 'ERROR',
           };
         }
       }
     } catch {
-      // Fallback gracefully if microservice is offline
+      // Fallback gracefully if backend proxy is offline
     }
     return {
+      status: 'SUCCESS',
       metrics: OPTIMIZATION_METRICS[stationId] || OPTIMIZATION_METRICS.maitri,
       dispatchSchedule: generateDispatchSchedule(stationId),
       source: 'MOCK_FALLBACK',
       isDemonstrationScenario: true,
+      stationId,
+      horizonHours: 24,
     };
   },
 
-  async runOptimization(stationId: StationId): Promise<{
-    metrics: OptimizationMetrics;
-    dispatchSchedule: HourlyDispatchPoint[];
-    message: string;
-    source?: string;
-    isDemonstrationScenario?: boolean;
-  }> {
+  async runOptimization(stationId: StationId): Promise<OptimizationResultData> {
     try {
       const response = await fetch(`${API_BASE_URL}/optimization/${stationId}`);
       if (response.ok) {
         const result = await response.json();
         if (result.data && result.data.metrics && result.data.dispatchSchedule) {
           return {
+            status: result.data.status || 'SUCCESS',
             metrics: result.data.metrics,
             dispatchSchedule: result.data.dispatchSchedule,
+            scenarioMetadata: result.data.scenarioMetadata || null,
             message: result.data.recommendation || 'Optimal dispatch schedule computed with OR-Tools MILP solver. All critical loads guaranteed.',
             source: result.data.source || 'OR_TOOLS_MILP',
+            solverEngine: result.data.solverEngine || 'Google OR-Tools (MILP/SCIP)',
             isDemonstrationScenario: result.data.isDemonstrationScenario ?? true,
+            recommendation: result.data.recommendation,
+            stationId: result.data.stationId || stationId,
+            horizonHours: result.data.horizonHours || 24,
+            objectiveValue: result.data.objectiveValue,
+            totalEstimatedFuel: result.data.totalEstimatedFuel,
+            baselineFuel: result.data.baselineFuel,
+            fuelSavedLiters: result.data.fuelSavedLiters,
+            fuelSavedPercent: result.data.fuelSavedPercent,
+            totalPVAvailableKWh: result.data.totalPVAvailableKWh,
+            totalPVUsedKWh: result.data.totalPVUsedKWh,
+            totalPVCurtailedKWh: result.data.totalPVCurtailedKWh,
+            pvUtilizationPercent: result.data.pvUtilizationPercent,
+            totalRenewableGenerated: result.data.totalRenewableGenerated,
+            totalRenewableUsed: result.data.totalRenewableUsed,
+            totalRenewableCurtailed: result.data.totalRenewableCurtailed,
+            renewableUtilizationPercent: result.data.renewableUtilizationPercent,
+            totalGeneratorEnergy: result.data.totalGeneratorEnergy,
+            generatorCommittedHours: result.data.generatorCommittedHours,
+            totalBatteryCharge: result.data.totalBatteryCharge,
+            totalBatteryDischarge: result.data.totalBatteryDischarge,
+            minimumBatterySOC: result.data.minimumBatterySOC,
+            maximumBatterySOC: result.data.maximumBatterySOC,
+            criticalLoadReliabilityPercent: result.data.criticalLoadReliabilityPercent ?? 100,
+            criticalLoadShedTotalKWh: result.data.criticalLoadShedTotalKWh ?? 0,
+            rawResult: result.data.rawResult || result.data,
           };
         }
       }
@@ -902,6 +958,7 @@ export const apiClient = {
 
     const base = OPTIMIZATION_METRICS[stationId] || OPTIMIZATION_METRICS.maitri;
     return {
+      status: 'SUCCESS',
       metrics: {
         ...base,
         fuelSavedL: base.fuelSavedL + Math.round((Math.random() * 8 - 4)),
@@ -912,6 +969,7 @@ export const apiClient = {
       message: 'Optimal dispatch schedule computed with MILP solver. All critical loads guaranteed.',
       source: 'MOCK_FALLBACK',
       isDemonstrationScenario: true,
+      stationId,
     };
   },
 

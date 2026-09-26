@@ -19,43 +19,62 @@ interface EnergyDispatchChartProps {
 }
 
 export const EnergyDispatchChart: React.FC<EnergyDispatchChartProps> = ({ data }) => {
+  // Normalize data points to handle both direct OR-Tools fields and legacy mock fields
+  const formattedData = data.map((pt, idx) => {
+    const pvUsed = pt.pv_used_kW ?? pt.solarKW ?? 0;
+    const pvAvailable = pt.pv_available_kW ?? pt.pvAvailableKW ?? pvUsed;
+    const windUsed = pt.wind_used_kW ?? pt.windKW ?? 0;
+    const bessDischarge = pt.battery_discharge_kW ?? pt.batteryDischargeKW ?? 0;
+    const bessCharge = pt.battery_charge_kW ?? pt.batteryChargeKW ?? 0;
+    const genOutput = pt.generator_output_kW ?? ((pt.generator1KW || 0) + (pt.generator2KW || 0) + (pt.generator3KW || 0));
+    const load = pt.load_kW ?? pt.totalLoadKW ?? 0;
+    const timeLabel = pt.time || `${String(pt.hour ?? idx).padStart(2, '0')}:00`;
+
+    return {
+      time: timeLabel,
+      pvUsed: Number(pvUsed.toFixed(1)),
+      pvAvailable: Number(pvAvailable.toFixed(1)),
+      windUsed: Number(windUsed.toFixed(1)),
+      bessDischarge: Number(bessDischarge.toFixed(1)),
+      bessCharge: Number(bessCharge.toFixed(1)),
+      genOutput: Number(genOutput.toFixed(1)),
+      loadDemand: Number(load.toFixed(1)),
+    };
+  });
+
   return (
-    <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5">
+    <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5 font-mono">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-2.5 border-b border-[#1B2C42]/50">
         <div>
-          <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase font-mono flex items-center gap-2">
+          <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
             <span className="w-2 h-2 rounded-sm bg-cyan-400" />
             24-Hour Optimal Energy Dispatch Schedule (Stacked Sources)
           </h3>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            Hourly generation stacking: Solar + Wind + Battery Discharge + G1 + G2 matching Station Demand
+            Hourly generation stacking: Solar PV + Wind + BESS Discharge + Generator Output matching Station Demand
           </p>
         </div>
       </div>
 
       <div className="w-full h-80 sm:h-96">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+          <ComposedChart data={formattedData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
             <defs>
               <linearGradient id="solarStack" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.4} />
+                <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.85} />
+                <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.35} />
               </linearGradient>
               <linearGradient id="windStack" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#06B6D4" stopOpacity={0.4} />
+                <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.85} />
+                <stop offset="95%" stopColor="#06B6D4" stopOpacity={0.35} />
               </linearGradient>
               <linearGradient id="bessStack" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10B981" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#10B981" stopOpacity={0.4} />
+                <stop offset="5%" stopColor="#10B981" stopOpacity={0.85} />
+                <stop offset="95%" stopColor="#10B981" stopOpacity={0.35} />
               </linearGradient>
-              <linearGradient id="gen1Stack" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.4} />
-              </linearGradient>
-              <linearGradient id="gen2Stack" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.4} />
+              <linearGradient id="genStack" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.85} />
+                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.35} />
               </linearGradient>
             </defs>
 
@@ -66,36 +85,68 @@ export const EnergyDispatchChart: React.FC<EnergyDispatchChartProps> = ({ data }
             <Tooltip
               content={({ active, payload, label }) => {
                 if (!active || !payload || !payload.length) return null;
-                const total = payload.reduce((acc, p: any) => (p.dataKey !== 'totalLoadKW' ? acc + (p.value || 0) : acc), 0);
-                const load = payload.find((p: any) => p.dataKey === 'totalLoadKW')?.value;
+                const pt = payload[0]?.payload;
+                const totalGen = (pt?.pvUsed || 0) + (pt?.windUsed || 0) + (pt?.bessDischarge || 0) + (pt?.genOutput || 0);
 
                 return (
-                  <div className="bg-[#0A121E]/95 border border-cyan-500/40 p-3.5 rounded shadow-2xl font-mono text-xs text-slate-200 min-w-[220px]">
+                  <div className="bg-[#0A121E]/95 border border-cyan-500/40 p-3.5 rounded shadow-2xl font-mono text-xs text-slate-200 min-w-[240px]">
                     <p className="text-cyan-400 font-bold mb-1.5 border-b border-[#1B2C42] pb-1">
-                      DISPATCH TIME: {label}
+                      DISPATCH HOUR: {label}
                     </p>
-                    {payload.map((entry: any) => {
-                      if (entry.dataKey === 'totalLoadKW') return null;
-                      return (
-                        <div key={entry.name} className="flex justify-between gap-3 py-0.5">
-                          <span className="flex items-center gap-1.5" style={{ color: entry.color }}>
-                            <span className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: entry.color }} />
-                            {entry.name}:
-                          </span>
-                          <span className="font-bold text-white">{entry.value} kW</span>
-                        </div>
-                      );
-                    })}
-                    <div className="border-t border-[#1B2C42] mt-1.5 pt-1.5 flex justify-between font-bold text-slate-100">
-                      <span>Total Generation:</span>
-                      <span className="text-cyan-300">{total} kW</span>
-                    </div>
-                    {load !== undefined && (
-                      <div className="flex justify-between font-bold text-rose-300">
-                        <span>Station Load:</span>
-                        <span>{load} kW</span>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-amber-300">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-sm bg-amber-400 inline-block" />
+                          Solar PV Used:
+                        </span>
+                        <span className="font-bold text-white">{pt?.pvUsed} kW</span>
                       </div>
-                    )}
+
+                      <div className="flex justify-between text-cyan-300">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-sm bg-cyan-400 inline-block" />
+                          Wind Turbines:
+                        </span>
+                        <span className="font-bold text-white">{pt?.windUsed} kW</span>
+                      </div>
+
+                      <div className="flex justify-between text-emerald-300">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-sm bg-emerald-400 inline-block" />
+                          BESS Discharge:
+                        </span>
+                        <span className="font-bold text-white">{pt?.bessDischarge} kW</span>
+                      </div>
+
+                      {pt?.bessCharge > 0 && (
+                        <div className="flex justify-between text-teal-300">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-sm bg-teal-400 inline-block" />
+                            BESS Charging:
+                          </span>
+                          <span className="font-bold text-teal-300">+{pt?.bessCharge} kW</span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between text-blue-300">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-sm bg-blue-400 inline-block" />
+                          Generator Output:
+                        </span>
+                        <span className="font-bold text-white">{pt?.genOutput} kW</span>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-[#1B2C42] mt-2 pt-1.5 flex justify-between font-bold text-slate-100">
+                      <span>Total Supply:</span>
+                      <span className="text-cyan-300">{totalGen.toFixed(1)} kW</span>
+                    </div>
+
+                    <div className="flex justify-between font-bold text-rose-300">
+                      <span>Station Demand:</span>
+                      <span>{pt?.loadDemand} kW</span>
+                    </div>
                   </div>
                 );
               }}
@@ -105,23 +156,23 @@ export const EnergyDispatchChart: React.FC<EnergyDispatchChartProps> = ({ data }
             {/* Stacked Generation Areas */}
             <Area
               type="monotone"
-              dataKey="solarKW"
-              name="Solar PV"
+              dataKey="pvUsed"
+              name="Solar PV (Used)"
               stackId="dispatch"
               stroke="#F59E0B"
               fill="url(#solarStack)"
             />
             <Area
               type="monotone"
-              dataKey="windKW"
-              name="Wind Turbines"
+              dataKey="windUsed"
+              name="Wind Generation"
               stackId="dispatch"
               stroke="#06B6D4"
               fill="url(#windStack)"
             />
             <Area
               type="monotone"
-              dataKey="batteryDischargeKW"
+              dataKey="bessDischarge"
               name="BESS Discharge"
               stackId="dispatch"
               stroke="#10B981"
@@ -129,25 +180,17 @@ export const EnergyDispatchChart: React.FC<EnergyDispatchChartProps> = ({ data }
             />
             <Area
               type="monotone"
-              dataKey="generator1KW"
-              name="Primary Genset G1"
+              dataKey="genOutput"
+              name="Diesel Generator"
               stackId="dispatch"
               stroke="#3B82F6"
-              fill="url(#gen1Stack)"
-            />
-            <Area
-              type="monotone"
-              dataKey="generator2KW"
-              name="Secondary Genset G2"
-              stackId="dispatch"
-              stroke="#8B5CF6"
-              fill="url(#gen2Stack)"
+              fill="url(#genStack)"
             />
 
             {/* Total Demand Load Overlay Line */}
             <Line
               type="monotone"
-              dataKey="totalLoadKW"
+              dataKey="loadDemand"
               name="Station Load Demand"
               stroke="#FFFFFF"
               strokeWidth={3}

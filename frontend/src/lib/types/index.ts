@@ -271,9 +271,37 @@ export interface WeatherForecastData {
   source?: string;
 }
 
+export interface ScenarioMetadata {
+  scenario_type: string;
+  station: string;
+  pv_mode: string;
+  pv_capacity_kw: number;
+  performance_ratio: number;
+  scenario_month?: string;
+  source_description?: string;
+}
+
 export interface HourlyDispatchPoint {
+  hour?: number;
   time: string;
+  timestamp?: string;
+  load_kW?: number;
+  pv_available_kW?: number;
+  pv_used_kW?: number;
+  pv_curtailed_kW?: number;
+  wind_available_kW?: number;
+  wind_used_kW?: number;
+  wind_curtailed_kW?: number;
+  battery_charge_kW?: number;
+  battery_discharge_kW?: number;
+  battery_soc_percent?: number;
+  generator_output_kW?: number;
+  critical_load_kW?: number;
+  critical_load_shed_kW?: number;
+  
+  // Legacy / backwards-compatible fields
   solarKW: number;
+  pvAvailableKW?: number;
   windKW: number;
   batteryDischargeKW: number;
   batteryChargeKW: number;
@@ -282,6 +310,9 @@ export interface HourlyDispatchPoint {
   generator3KW: number;
   totalLoadKW: number;
   netDeficitKW: number;
+  batterySOC?: number;
+  flexibleLoadSheddingKW?: number;
+  renewableCurtailmentKW?: number;
 }
 
 export interface OptimizationMetrics {
@@ -302,7 +333,54 @@ export interface OptimizationMetrics {
   
   criticalLoadReliabilityPercent: number;
   solverExecutionTimeMs: number;
-  solverStatus: 'OPTIMAL' | 'FEASIBLE' | 'COMPUTING';
+  solverStatus: 'OPTIMAL' | 'FEASIBLE' | 'COMPUTING' | 'SUCCESS' | 'ERROR' | 'DEGRADED';
+
+  // Extended PV and Dispatch Summary Fields
+  totalPVAvailableKWh?: number;
+  totalPVUsedKWh?: number;
+  totalPVCurtailedKWh?: number;
+  pvUtilizationPercent?: number;
+  totalBatteryCharge?: number;
+  totalBatteryDischarge?: number;
+  totalGeneratorEnergy?: number;
+  criticalLoadShedTotalKWh?: number;
+  objectiveValue?: number;
+}
+
+export interface OptimizationResultData {
+  status: 'SUCCESS' | 'ERROR' | 'DEGRADED';
+  source?: string;
+  solverEngine?: string;
+  isDemonstrationScenario?: boolean;
+  scenarioMetadata?: ScenarioMetadata | null;
+  stationId?: string;
+  horizonHours?: number;
+  objectiveValue?: number;
+  totalEstimatedFuel?: number;
+  baselineFuel?: number;
+  fuelSavedLiters?: number;
+  fuelSavedPercent?: number;
+  totalPVAvailableKWh?: number;
+  totalPVUsedKWh?: number;
+  totalPVCurtailedKWh?: number;
+  pvUtilizationPercent?: number;
+  totalRenewableGenerated?: number;
+  totalRenewableUsed?: number;
+  totalRenewableCurtailed?: number;
+  renewableUtilizationPercent?: number;
+  totalGeneratorEnergy?: number;
+  generatorCommittedHours?: number;
+  totalBatteryCharge?: number;
+  totalBatteryDischarge?: number;
+  minimumBatterySOC?: number;
+  maximumBatterySOC?: number;
+  criticalLoadReliabilityPercent?: number;
+  criticalLoadShedTotalKWh?: number;
+  metrics: OptimizationMetrics;
+  dispatchSchedule: HourlyDispatchPoint[];
+  recommendation?: string;
+  rawResult?: any;
+  message?: string;
 }
 
 export interface SimulationParams {

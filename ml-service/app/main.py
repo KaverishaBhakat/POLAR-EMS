@@ -369,8 +369,11 @@ def get_optimization_dispatch(
         optimize_24h_dispatch
     )
 
-    station = resolve_station(station_id)
-    station_code = station["code"] if station else station_id.upper()
+    try:
+        station = resolve_station(station_id)
+        station_code = station["code"] if station else station_id.upper()
+    except Exception:
+        station_code = station_id.upper()
 
     # 1. Build demonstration scenario inputs
     scenario_inputs = build_demonstration_scenario_inputs(
@@ -388,6 +391,7 @@ def get_optimization_dispatch(
         station_id=station_code,
         timestamps=scenario_inputs["timestamps"],
         hours_labels=scenario_inputs["hours"],
+        scenario_metadata=scenario_inputs.get("scenarioMetadata"),
     )
 
     if result.get("status") == "ERROR":
