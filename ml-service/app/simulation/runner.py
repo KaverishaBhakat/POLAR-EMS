@@ -111,6 +111,19 @@ def run_resilience_simulation(
             "Remaining GEN-02 (80 kW), solar PV, wind turbine, and BESS maintain microgrid stability."
         )
 
+    elif norm_scenario_id == ScenarioId.LOW_BATTERY.value:
+        # Low Battery Transformation: Initial Battery SOC set to 20.0% (lower operational limit)
+        scenario_inputs["initialSOC"] = 20.0
+
+        meta["scenario_type"] = "LOW_BATTERY"
+        meta["scenario_id"] = ScenarioId.LOW_BATTERY.value
+        meta["battery_mode"] = "CRITICALLY_LOW_INITIAL_SOC"
+        meta["initial_soc_percent"] = 20.0
+        meta["source_description"] = (
+            "Critically Low Battery What-If Simulation: Initial BESS SOC set to 20.0% (70.0 kWh lower limit). "
+            "Solar PV, wind turbine, and generator dispatch evaluate station recovery and critical load protection."
+        )
+
     scenario_inputs["scenarioMetadata"] = meta
 
     # 4. Run Scenario Optimization
@@ -170,6 +183,8 @@ def run_resilience_simulation(
     remaining_gen_energy = g2_energy if norm_scenario_id == ScenarioId.GENERATOR_FAILURE.value else total_gen_energy
     remaining_gen_runtime = g2_runtime_hours if norm_scenario_id == ScenarioId.GENERATOR_FAILURE.value else gen_hours
 
+    scen_initial_soc = float(scenario_inputs.get("initialSOC", initial_soc))
+
     resilience_metrics = {
         "scenario_name": scenario_def.scenario_name,
         "scenario_id": scenario_def.scenario_id,
@@ -190,6 +205,7 @@ def run_resilience_simulation(
         "total_generator_energy_kwh": total_gen_energy,
         "total_battery_charge_kwh": total_batt_chg,
         "total_battery_discharge_kwh": total_batt_dis,
+        "initial_battery_soc_percent": scen_initial_soc,
         "minimum_battery_soc_percent": min_soc,
         "maximum_battery_soc_percent": max_soc,
         "generator_runtime_hours": gen_hours,
@@ -218,6 +234,7 @@ def run_resilience_simulation(
     b_gen_hours = int(baseline_result.get("generatorCommittedHours", 0))
     b_obj = float(baseline_result.get("objectiveValue", 0.0))
     scen_obj = float(scenario_result.get("objectiveValue", 0.0))
+    b_init_soc = float(baseline_inputs.get("initialSOC", initial_soc))
 
     def _calc_pct_delta(scen_val: float, base_val: float) -> Optional[float]:
         if abs(base_val) > 1e-4:
@@ -254,6 +271,12 @@ def run_resilience_simulation(
             "scenario": gen_hours,
             "absolute_delta": gen_hours - b_gen_hours,
             "percent_delta": _calc_pct_delta(float(gen_hours), float(b_gen_hours)),
+        },
+        "initial_battery_soc_percent": {
+            "baseline": b_init_soc,
+            "scenario": scen_initial_soc,
+            "absolute_delta": round(scen_initial_soc - b_init_soc, 1),
+            "percent_delta": _calc_pct_delta(scen_initial_soc, b_init_soc),
         },
         "battery_discharge_kwh": {
             "baseline": b_dis,
@@ -332,6 +355,14 @@ def run_resilience_simulation(
             f"with estimated fuel consumption of {fuel_liters:.1f} L (compared to {b_fuel:.1f} L in baseline). "
             f"Solar PV ({total_pv_avail:.1f} kWh) and wind generation ({total_wind_avail:.1f} kWh) with BESS buffer "
             f"prevent any critical life-support load shedding."
+        )
+    elif norm_scenario_id == ScenarioId.LOW_BATTERY.value:
+        recommendation = (
+            f"Under the modeled Critically Low Battery State scenario (starting at 20.0% SOC / 70.0 kWh), "
+            f"the microgrid remains {critical_load_status} with {crit_reliability}% critical-load reliability. "
+            f"Primary generator GEN-01 and renewable co-generation supply {total_gen_energy:.1f} kWh of generator energy "
+            f"and {total_renew_used:.1f} kWh of renewable energy, charging the battery with {total_batt_chg:.1f} kWh "
+            f"to recover SOC up to {max_soc:.1f}% while strictly protecting all critical life-support loads."
         )
     else:
         recommendation = (

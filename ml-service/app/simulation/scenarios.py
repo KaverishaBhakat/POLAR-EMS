@@ -105,6 +105,84 @@ SCENARIO_REGISTRY: Dict[str, ScenarioMetadata] = {
             "critical_load_protection": True
         }
     ),
+    ScenarioId.LOW_BATTERY.value: ScenarioMetadata(
+        scenario_id=ScenarioId.LOW_BATTERY.value,
+        scenario_type="LOW_BATTERY",
+        scenario_name="Critically Low Battery State",
+        description=(
+            "Simulates a contingency condition where the microgrid enters the 24-hour horizon with a "
+            "critically low initial battery state of charge (20.0%, at the operational lower limit), "
+            "evaluating whether station renewables and generator dispatch can protect critical life-support "
+            "loads and replenish energy storage."
+        ),
+        category="RESILIENCE",
+        is_active=True,
+        provenance={
+            "scenario_type": "LOW_BATTERY",
+            "data_classification": "SCENARIO",
+            "battery_modification": "Initial BESS state of charge set to 20.0% (70.0 kWh), representing the lower operational reserve floor.",
+            "battery_capacity_kwh": 350.0,
+            "pv_source": "Historical December climatology scenario (100 kW capacity, PR=0.80).",
+            "wind_source": "Maitri 2019 observed wind speed converted to modeled turbine power via scenario power curve.",
+            "demand_source": "Deterministic scenario demand model (base 65 kW, diurnal 55.2–83.6 kW).",
+            "generator_source": "Scenario generator fleet (GEN-01 100 kW, GEN-02 80 kW).",
+            "is_demonstration_scenario": True,
+            "disclaimer": "All Low Battery results are modeled what-if results and are not measurements of an actual Maitri battery depletion event."
+        },
+        assumptions={
+            "initial_soc": 20.0,
+            "initial_battery_soc_percent": 20.0,
+            "g1_available": True,
+            "g2_available": True,
+            "generator_availability": {
+                "GEN-01": True,
+                "GEN-02": True
+            },
+            "pv_availability_multiplier": 1.0,
+            "wind_availability_multiplier": 1.0,
+            "demand_multiplier": 1.0,
+            "critical_load_protection": True
+        }
+    ),
+    ScenarioId.RENEWABLE_DROP.value: ScenarioMetadata(
+        scenario_id=ScenarioId.RENEWABLE_DROP.value,
+        scenario_type="RENEWABLE_DROP",
+        scenario_name="Renewable Generation Drop",
+        description=(
+            "Simulates a severe 80% reduction across both solar PV and wind generation for the full 24-hour horizon, "
+            "testing station resilience and thermal dispatch when only 20% of renewable generation remains available."
+        ),
+        category="RESILIENCE",
+        is_active=True,
+        provenance={
+            "scenario_type": "RENEWABLE_DROP",
+            "data_classification": "SCENARIO",
+            "pv_modification": "Solar PV generation scaled by 0.20 (80% reduction) for all 24 hours.",
+            "wind_modification": "Wind generation scaled by 0.20 (80% reduction) for all 24 hours.",
+            "retention_factor": 0.20,
+            "drop_factor": 0.80,
+            "pv_source": "Historical December climatology scenario (100 kW baseline capacity, PR=0.80) scaled to 20% availability.",
+            "wind_source": "Maitri 2019 observed wind speed converted to modeled turbine power (50 kW baseline capacity) scaled to 20% availability.",
+            "demand_source": "Deterministic scenario demand model (base 65 kW, diurnal 55.2–83.6 kW).",
+            "battery_source": "Baseline initial SOC (75.0%) and physical limits [20%, 95%].",
+            "generator_source": "Baseline generator fleet (GEN-01 100 kW, GEN-02 80 kW, both available).",
+            "is_demonstration_scenario": True,
+            "disclaimer": "The 80% renewable reduction is a scenario assumption for resilience testing and does not represent a measured Maitri event."
+        },
+        assumptions={
+            "pv_availability_multiplier": 0.20,
+            "wind_availability_multiplier": 0.20,
+            "demand_multiplier": 1.0,
+            "initial_soc_override": None,
+            "g1_available": True,
+            "g2_available": True,
+            "generator_availability": {
+                "GEN-01": True,
+                "GEN-02": True
+            },
+            "critical_load_protection": True
+        }
+    ),
 }
 
 
