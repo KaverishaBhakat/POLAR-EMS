@@ -446,21 +446,140 @@ def test_low_battery_deterministic_repeatability():
     assert len(run1["dispatch"]) == len(run2["dispatch"]) == 24
 
 
+def test_scenario_registry_contains_renewable_drop():
+    """Verify Renewable Drop is properly registered with required metadata and provenance."""
+    scenarios = get_registered_scenarios()
+    scen_ids = [s["scenario_id"] for s in scenarios]
+    assert "renewable-drop" in scen_ids
+
+    scen = get_scenario_definition("renewable-drop")
+    assert scen is not None
+    assert scen.scenario_name == "Renewable Generation Drop"
+    assert scen.scenario_type == "RENEWABLE_DROP"
+    assert scen.category == "RESILIENCE"
+    assert scen.provenance["data_classification"] == "SCENARIO"
+    assert scen.assumptions["pv_availability_multiplier"] == 0.20
+    assert scen.assumptions["wind_availability_multiplier"] == 0.20
+    assert scen.assumptions["g1_available"] is True
+    assert scen.assumptions["g2_available"] is True
+    assert scen.assumptions["critical_load_protection"] is True
+
+
+def test_renewable_drop_inputs_and_curtailment_preservation():
+    """
+    Validation Test for Renewable Drop:
+    1. Solar PV vector is exactly 20% of baseline for every hour.
+    2. Wind generation vector is exactly 20% of baseline for every hour.
+    3. Demand input matches baseline demand.
+    4. Initial battery SOC remains baseline (75%), not 20%.
+    5. Both generators remain fully available.
+    6. Battery SOC limits [20%, 95%] are respected.
+    7. Critical load remains protected with 0 kWh shedding.
+    """
+    baseline_inputs = build_demonstration_scenario_inputs("MAITRI", horizon_hours=24)
+    sim_result = run_resilience_simulation(station_id="MAITRI", scenario_id="renewable-drop", horizon_hours=24)
+
+    assert sim_result["status"] == "SUCCESS"
+    dispatch = sim_result["dispatch"]
+    assert len(dispatch) == 24
+
+    # 1. Solar PV is 20% of baseline
+    for t, step in enumerate(dispatch):
+        expected_pv = round(baseline_inputs["solar"][t] * 0.20, 2)
+        assert math.isclose(step["pv_available_kW"], expected_pv, abs_tol=1e-2)
+
+    # 2. Wind is 20% of baseline
+    for t, step in enumerate(dispatch):
+        expected_wind = round(baseline_inputs["wind"][t] * 0.20, 2)
+        assert math.isclose(step["wind_available_kW"], expected_wind, abs_tol=1e-2)
+
+    # 3. Demand matches baseline
+    sim_demand = [step["load_kW"] for step in dispatch]
+    assert sim_demand == baseline_inputs["demand"]
+
+    # 4. Initial SOC matches baseline
+    assert sim_result["resilienceMetrics"]["initial_battery_soc_percent"] == 75.0
+
+    # 5. Both generators available and G1 committed
+    assert any(step["generator1Power"] > 0 for step in dispatch)
+
+    # 6. Critical load protected
+    for step in dispatch:
+        assert step["critical_load_kW"] == 42.5
+        assert step["critical_load_shed_kW"] == 0.0
+        assert step["criticalLoadProtected"] is True
+
+
+def test_renewable_drop_resilience_metrics():
+    """Verify standard resilience metrics in Renewable Drop output."""
+    sim_result = run_resilience_simulation(station_id="MAITRI", scenario_id="renewable-drop", horizon_hours=24)
+    metrics = sim_result["resilienceMetrics"]
+
+    assert metrics["scenario_id"] == "renewable-drop"
+    assert metrics["scenario_type"] == "RENEWABLE_DROP"
+    assert metrics["data_classification"] == "SCENARIO"
+    assert metrics["is_demonstration_scenario"] is True
+    assert math.isclose(metrics["total_pv_available_kwh"], 131.4, abs_tol=0.5)
+    assert math.isclose(metrics["total_wind_available_kwh"], 31.92, abs_tol=0.5)
+    assert math.isclose(metrics["total_renewable_available_kwh"], 163.32, abs_tol=0.5)
+    assert metrics["renewable_utilization_percent"] == 100.0
+    assert metrics["total_generator_energy_kwh"] > 1000.0
+    assert metrics["generator_runtime_hours"] > 10
+    assert metrics["estimated_fuel_liters"] > 300.0
+    assert metrics["total_critical_load_shed_kwh"] == 0.0
+    assert metrics["critical_load_reliability_percent"] == 100.0
+    assert metrics["resilience_status"] == "PROTECTED"
+    assert metrics["critical_load_status"] == "PROTECTED"
+
+
+def test_renewable_drop_baseline_comparison():
+    """Verify baseline comparison table under Renewable Drop."""
+    sim_result = run_resilience_simulation(station_id="MAITRI", scenario_id="renewable-drop", horizon_hours=24)
+    comp = sim_result["comparison"]
+
+    # PV, Wind, and Total Renewable: exactly -80.0% delta
+    assert math.isclose(comp["pv_available_kwh"]["percent_delta"], -80.0, abs_tol=0.1)
+    assert math.isclose(comp["wind_available_kwh"]["percent_delta"], -80.0, abs_tol=0.1)
+    assert math.isclose(comp["total_renewable_energy_kwh"]["percent_delta"], -80.0, abs_tol=0.1)
+
+    # Generator energy & Fuel consumption increase
+    assert comp["generator_energy_kwh"]["scenario"] > comp["generator_energy_kwh"]["baseline"]
+    assert comp["generator_energy_kwh"]["percent_delta"] > 90.0
+    assert comp["fuel_consumption_liters"]["scenario"] > comp["fuel_consumption_liters"]["baseline"]
+    assert comp["fuel_consumption_liters"]["percent_delta"] > 90.0
+
+    # Critical load shedding: 0 on both
+    assert comp["critical_load_shed_kwh"]["scenario"] == 0.0
+    assert comp["critical_load_reliability_percent"]["scenario"] == 100.0
+
+
+def test_renewable_drop_deterministic_repeatability():
+    """Verify running Renewable Drop simulation twice produces strictly identical results."""
+    run1 = run_resilience_simulation(station_id="MAITRI", scenario_id="renewable-drop", horizon_hours=24)
+    run2 = run_resilience_simulation(station_id="MAITRI", scenario_id="renewable-drop", horizon_hours=24)
+
+    assert run1["objectiveValue"] == run2["objectiveValue"]
+    assert run1["resilienceMetrics"] == run2["resilienceMetrics"]
+    assert run1["comparison"] == run2["comparison"]
+    assert len(run1["dispatch"]) == len(run2["dispatch"]) == 24
+
+
 # =========================================================================
 # 5. FastAPI Simulation Endpoint Tests
 # =========================================================================
 
 def test_api_get_simulation_scenarios():
-    """Test GET /simulation/scenarios endpoint returns active scenario list containing all three scenarios."""
+    """Test GET /simulation/scenarios endpoint returns active scenario list containing all four scenarios."""
     response = client.get("/simulation/scenarios")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "SUCCESS"
-    assert data["count"] >= 3
+    assert data["count"] >= 4
     scen_ids = [s["scenario_id"] for s in data["scenarios"]]
     assert "polar-night" in scen_ids
     assert "generator-failure" in scen_ids
     assert "low-battery" in scen_ids
+    assert "renewable-drop" in scen_ids
 
 
 def test_api_get_simulation_run_polar_night():
@@ -513,6 +632,23 @@ def test_api_get_simulation_run_low_battery():
     assert "comparison" in data
     assert "recommendation" in data
     assert "Critically Low Battery State" in data["recommendation"]
+
+
+def test_api_get_simulation_run_renewable_drop():
+    """Test GET /simulation/run/MAITRI/renewable-drop endpoint executes successfully."""
+    response = client.get("/simulation/run/MAITRI/renewable-drop?horizon_hours=24")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "SUCCESS"
+    assert data["stationId"] == "MAITRI"
+    assert data["horizonHours"] == 24
+    assert data["scenario"]["scenario_id"] == "renewable-drop"
+    assert data["resilienceMetrics"]["resilience_status"] == "PROTECTED"
+    assert math.isclose(data["resilienceMetrics"]["total_renewable_available_kwh"], 163.32, abs_tol=0.5)
+    assert len(data["dispatch"]) == 24
+    assert "comparison" in data
+    assert "recommendation" in data
+    assert "Renewable Generation Drop" in data["recommendation"]
 
 
 def test_api_simulation_unknown_scenario_returns_404():

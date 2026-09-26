@@ -124,6 +124,22 @@ def run_resilience_simulation(
             "Solar PV, wind turbine, and generator dispatch evaluate station recovery and critical load protection."
         )
 
+    elif norm_scenario_id == ScenarioId.RENEWABLE_DROP.value:
+        # Renewable Drop Transformation: 80% reduction in solar PV and wind generation (20% retained)
+        scenario_inputs["solar"] = [round(float(v) * 0.20, 2) for v in baseline_inputs["solar"]]
+        scenario_inputs["pvAvailable"] = scenario_inputs["solar"]
+        scenario_inputs["wind"] = [round(float(v) * 0.20, 2) for v in baseline_inputs["wind"]]
+
+        meta["scenario_type"] = "RENEWABLE_DROP"
+        meta["scenario_id"] = ScenarioId.RENEWABLE_DROP.value
+        meta["renewable_mode"] = "REDUCED_RENEWABLE_GENERATION_20_PERCENT"
+        meta["pv_retention_multiplier"] = 0.20
+        meta["wind_retention_multiplier"] = 0.20
+        meta["source_description"] = (
+            "Renewable Generation Drop What-If Simulation: 80% reduction in solar PV and wind generation. "
+            "Microgrid relies on remaining 20% renewables, BESS, and generator fleet."
+        )
+
     scenario_inputs["scenarioMetadata"] = meta
 
     # 4. Run Scenario Optimization
@@ -363,6 +379,14 @@ def run_resilience_simulation(
             f"Primary generator GEN-01 and renewable co-generation supply {total_gen_energy:.1f} kWh of generator energy "
             f"and {total_renew_used:.1f} kWh of renewable energy, charging the battery with {total_batt_chg:.1f} kWh "
             f"to recover SOC up to {max_soc:.1f}% while strictly protecting all critical life-support loads."
+        )
+    elif norm_scenario_id == ScenarioId.RENEWABLE_DROP.value:
+        recommendation = (
+            f"Under the modeled Renewable Generation Drop scenario (80% reduction across solar PV and wind co-generation), "
+            f"the microgrid remains {critical_load_status} with {crit_reliability}% critical-load reliability. "
+            f"Remaining renewable generation ({total_renew_avail:.1f} kWh) is utilized at {renew_util_pct:.1f}% efficiency. "
+            f"Primary generator GEN-01 supplies {total_gen_energy:.1f} kWh across {gen_hours} committed runtime hours "
+            f"with estimated fuel consumption of {fuel_liters:.1f} L (+{fuel_liters - b_fuel:.1f} L vs baseline) to maintain microgrid equilibrium."
         )
     else:
         recommendation = (
