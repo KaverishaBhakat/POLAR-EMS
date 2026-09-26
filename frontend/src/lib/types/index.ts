@@ -255,17 +255,20 @@ export interface WeatherPredictionPoint {
 export interface WeatherForecastData {
   status: string;
   stationId: string;
-  target: string;
-  unit: string;
-  horizonHours: number;
-  generatedAt: string;
-  predictions: WeatherPredictionPoint[];
-  model: {
+  target?: string;
+  unit?: string;
+  horizonHours?: number;
+  generatedAt?: string;
+  predictions?: WeatherPredictionPoint[];
+  model?: {
     name: string;
-    mae: number;
-    rmse: number;
-    r2: number;
+    mae?: number;
+    rmse?: number;
+    r2?: number;
   };
+  message?: string;
+  statusCode?: number;
+  source?: string;
 }
 
 export interface HourlyDispatchPoint {

@@ -824,11 +824,22 @@ export const apiClient = {
       if (response.ok) {
         const result = await response.json();
         return result.data;
+      } else {
+        const errJson = await response.json().catch(() => ({}));
+        return {
+          status: 'ERROR',
+          stationId: stationId.toUpperCase(),
+          message: errJson.detail || errJson.message || `Failed to fetch forecast (HTTP ${response.status})`,
+          statusCode: response.status,
+        };
       }
-    } catch {
-      // Fallback silently if offline or microservice not reached
+    } catch (e: any) {
+      return {
+        status: 'ERROR',
+        stationId: stationId.toUpperCase(),
+        message: e?.message || 'Network connection to backend forecast proxy unavailable',
+      };
     }
-    return null;
   },
 
   // AI Optimization

@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { useStation } from '@/lib/context/StationContext';
 import { apiClient } from '@/lib/api/client';
-import { ForecastMetrics, HourlyForecastPoint, WeatherData } from '@/lib/types';
+import { ForecastMetrics, HourlyForecastPoint, WeatherData, WeatherForecastData } from '@/lib/types';
 import { LoadForecastChart } from '@/components/charts/LoadForecastChart';
 import { RenewableChart } from '@/components/charts/RenewableChart';
+import { WeatherForecastChart } from '@/components/charts/WeatherForecastChart';
 import { WeatherTelemetry } from '@/components/forecast/WeatherTelemetry';
 import { ForecastDrivers } from '@/components/forecast/ForecastDrivers';
 import { LoadingSkeleton } from '@/components/common/Toast';
@@ -17,6 +18,27 @@ export default function ForecastPage() {
   const [forecastPoints, setForecastPoints] = useState<HourlyForecastPoint[]>([]);
   const [metrics, setMetrics] = useState<ForecastMetrics | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Weather (Temperature) ML Forecast state
+  const [weatherForecast, setWeatherForecast] = useState<WeatherForecastData | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
+  const [weatherError, setWeatherError] = useState<string | null>(null);
+
+  const fetchWeatherForecast = async () => {
+    setWeatherLoading(true);
+    setWeatherError(null);
+    try {
+      const wf = await apiClient.getWeatherForecast(activeStationId, 24);
+      setWeatherForecast(wf);
+      if (wf?.status === 'ERROR') {
+        setWeatherError(wf.message || 'Error fetching weather forecast');
+      }
+    } catch (err: any) {
+      setWeatherError(err?.message || 'Failed to retrieve weather forecast');
+    } finally {
+      setWeatherLoading(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -33,6 +55,7 @@ export default function ForecastPage() {
       }
     }
     loadData();
+    fetchWeatherForecast();
     return () => {
       isMounted = false;
     };
@@ -58,13 +81,22 @@ export default function ForecastPage() {
             AI Energy Forecast
           </h1>
           <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Predicting station demand and renewable generation for the next 24 hours | {station?.name}
+            Predicting station demand, ambient temperature, and renewable generation for the next 24 hours | {station?.name}
           </p>
         </div>
       </div>
 
       {/* Weather Telemetry Inputs */}
       <WeatherTelemetry weather={weather} />
+
+      {/* 24-Hour ML Ambient Temperature Forecast */}
+      <WeatherForecastChart
+        data={weatherForecast}
+        loading={weatherLoading}
+        error={weatherError}
+        onRefresh={fetchWeatherForecast}
+        stationName={station?.name || activeStationId.toUpperCase()}
+      />
 
       {/* A. Load Demand Forecast Chart with Confidence Intervals */}
       <LoadForecastChart data={forecastPoints} metrics={metrics} />
