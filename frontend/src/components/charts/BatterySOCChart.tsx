@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import { HourlyDispatchPoint } from '@/lib/types';
 import { BatteryCharging, ShieldAlert, CheckCircle } from 'lucide-react';
+import { ProvenanceBadge } from '../common/ProvenanceBadge';
 
 interface BatterySOCChartProps {
   data: HourlyDispatchPoint[];
@@ -49,10 +50,13 @@ export const BatterySOCChart: React.FC<BatterySOCChartProps> = ({
     <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5 font-mono">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-2.5 border-b border-[#1B2C42]/50">
         <div>
-          <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
-            <BatteryCharging className="w-4 h-4 text-cyan-400" />
-            24-Hour Battery State of Charge (SOC) & Safety Envelopes
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
+              <BatteryCharging className="w-4 h-4 text-cyan-400" />
+              24-Hour Battery State of Charge (SOC) & Safety Envelopes
+            </h3>
+            <ProvenanceBadge type="OPTIMIZATION" size="xs" />
+          </div>
           <p className="text-[11px] text-slate-400 mt-0.5">
             OR-Tools bounded storage trajectory with strict 20.0% life-support reserve constraint
           </p>

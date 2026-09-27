@@ -4,6 +4,7 @@ import React from 'react';
 import { OptimizationMetrics } from '@/lib/types';
 import { Fuel, Leaf, Clock, BatteryCharging, ShieldCheck, Zap, ArrowDownRight, Sparkles } from 'lucide-react';
 import { StatusBadge } from '../common/StatusBadge';
+import { ProvenanceBadge } from '../common/ProvenanceBadge';
 
 interface OptimizationComparisonProps {
   metrics: OptimizationMetrics;
@@ -29,13 +30,14 @@ export const OptimizationComparison: React.FC<OptimizationComparisonProps> = ({ 
                 <Sparkles size={12} className="text-emerald-400" />
                 MILP OPTIMAL SOLUTION CONVERGED
               </span>
+              <ProvenanceBadge type="OPTIMIZATION" size="xs" />
               <StatusBadge status="OPERATIONAL" label={`FEASIBILITY: ${metrics.criticalLoadReliabilityPercent || 100}%`} size="sm" />
             </div>
             <h2 className="text-xl sm:text-2xl font-bold tracking-wide text-white uppercase">
               POLAR-EMS Microgrid Dispatch Optimization
             </h2>
             <p className="text-xs text-slate-300 max-w-xl">
-              Google OR-Tools co-optimization of generator unit commitment, battery SOC trajectory, and solar PV priority absorption.
+              Modeled 24-hour lookahead comparison: Google OR-Tools co-optimization of generator unit commitment, battery SOC trajectory, and solar PV priority absorption vs uncontrolled baseline.
             </p>
           </div>
 

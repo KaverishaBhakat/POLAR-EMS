@@ -36,6 +36,7 @@ import {
 } from 'recharts';
 import { inspectTelemetryData, sanitizeNumeric, sortChronological } from '@/lib/utils/chartData';
 import { ChartTelemetryStatus } from '@/components/charts/ChartTelemetryStatus';
+import { ProvenanceBadge } from '@/components/common/ProvenanceBadge';
 
 export default function EnergyPage() {
   const { activeStationId, station, addToast } = useStation();
@@ -236,11 +237,9 @@ export default function EnergyPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                    Current SCADA Bus Load Breakdown
+                    Current Bus Load Breakdown
                   </span>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 tracking-wider">
-                    POSTGRESQL TELEMETRY
-                  </span>
+                  <ProvenanceBadge type="SCENARIO" label="SCENARIO / MODEL" size="xs" />
                 </div>
                 {currentEnergy.timestamp && (
                   <div className="text-[10px] text-slate-400 flex items-center gap-1.5">
@@ -248,6 +247,19 @@ export default function EnergyPage() {
                     <span>Observed: {formatDateLabel(currentEnergy.timestamp)}</span>
                   </div>
                 )}
+              </div>
+
+              {/* Data Provenance & Methodology Notice */}
+              <div className="p-3 rounded-lg bg-[#08101C] border border-[#1B2C42] text-[11px] text-slate-400 flex items-start gap-2.5">
+                <Database size={15} className="text-cyan-400 flex-shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <span className="font-bold text-slate-200 uppercase tracking-wider text-[10px]">
+                    Load Telemetry Provenance:
+                  </span>
+                  <p className="leading-relaxed">
+                    Historical measured electrical-load telemetry is not available for this station dataset. Current load profiles are modeled/scenario inputs used for optimization and resilience analysis.
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 text-xs">
@@ -370,10 +382,13 @@ export default function EnergyPage() {
             <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[#1B2C42]/60">
                 <div>
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-cyan-400" />
-                    Historical Load Profile ({history.length} Data Points)
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-cyan-400" />
+                      Historical Load Profile ({history.length} Data Points)
+                    </h3>
+                    <ProvenanceBadge type="SCENARIO" label="SCENARIO / MODEL" size="xs" />
+                  </div>
                   <p className="text-[11px] text-slate-400 mt-0.5">
                     Chronological microgrid demand readings retrieved from PostgreSQL `energy_loads`
                   </p>

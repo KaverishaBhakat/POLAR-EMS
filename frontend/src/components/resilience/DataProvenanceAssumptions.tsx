@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Database, ChevronDown, ChevronUp, FileText, CheckCircle2 } from 'lucide-react';
 import { ResilienceSimulationScenario } from '@/lib/types';
+import { ProvenanceBadge } from '../common/ProvenanceBadge';
 
 interface DataProvenanceAssumptionsProps {
   scenario?: ResilienceSimulationScenario | null;
@@ -18,19 +19,19 @@ export const DataProvenanceAssumptions: React.FC<DataProvenanceAssumptionsProps>
   const provenanceItems = [
     {
       parameter: 'Solar Radiation / Irradiance',
-      classification: 'REAL CLIMATOLOGY',
+      classification: 'REAL_CLIMATOLOGY',
       description: 'Historical December clear-sky / climatology solar irradiance profile for Maitri Station (70°45′57″S, 11°44′09″E).',
       source: 'Maitri Climatological Solar Model',
     },
     {
       parameter: 'PV Electrical Generation',
       classification: 'MODELED',
-      description: '100 kW nameplate PV array modeled with 0.80 Performance Ratio (PR) and temperature derating.',
+      description: '100 kW nameplate PV array scenario modeled with 0.80 Performance Ratio (PR) and temperature derating for peak microgrid contingency evaluation.',
       source: 'POLAR-EMS PV Electrical Model',
     },
     {
       parameter: 'Wind Speed Telemetry',
-      classification: 'REAL OBSERVATION',
+      classification: 'REAL_MEASURED',
       description: 'Observed hourly wind speed telemetry from Maitri Automatic Weather Station (AWS) 2019 dataset.',
       source: 'Maitri 2019 Observational Record',
     },
@@ -42,25 +43,25 @@ export const DataProvenanceAssumptions: React.FC<DataProvenanceAssumptionsProps>
     },
     {
       parameter: 'Electrical Demand',
-      classification: 'SCENARIO ASSUMPTION',
+      classification: 'SCENARIO',
       description: 'Deterministic Antarctic station load model (base 65.0 kW, diurnal range 55.2–83.6 kW, 42.5 kW critical life-support floor).',
       source: 'Station Energy Profile Model',
     },
     {
       parameter: 'Diesel Generator Fleet',
-      classification: 'SCENARIO ASSUMPTION',
+      classification: 'ENGINEERING_ASSUMPTION',
       description: 'Dual-genset fleet: GEN-01 (100 kW primary, 40 kW min) and GEN-02 (80 kW secondary, 30 kW min).',
       source: 'Antarctic Genset Fleet Specifications',
     },
     {
       parameter: 'Battery Energy Storage (BESS)',
-      classification: 'SCENARIO ASSUMPTION',
+      classification: 'ENGINEERING_ASSUMPTION',
       description: '350 kWh / 100 kW LiFePO4 battery storage with strict 20.0% life-support reserve and 95.0% maximum SOC limits.',
       source: 'Station BESS Technical Model',
     },
     {
       parameter: 'Microgrid Dispatch Optimization',
-      classification: 'OR-TOOLS MILP',
+      classification: 'OPTIMIZATION',
       description: 'Google OR-Tools Mixed-Integer Linear Programming (MILP) with SCIP backend for 24-hour lookahead economic dispatch.',
       source: 'Google OR-Tools MILP Solver',
     },
@@ -133,9 +134,7 @@ export const DataProvenanceAssumptions: React.FC<DataProvenanceAssumptionsProps>
                   >
                     <td className="py-2.5 px-3 font-bold text-white">{item.parameter}</td>
                     <td className="py-2.5 px-3">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 uppercase">
-                        {item.classification}
-                      </span>
+                      <ProvenanceBadge type={item.classification} size="xs" />
                     </td>
                     <td className="py-2.5 px-3 text-slate-300 text-[11px]">{item.description}</td>
                     <td className="py-2.5 px-3 text-slate-400 font-mono text-[10px]">{item.source}</td>

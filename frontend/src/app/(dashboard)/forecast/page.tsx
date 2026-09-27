@@ -11,6 +11,7 @@ import { WeatherTelemetry } from '@/components/forecast/WeatherTelemetry';
 import { ForecastDrivers } from '@/components/forecast/ForecastDrivers';
 import { LoadingSkeleton } from '@/components/common/Toast';
 import { TrendingUp, Cpu, Sparkles } from 'lucide-react';
+import { ProvenanceBadge } from '@/components/common/ProvenanceBadge';
 
 export default function ForecastPage() {
   const { activeStationId, station, weather } = useStation();
@@ -72,16 +73,19 @@ export default function ForecastPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-mono">
       {/* Title & Subtitle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#1B2C42]/50">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold font-mono text-white tracking-wide uppercase flex items-center gap-2.5">
-            <TrendingUp className="w-5 h-5 text-cyan-400" />
-            AI Energy Forecast
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold font-mono text-white tracking-wide uppercase flex items-center gap-2.5">
+              <TrendingUp className="w-5 h-5 text-cyan-400" />
+              Machine Learning Energy &amp; Weather Forecast
+            </h1>
+            <ProvenanceBadge type="MODELED" label="ML / MODELED" size="xs" />
+          </div>
           <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Predicting station demand, ambient temperature, and renewable generation for the next 24 hours | {station?.name}
+            24-hour lookahead regression: station demand, ambient temperature, and renewable generation | {station?.name}
           </p>
         </div>
       </div>

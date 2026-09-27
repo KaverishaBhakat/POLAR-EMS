@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import {
   Zap,
   Leaf,
@@ -12,6 +11,7 @@ import {
   Target,
 } from 'lucide-react';
 import { ResilienceMetrics } from '@/lib/types';
+import { ProvenanceBadge } from '../common/ProvenanceBadge';
 
 interface ResilienceKPICardsProps {
   metrics: ResilienceMetrics | null | undefined;
@@ -52,6 +52,7 @@ export const ResilienceKPICards: React.FC<ResilienceKPICardsProps> = ({
       icon: Zap,
       accentColor: 'text-amber-400',
       borderColor: 'border-[#1E324A]',
+      provenance: 'SCENARIO',
     },
     {
       id: 'renewable',
@@ -61,6 +62,7 @@ export const ResilienceKPICards: React.FC<ResilienceKPICardsProps> = ({
       icon: Leaf,
       accentColor: 'text-emerald-400',
       borderColor: 'border-[#1E324A]',
+      provenance: 'MODELED',
     },
     {
       id: 'generator',
@@ -72,6 +74,7 @@ export const ResilienceKPICards: React.FC<ResilienceKPICardsProps> = ({
       icon: Cpu,
       accentColor: 'text-blue-400',
       borderColor: 'border-[#1E324A]',
+      provenance: 'OPTIMIZATION',
     },
     {
       id: 'fuel',
@@ -81,6 +84,7 @@ export const ResilienceKPICards: React.FC<ResilienceKPICardsProps> = ({
       icon: Fuel,
       accentColor: 'text-rose-400',
       borderColor: 'border-[#1E324A]',
+      provenance: 'OPTIMIZATION',
     },
     {
       id: 'runtime',
@@ -90,6 +94,7 @@ export const ResilienceKPICards: React.FC<ResilienceKPICardsProps> = ({
       icon: Clock,
       accentColor: 'text-cyan-400',
       borderColor: 'border-[#1E324A]',
+      provenance: 'OPTIMIZATION',
     },
     {
       id: 'battery',
@@ -99,6 +104,7 @@ export const ResilienceKPICards: React.FC<ResilienceKPICardsProps> = ({
       icon: BatteryCharging,
       accentColor: 'text-teal-400',
       borderColor: 'border-[#1E324A]',
+      provenance: 'OPTIMIZATION',
     },
     {
       id: 'critical_load',
@@ -108,6 +114,7 @@ export const ResilienceKPICards: React.FC<ResilienceKPICardsProps> = ({
       icon: ShieldCheck,
       accentColor: criticalShed > 0 ? 'text-rose-400' : 'text-emerald-400',
       borderColor: criticalShed > 0 ? 'border-rose-500/40' : 'border-[#1E324A]',
+      provenance: 'OPTIMIZATION',
     },
     {
       id: 'objective',
@@ -117,6 +124,7 @@ export const ResilienceKPICards: React.FC<ResilienceKPICardsProps> = ({
       icon: Target,
       accentColor: 'text-purple-400',
       borderColor: 'border-[#1E324A]',
+      provenance: 'OPTIMIZATION',
     },
   ];
 
@@ -127,9 +135,9 @@ export const ResilienceKPICards: React.FC<ResilienceKPICardsProps> = ({
         return (
           <div
             key={card.id}
-            className={`p-3.5 rounded-lg bg-[#0E1724]/90 border ${card.borderColor} flex flex-col justify-between`}
+            className={`p-3 rounded-lg bg-[#0E1724]/90 border ${card.borderColor} flex flex-col justify-between space-y-2`}
           >
-            <div className="flex items-center justify-between text-slate-400 mb-1.5">
+            <div className="flex items-center justify-between text-slate-400">
               <span className="text-[10px] font-bold uppercase tracking-wider truncate" title={card.title}>
                 {card.title}
               </span>
@@ -143,6 +151,10 @@ export const ResilienceKPICards: React.FC<ResilienceKPICardsProps> = ({
               <p className="text-[9px] text-slate-400 mt-0.5 truncate" title={card.subtitle}>
                 {card.subtitle}
               </p>
+            </div>
+
+            <div className="pt-1 border-t border-[#1B2C42]/50 flex items-center justify-between">
+              <ProvenanceBadge type={card.provenance} size="xs" />
             </div>
           </div>
         );

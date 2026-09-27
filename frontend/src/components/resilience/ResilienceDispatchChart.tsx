@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import { HourlyDispatchPoint } from '@/lib/types';
 import { BarChart3 } from 'lucide-react';
+import { ProvenanceBadge } from '../common/ProvenanceBadge';
 
 interface ResilienceDispatchChartProps {
   data: HourlyDispatchPoint[];
@@ -55,10 +56,13 @@ export const ResilienceDispatchChart: React.FC<ResilienceDispatchChartProps> = (
     <div className="bg-[#0E1724]/95 rounded-lg border border-[#1B2C42] p-4 sm:p-5 font-mono">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1B2C42]/60 pb-3 mb-4">
         <div>
-          <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-cyan-400" />
-            24-Hour Energy Dispatch Schedule: {scenarioName}
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-cyan-400" />
+              24-Hour Energy Dispatch Schedule: {scenarioName}
+            </h3>
+            <ProvenanceBadge type="OPTIMIZATION" size="xs" />
+          </div>
           <p className="text-[11px] text-slate-400 mt-0.5">
             Microgrid dispatch balance: PV + Wind + Generator Fleet + BESS matching Station Load
           </p>

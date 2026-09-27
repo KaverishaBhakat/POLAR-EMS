@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { LucideIcon, TrendingUp, TrendingDown, HelpCircle } from 'lucide-react';
 import { StatusBadge, StatusVariant } from '../common/StatusBadge';
+import { ProvenanceBadge, ProvenanceCategory } from '../common/ProvenanceBadge';
 
 interface KPICardProps {
   title: string;
@@ -19,6 +20,7 @@ interface KPICardProps {
     variant: StatusVariant;
     label?: string;
   };
+  provenance?: ProvenanceCategory | string;
   tooltip: string;
   accentColor?: 'cyan' | 'emerald' | 'amber' | 'blue' | 'purple';
 }
@@ -31,6 +33,7 @@ export const KPICard: React.FC<KPICardProps> = ({
   trend,
   subtitle,
   status,
+  provenance,
   tooltip,
   accentColor = 'cyan',
 }) => {
@@ -68,7 +71,7 @@ export const KPICard: React.FC<KPICardProps> = ({
     <div
       className={`relative bg-[#0E1724]/90 backdrop-blur-md rounded-lg border ${colors.border} ${colors.glow} p-4 transition-all duration-300 group`}
     >
-      {/* Top row: Icon + Title + Tooltip */}
+      {/* Top row: Icon + Title + (Provenance / Tooltip) */}
       <div className="flex items-center justify-between gap-2 mb-2.5">
         <div className="flex items-center gap-2">
           <div
@@ -81,21 +84,24 @@ export const KPICard: React.FC<KPICardProps> = ({
           </span>
         </div>
 
-        <div className="relative">
-          <button
-            onMouseEnter={() => setShowTooltip(true)}
-            onMouseLeave={() => setShowTooltip(false)}
-            onClick={() => setShowTooltip(!showTooltip)}
-            className="text-slate-500 hover:text-slate-300 p-0.5 focus:outline-none"
-            aria-label="Info"
-          >
-            <HelpCircle size={13} />
-          </button>
-          {showTooltip && (
-            <div className="absolute right-0 top-6 z-50 w-52 p-2 rounded bg-[#0A101A] border border-cyan-500/40 text-[10px] text-slate-300 leading-relaxed shadow-xl font-mono">
-              {tooltip}
-            </div>
-          )}
+        <div className="flex items-center gap-2">
+          {provenance && <ProvenanceBadge type={provenance} size="xs" />}
+          <div className="relative">
+            <button
+              onMouseEnter={() => setShowTooltip(true)}
+              onMouseLeave={() => setShowTooltip(false)}
+              onClick={() => setShowTooltip(!showTooltip)}
+              className="text-slate-500 hover:text-slate-300 p-0.5 focus:outline-none"
+              aria-label="Info"
+            >
+              <HelpCircle size={13} />
+            </button>
+            {showTooltip && (
+              <div className="absolute right-0 top-6 z-50 w-52 p-2 rounded bg-[#0A101A] border border-cyan-500/40 text-[10px] text-slate-300 leading-relaxed shadow-xl font-mono">
+                {tooltip}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

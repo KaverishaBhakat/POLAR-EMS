@@ -3,6 +3,7 @@
 import React from 'react';
 import { Sun, Wind, Leaf, CheckCircle2 } from 'lucide-react';
 import { HourlyDispatchPoint, ResilienceMetrics } from '@/lib/types';
+import { ProvenanceBadge } from '../common/ProvenanceBadge';
 
 interface RenewableGenerationPanelProps {
   metrics: ResilienceMetrics | null | undefined;
@@ -57,12 +58,14 @@ export const RenewableGenerationPanel: React.FC<RenewableGenerationPanelProps> =
               </div>
               <div>
                 <h4 className="text-xs font-bold text-white uppercase">Solar PV Array</h4>
-                <p className="text-[10px] text-slate-400">100 kW Nameplate</p>
+                <p className="text-[10px] text-slate-400">100 kW Nameplate Baseline</p>
               </div>
             </div>
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 uppercase">
-              {totalPVAvail === 0 ? 'POLAR NIGHT (0 kW)' : 'MODELED CLIMATOLOGY'}
-            </span>
+            <ProvenanceBadge
+              type={totalPVAvail === 0 ? 'UNAVAILABLE' : 'MODELED'}
+              label={totalPVAvail === 0 ? 'POLAR NIGHT' : 'MODELED'}
+              size="xs"
+            />
           </div>
 
           <div className="space-y-1.5 pt-1 text-xs">
@@ -94,12 +97,14 @@ export const RenewableGenerationPanel: React.FC<RenewableGenerationPanelProps> =
               </div>
               <div>
                 <h4 className="text-xs font-bold text-white uppercase">Wind Turbines</h4>
-                <p className="text-[10px] text-slate-400">50 kW Nameplate</p>
+                <p className="text-[10px] text-slate-400">50 kW Nameplate Baseline</p>
               </div>
             </div>
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 uppercase">
-              REAL 2019 AWS DATA
-            </span>
+            <ProvenanceBadge
+              type="REAL_MEASURED"
+              label="2019 AWS WIND"
+              size="xs"
+            />
           </div>
 
           <div className="space-y-1.5 pt-1 text-xs">
@@ -134,9 +139,10 @@ export const RenewableGenerationPanel: React.FC<RenewableGenerationPanelProps> =
                 <p className="text-[10px] text-slate-400">Solar PV + Wind</p>
               </div>
             </div>
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 uppercase">
-              OR-TOOLS MILP
-            </span>
+            <ProvenanceBadge
+              type="OPTIMIZATION"
+              size="xs"
+            />
           </div>
 
           <div className="space-y-1.5 pt-1 text-xs">

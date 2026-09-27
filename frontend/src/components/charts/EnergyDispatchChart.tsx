@@ -13,6 +13,7 @@ import {
   CartesianGrid,
 } from 'recharts';
 import { HourlyDispatchPoint } from '@/lib/types';
+import { ProvenanceBadge } from '../common/ProvenanceBadge';
 
 interface EnergyDispatchChartProps {
   data: HourlyDispatchPoint[];
@@ -52,10 +53,13 @@ export const EnergyDispatchChart: React.FC<EnergyDispatchChartProps> = ({ data }
     <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5 font-mono">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-2.5 border-b border-[#1B2C42]/50">
         <div>
-          <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
-            <span className="w-2 h-2 rounded-sm bg-cyan-400" />
-            24-Hour Optimal Energy Dispatch Schedule (Stacked Sources)
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
+              <span className="w-2 h-2 rounded-sm bg-cyan-400" />
+              24-Hour Optimal Energy Dispatch Schedule (Stacked Sources)
+            </h3>
+            <ProvenanceBadge type="OPTIMIZATION" size="xs" />
+          </div>
           <p className="text-[11px] text-slate-400 mt-0.5">
             Hourly generation stacking: Solar PV + Wind + BESS Discharge + Generator Output matching Station Demand
           </p>

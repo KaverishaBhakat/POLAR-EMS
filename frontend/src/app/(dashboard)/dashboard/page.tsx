@@ -223,6 +223,7 @@ export default function DashboardPage() {
           value={displayLoadKW}
           unit="kW"
           icon={Zap}
+          provenance={hasLiveTelemetry ? 'REAL_MEASURED' : 'SCENARIO'}
           trend={{
             value: hasLiveTelemetry ? `Live telemetry active` : `Awaiting ingestion`,
             isPositiveGood: false,
@@ -239,6 +240,7 @@ export default function DashboardPage() {
           value={displayRenewableKW}
           unit="kW"
           icon={Sun}
+          provenance={solarSource === 'MEASURED' ? 'REAL_MEASURED' : 'MODELED'}
           trend={{
             value: `${displayRenewablePercent}% of demand`,
             isPositiveGood: true,
@@ -258,6 +260,7 @@ export default function DashboardPage() {
           value={`${displayBatterySOC}%`}
           unit=""
           icon={BatteryCharging}
+          provenance="ENGINEERING_ASSUMPTION"
           subtitle={`${Math.round((displayBatterySOC / 100) * 500)} / 500 kWh`}
           tooltip="State of Charge of the 500 kWh Lithium Iron Phosphate BESS energy storage bank."
           accentColor="emerald"
@@ -270,6 +273,7 @@ export default function DashboardPage() {
           value={`${displayFuelLevel}%`}
           unit="Level"
           icon={Fuel}
+          provenance="ENGINEERING_ASSUMPTION"
           trend={{
             value: `${Math.round(displayFuelLevel * 28)} L in reserve`,
             isPositiveGood: true,
@@ -286,6 +290,7 @@ export default function DashboardPage() {
           value={`${energy?.criticalLoadProtectedPercent || 100}%`}
           unit="Protected"
           icon={ShieldCheck}
+          provenance="ENGINEERING_ASSUMPTION"
           subtitle={`${displayTotalCriticalKW} kW Reserved`}
           tooltip="Guaranteed power allocation for life support, habitat heating, SATCOM, and medical ward."
           accentColor="emerald"
@@ -298,6 +303,7 @@ export default function DashboardPage() {
           value={Math.round((displayRenewableKW * 0.72) * 10) / 10}
           unit="kg/hr"
           icon={Leaf}
+          provenance="MODELED"
           subtitle={`${Math.round((displayRenewableKW * 24 * 0.72) / 10) / 100} Tonnes Est`}
           tooltip="Carbon dioxide emissions displaced through renewable priority dispatch & battery peak-shaving."
           accentColor="purple"

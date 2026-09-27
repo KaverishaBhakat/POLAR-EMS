@@ -3,6 +3,7 @@
 import React from 'react';
 import { GitCompare, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import { ResilienceComparison } from '@/lib/types';
+import { ProvenanceBadge } from '../common/ProvenanceBadge';
 
 interface BaselineComparisonPanelProps {
   comparison: ResilienceComparison | null | undefined;
@@ -21,90 +22,105 @@ export const BaselineComparisonPanel: React.FC<BaselineComparisonPanelProps> = (
       unit: 'kWh',
       data: comparison.total_demand_kwh,
       digits: 1,
+      provenance: 'SCENARIO',
     },
     {
       label: 'Renewable Generation',
       unit: 'kWh',
       data: comparison.total_renewable_energy_kwh,
       digits: 1,
+      provenance: 'MODELED',
     },
     {
       label: 'Solar PV Available',
       unit: 'kWh',
       data: comparison.pv_available_kwh,
       digits: 1,
+      provenance: 'MODELED',
     },
     {
       label: 'Wind Power Available',
       unit: 'kWh',
       data: comparison.wind_available_kwh,
       digits: 1,
+      provenance: 'REAL_MEASURED',
     },
     {
       label: 'Renewable Utilization',
       unit: '%',
       data: comparison.renewable_utilization_percent,
       digits: 1,
+      provenance: 'OPTIMIZATION',
     },
     {
       label: 'Generator Energy',
       unit: 'kWh',
       data: comparison.generator_energy_kwh,
       digits: 1,
+      provenance: 'OPTIMIZATION',
     },
     {
       label: 'Fuel Consumption',
       unit: 'L',
       data: comparison.fuel_consumption_liters,
       digits: 1,
+      provenance: 'OPTIMIZATION',
     },
     {
       label: 'Generator Runtime',
       unit: 'h',
       data: comparison.generator_runtime_hours,
       digits: 0,
+      provenance: 'OPTIMIZATION',
     },
     {
       label: 'Battery Discharge',
       unit: 'kWh',
       data: comparison.battery_discharge_kwh,
       digits: 1,
+      provenance: 'OPTIMIZATION',
     },
     {
       label: 'Battery Charge',
       unit: 'kWh',
       data: comparison.battery_charge_kwh,
       digits: 1,
+      provenance: 'OPTIMIZATION',
     },
     {
       label: 'Minimum Battery SOC',
       unit: '%',
       data: comparison.minimum_battery_soc_percent,
       digits: 1,
+      provenance: 'OPTIMIZATION',
     },
     {
       label: 'Maximum Battery SOC',
       unit: '%',
       data: comparison.maximum_battery_soc_percent,
       digits: 1,
+      provenance: 'OPTIMIZATION',
     },
     {
       label: 'Critical Load Shed',
       unit: 'kWh',
       data: comparison.critical_load_shed_kwh,
       digits: 1,
+      provenance: 'OPTIMIZATION',
     },
     {
       label: 'Critical Load Reliability',
       unit: '%',
       data: comparison.critical_load_reliability_percent,
       digits: 1,
+      provenance: 'OPTIMIZATION',
     },
     {
       label: 'Optimization Objective',
       unit: '',
       data: comparison.objective_value,
       digits: 2,
+      provenance: 'OPTIMIZATION',
     },
   ];
 
@@ -161,8 +177,9 @@ export const BaselineComparisonPanel: React.FC<BaselineComparisonPanelProps> = (
                     idx % 2 === 0 ? 'bg-transparent' : 'bg-[#0A121E]/30'
                   }`}
                 >
-                  <td className="py-2.5 px-3 font-medium text-slate-200 flex items-center gap-1.5">
+                  <td className="py-2.5 px-3 font-medium text-slate-200 flex items-center justify-between gap-2">
                     <span>{row.label}</span>
+                    <ProvenanceBadge type={row.provenance} size="xs" />
                   </td>
 
                   <td className="py-2.5 px-3 text-right font-mono text-slate-300">

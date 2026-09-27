@@ -34,6 +34,7 @@ import {
 import { inspectTelemetryData, sanitizeNumeric, sortChronological } from '@/lib/utils/chartData';
 import { ChartTelemetryStatus } from '@/components/charts/ChartTelemetryStatus';
 import { HistoricalSolarChart } from '@/components/solar/HistoricalSolarChart';
+import { ProvenanceBadge } from '@/components/common/ProvenanceBadge';
 
 export default function RenewablePage() {
   const { activeStationId, station, addToast } = useStation();
@@ -238,9 +239,7 @@ export default function RenewablePage() {
                   <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
                     Current Renewable Generation Feed
                   </span>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 tracking-wider">
-                    POSTGRESQL TELEMETRY
-                  </span>
+                  <ProvenanceBadge type="REAL_MEASURED" size="xs" />
                 </div>
                 {currentRenewable.timestamp && (
                   <div className="text-[10px] text-slate-400 flex items-center gap-1.5">
@@ -357,10 +356,13 @@ export default function RenewablePage() {
             <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[#1B2C42]/60">
                 <div>
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-emerald-400" />
-                    Historical Renewable Yield ({history.length} Data Points)
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-emerald-400" />
+                      Historical Renewable Yield ({history.length} Data Points)
+                    </h3>
+                    <ProvenanceBadge type="REAL_MEASURED" size="xs" />
+                  </div>
                   <p className="text-[11px] text-slate-400 mt-0.5">
                     Chronological clean generation readings retrieved from PostgreSQL `renewable_generation`
                   </p>

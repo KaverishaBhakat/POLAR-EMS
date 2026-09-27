@@ -15,6 +15,7 @@ import {
   Percent,
 } from 'lucide-react';
 import { StatusBadge } from '../common/StatusBadge';
+import { ProvenanceBadge } from '../common/ProvenanceBadge';
 
 interface OptimizationKPICardsProps {
   optimizationData: OptimizationResultData;
@@ -44,6 +45,7 @@ export const OptimizationKPICards: React.FC<OptimizationKPICardsProps> = ({
       unit: '',
       icon: CheckCircle2,
       iconColor: 'text-emerald-400',
+      provenance: 'OPTIMIZATION',
       badge: (
         <StatusBadge
           status={solverStatus === 'OPTIMAL' || solverStatus === 'SUCCESS' ? 'OPERATIONAL' : 'WARNING'}
@@ -60,15 +62,17 @@ export const OptimizationKPICards: React.FC<OptimizationKPICardsProps> = ({
       unit: 'kWh',
       icon: Sun,
       iconColor: 'text-amber-400',
+      provenance: 'MODELED',
       subtext: 'Dec Climatology Model',
     },
     {
       id: 'pv-used',
-      label: 'PV Used',
+      label: 'PV Dispatched',
       value: pvUsed.toFixed(1),
       unit: 'kWh',
       icon: Sun,
       iconColor: 'text-emerald-400',
+      provenance: 'OPTIMIZATION',
       subtext: 'Dispatched to Load/BESS',
     },
     {
@@ -78,6 +82,7 @@ export const OptimizationKPICards: React.FC<OptimizationKPICardsProps> = ({
       unit: 'kWh',
       icon: Layers,
       iconColor: pvCurtailed > 0 ? 'text-amber-400' : 'text-slate-400',
+      provenance: 'OPTIMIZATION',
       subtext: pvCurtailed === 0 ? 'Zero Curtailment' : 'Spillover',
     },
     {
@@ -87,6 +92,7 @@ export const OptimizationKPICards: React.FC<OptimizationKPICardsProps> = ({
       unit: '%',
       icon: Percent,
       iconColor: 'text-cyan-400',
+      provenance: 'OPTIMIZATION',
       subtext: 'Solar Absorption Rate',
     },
     {
@@ -96,6 +102,7 @@ export const OptimizationKPICards: React.FC<OptimizationKPICardsProps> = ({
       unit: 'kWh',
       icon: BatteryCharging,
       iconColor: 'text-cyan-400',
+      provenance: 'OPTIMIZATION',
       subtext: 'Peak Shaving / Deficit',
     },
     {
@@ -105,6 +112,7 @@ export const OptimizationKPICards: React.FC<OptimizationKPICardsProps> = ({
       unit: 'kWh',
       icon: Zap,
       iconColor: 'text-blue-400',
+      provenance: 'OPTIMIZATION',
       subtext: 'Supplementary Genset',
     },
     {
@@ -114,6 +122,7 @@ export const OptimizationKPICards: React.FC<OptimizationKPICardsProps> = ({
       unit: 'hours',
       icon: Clock,
       iconColor: 'text-blue-400',
+      provenance: 'OPTIMIZATION',
       subtext: '24-hour lookahead',
     },
     {
@@ -123,6 +132,7 @@ export const OptimizationKPICards: React.FC<OptimizationKPICardsProps> = ({
       unit: 'liters',
       icon: Fuel,
       iconColor: 'text-emerald-400',
+      provenance: 'OPTIMIZATION',
       subtext: `Saved ${metrics.fuelSavedL?.toFixed(1) ?? '13.0'} L (${metrics.fuelSavedPercent?.toFixed(1) ?? '21.9'}%)`,
     },
     {
@@ -132,6 +142,7 @@ export const OptimizationKPICards: React.FC<OptimizationKPICardsProps> = ({
       unit: 'kWh',
       icon: criticalLoadShed === 0 ? ShieldCheck : AlertTriangle,
       iconColor: criticalLoadShed === 0 ? 'text-emerald-400' : 'text-rose-400',
+      provenance: 'OPTIMIZATION',
       subtext: criticalLoadShed === 0 ? '100% Life Support Safe' : 'Emergency Shedding',
     },
   ];
@@ -165,8 +176,9 @@ export const OptimizationKPICards: React.FC<OptimizationKPICardsProps> = ({
               )}
             </div>
 
-            <div className="text-[10px] text-slate-500 truncate pt-0.5 border-t border-[#1B2C42]/50">
-              {card.subtext}
+            <div className="flex items-center justify-between gap-1 pt-1 border-t border-[#1B2C42]/50 text-[10px]">
+              <span className="text-slate-500 truncate">{card.subtext}</span>
+              <ProvenanceBadge type={card.provenance} size="xs" />
             </div>
           </div>
         );

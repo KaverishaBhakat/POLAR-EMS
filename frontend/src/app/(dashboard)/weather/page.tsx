@@ -33,6 +33,7 @@ import {
 } from 'recharts';
 import { inspectTelemetryData, sortChronological } from '@/lib/utils/chartData';
 import { ChartTelemetryStatus } from '@/components/charts/ChartTelemetryStatus';
+import { ProvenanceBadge } from '@/components/common/ProvenanceBadge';
 
 export default function WeatherPage() {
   const { activeStationId, station, addToast } = useStation();
@@ -244,9 +245,7 @@ export default function WeatherPage() {
                   <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
                     Latest AWS Surface Observation
                   </span>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 tracking-wider">
-                    POSTGRESQL REAL-TIME TELEMETRY
-                  </span>
+                  <ProvenanceBadge type="REAL_MEASURED" size="xs" />
                 </div>
                 {currentWeather.timestamp && (
                   <div className="text-[10px] text-slate-400 flex items-center gap-1.5">
@@ -347,10 +346,13 @@ export default function WeatherPage() {
             <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[#1B2C42]/60">
                 <div>
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
-                    <CloudSun className="w-4 h-4 text-cyan-400" />
-                    Historical Weather Observations ({history.length} Data Points: 1985–2016)
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
+                      <CloudSun className="w-4 h-4 text-cyan-400" />
+                      Historical Weather Observations ({history.length} Data Points: 1985–2016)
+                    </h3>
+                    <ProvenanceBadge type="REAL_MEASURED" size="xs" />
+                  </div>
                   <p className="text-[11px] text-slate-400 mt-0.5">
                     Chronological IMD meteorological sensor telemetry retrieved from PostgreSQL `weather_data`
                   </p>
