@@ -26,10 +26,12 @@ import {
   Cpu,
   BatteryCharging,
   ShieldCheck,
+  BrainCircuit,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { name: 'Dashboard', href: '/dashboard', icon: Activity, badge: 'LIVE' },
+  { name: 'AI Assistant', href: '/ai-assistant', icon: BrainCircuit, badge: 'SCADA-AI' },
   { name: 'Energy', href: '/energy', icon: Zap, badge: 'LOAD' },
   { name: 'Renewables', href: '/renewable', icon: Leaf, badge: 'CLEAN' },
   { name: 'Generators', href: '/generators', icon: Cpu, badge: 'GENSET' },

@@ -752,5 +752,63 @@ export interface SolarGenerationHistorySummary {
   performanceRatio: number;
 }
 
+// AI Operations Assistant Types
+export interface AssistantEvidence {
+  type: 'TELEMETRY' | 'KNOWLEDGE' | 'FORECAST' | 'OPTIMIZATION' | 'RESILIENCE' | 'ANALYTICS' | 'CLIMATOLOGY' | string;
+  tool?: string;
+  station?: string;
+  data?: any;
+  document?: string;
+  chunkId?: string;
+  title?: string;
+  heading?: string;
+  content?: string;
+  provenance?: string;
+  source?: string;
+}
+
+export interface AssistantResponse {
+  success: boolean;
+  answer: string;
+  station?: {
+    code: string;
+    name: string;
+  };
+  intent?: string[];
+  evidence?: AssistantEvidence[];
+  provenance?: string[];
+  toolsUsed?: string[];
+  ragUsed?: boolean;
+  conversationId?: string;
+  error?: {
+    code: string;
+    message: string;
+    details?: any;
+  };
+}
+
+export type ChatMessageRole = 'user' | 'assistant' | 'system';
+
+export interface ChatMessage {
+  id: string;
+  role: ChatMessageRole;
+  content: string;
+  response?: AssistantResponse;
+  timestamp: string;
+  isLoading?: boolean;
+  error?: string;
+}
+
+export interface AssistantQueryRequest {
+  message: string;
+  stationId?: string;
+  conversationId?: string;
+  recentMessages?: Array<{
+    role: 'user' | 'assistant' | 'system' | 'tool';
+    content: string;
+  }>;
+}
+
+
 
 

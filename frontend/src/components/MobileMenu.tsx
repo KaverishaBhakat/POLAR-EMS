@@ -22,6 +22,7 @@ import {
   Cpu,
   BatteryCharging,
   ShieldCheck,
+  BrainCircuit,
 } from 'lucide-react';
 
 interface MobileMenuProps {
@@ -31,6 +32,7 @@ interface MobileMenuProps {
 
 const DASHBOARD_ROUTES = [
   { name: 'Live SCADA Operations', href: '/dashboard', icon: Activity, badge: 'LIVE' },
+  { name: 'AI Operations Assistant', href: '/ai-assistant', icon: BrainCircuit, badge: 'SCADA-AI' },
   { name: 'Microgrid Energy & Load Ops', href: '/energy', icon: Zap, badge: 'LOAD' },
   { name: 'Polar Renewable Generation', href: '/renewable', icon: Leaf, badge: 'CLEAN' },
   { name: 'Diesel Genset Fleet & SCADA', href: '/generators', icon: Cpu, badge: 'GENSET' },

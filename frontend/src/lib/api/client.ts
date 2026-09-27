@@ -35,6 +35,8 @@ import {
   SolarGenerationHistoryRecord,
   SolarGenerationHistorySummary,
   SolarGenerationHistoryResponse,
+  AssistantResponse,
+  AssistantQueryRequest,
 } from '../types';
 import { STATIONS } from '../mock-data/stations';
 import { WEATHER_DATA } from '../mock-data/weather';
@@ -1584,6 +1586,24 @@ export const apiClient = {
     }
     const result = await response.json();
     return result.data;
+  },
+
+  // AI Operations Assistant
+  async askAssistant(request: AssistantQueryRequest): Promise<AssistantResponse> {
+    const response = await fetch(`${API_BASE_URL}/ai/assistant`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      const message = err.error?.message || err.message || 'Failed to communicate with AI Operations Assistant';
+      throw new Error(message);
+    }
+
+    return await response.json();
   },
 };
 

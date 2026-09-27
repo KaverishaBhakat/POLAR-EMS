@@ -58,13 +58,22 @@ export const AIInsight: React.FC<AIInsightProps> = ({ insight }) => {
             <span className="text-slate-300">{insight.recommendedAction}</span>
           </div>
 
-          <Link
-            href="/optimization"
-            className="inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded bg-cyan-500 hover:bg-cyan-400 text-[#080D14] font-mono font-bold text-xs tracking-wider uppercase transition-all duration-200 shadow-[0_0_12px_rgba(6,182,212,0.35)] flex-shrink-0"
-          >
-            <span>View Optimization</span>
-            <ArrowRight size={14} />
-          </Link>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link
+              href="/ai-assistant"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded bg-[#0A1626] hover:bg-[#12243C] border border-cyan-500/40 text-cyan-300 font-mono text-xs tracking-wider uppercase transition-all duration-200"
+            >
+              <BrainCircuit size={13} className="text-cyan-400" />
+              <span>Ask Assistant</span>
+            </Link>
+            <Link
+              href="/optimization"
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded bg-cyan-500 hover:bg-cyan-400 text-[#080D14] font-mono font-bold text-xs tracking-wider uppercase transition-all duration-200 shadow-[0_0_12px_rgba(6,182,212,0.35)]"
+            >
+              <span>View Optimization</span>
+              <ArrowRight size={14} />
+            </Link>
+          </div>
         </div>
       </div>
     </div>
