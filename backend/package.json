@@ -10,6 +10,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
     "prisma:seed": "node prisma/seed.js",
+    "knowledge:ingest": "node scripts/ingest-knowledge.js",
+    "knowledge:eval": "node scripts/evaluate-rag.js",
     "test": "jest --runInBand --detectOpenHandles"
   },
   "keywords": [

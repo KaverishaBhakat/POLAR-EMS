@@ -299,3 +299,27 @@ model SolarGenerationHistory {
   @@map("solar_generation_history")
 }
 
+/// RAG knowledge document chunks with pgvector embeddings for semantic retrieval.
+model RagKnowledgeChunk {
+  id         String                 @id @default(uuid())
+  documentId String                 @map("document_id")
+  chunkId    String                 @unique @map("chunk_id")
+  title      String
+  heading    String?
+  category   String
+  station    String?
+  provenance String
+  source     String?
+  content    String
+  embedding  Unsupported("vector")?
+  metadata   Json?
+  createdAt  DateTime               @default(now()) @map("created_at")
+  updatedAt  DateTime               @default(now()) @updatedAt @map("updated_at")
+
+  @@index([documentId])
+  @@index([category])
+  @@index([station])
+  @@index([provenance])
+  @@map("rag_knowledge_chunks")
+}
+

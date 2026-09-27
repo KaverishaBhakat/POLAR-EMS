@@ -1,0 +1,88 @@
+[
+  {
+    "id": "eval-01",
+    "question": "What is POLAR-EMS and what are its core objectives?",
+    "expectedCategory": "SYSTEM",
+    "expectedDocumentId": "system-polar-ems-overview",
+    "keywords": ["energy management", "antarctica", "maitri", "bharati", "fuel consumption", "critical load"]
+  },
+  {
+    "id": "eval-02",
+    "question": "What does Maitri station monitor and what are its baseline microgrid specifications?",
+    "expectedCategory": "STATIONS",
+    "expectedDocumentId": "stations-maitri",
+    "expectedStation": "MAITRI",
+    "keywords": ["maitri", "schirmacher oasis", "65 kw", "42.5 kw", "350 kwh", "100 kw"]
+  },
+  {
+    "id": "eval-03",
+    "question": "Where is Bharati station located and what are its power characteristics?",
+    "expectedCategory": "STATIONS",
+    "expectedDocumentId": "stations-bharati",
+    "expectedStation": "BHARATI",
+    "keywords": ["bharati", "larsemann hills", "75 kw", "400 kwh"]
+  },
+  {
+    "id": "eval-04",
+    "question": "How is solar photovoltaic power calculated in POLAR-EMS?",
+    "expectedCategory": "RENEWABLE",
+    "expectedDocumentId": "renewable-solar-model",
+    "keywords": ["iec 61724-1", "irradiance", "performance ratio", "pr", "capacity"]
+  },
+  {
+    "id": "eval-05",
+    "question": "What aerodynamic parameters and cut-in/cut-out speeds are used for the wind turbine model?",
+    "expectedCategory": "RENEWABLE",
+    "expectedDocumentId": "renewable-wind-model",
+    "keywords": ["cut-in", "3.5 m/s", "cut-out", "25 m/s", "rated", "12 m/s", "katabatic"]
+  },
+  {
+    "id": "eval-06",
+    "question": "What operational assumptions, SOC limits, and efficiency values are used for the BESS?",
+    "expectedCategory": "BATTERY",
+    "expectedDocumentId": "battery-bess-model",
+    "keywords": ["350 kwh", "soc", "20%", "95%", "80 kw", "lifepo4", "round-trip"]
+  },
+  {
+    "id": "eval-07",
+    "question": "Why might generator output increase during periods of low renewable generation?",
+    "expectedCategory": "GENERATORS",
+    "expectedDocumentId": "generators-generator-model",
+    "keywords": ["power balance", "deficit", "battery", "minimum soc", "fuel consumption", "critical load"]
+  },
+  {
+    "id": "eval-08",
+    "question": "How does the 24-hour MILP optimization and economic dispatch system work?",
+    "expectedCategory": "OPTIMIZATION",
+    "expectedDocumentId": "optimization-milp-dispatch",
+    "keywords": ["milp", "or-tools", "unit commitment", "economic dispatch", "fuel savings"]
+  },
+  {
+    "id": "eval-09",
+    "question": "What happens during the Polar Night resilience scenario?",
+    "expectedCategory": "RESILIENCE",
+    "expectedDocumentId": "resilience-scenarios",
+    "keywords": ["polar night", "0.0 kw", "katabatic wind", "battery", "genset"]
+  },
+  {
+    "id": "eval-10",
+    "question": "What is the difference between measured and modeled data in POLAR-EMS?",
+    "expectedCategory": "PROVENANCE",
+    "expectedDocumentId": "provenance-data-provenance",
+    "keywords": ["real / measured", "modeled / scenario", "real climatology", "engineering assumption", "scada"]
+  },
+  {
+    "id": "eval-11",
+    "question": "How does the machine learning weather forecasting model predict ambient temperature?",
+    "expectedCategory": "FORECASTING",
+    "expectedDocumentId": "forecasting-weather-forecast",
+    "keywords": ["histgradientboostingregressor", "lag", "r2", "mae", "24-hour"]
+  },
+  {
+    "id": "eval-12",
+    "question": "How are station electrical demand and sub-zero heating loads modeled?",
+    "expectedCategory": "ENERGY",
+    "expectedDocumentId": "energy-load-model",
+    "keywords": ["1.8 kw", "thermal", "heating", "occupancy", "base load", "diurnal"]
+  }
+]
