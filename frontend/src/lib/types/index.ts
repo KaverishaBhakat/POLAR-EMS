@@ -223,19 +223,70 @@ export interface AIInsight {
   priority: 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
+export type SolarProvenanceSource = 'MEASURED' | 'CLIMATOLOGICAL_ESTIMATE' | 'UNAVAILABLE';
+
 export interface HourlyForecastPoint {
   hour: string;
   time: string;
+  timestamp?: string | Date;
   actualLoadKW?: number;
   predictedLoadKW: number;
   lowerConfidenceKW: number;
   upperConfidenceKW: number;
-  solarForecastKW: number;
-  windForecastKW: number;
-  totalRenewableKW: number;
+  solarForecastKW: number | null;
+  solarSource?: SolarProvenanceSource;
+  windForecastKW: number | null;
+  totalRenewableKW: number | null;
   temperatureC: number;
   windSpeedMs: number;
   solarRadiationWm2: number;
+}
+
+export interface DashboardSummary {
+  currentLoad: number;
+  renewableGeneration: number;
+  batterySOC: number;
+  fuelLevel: number;
+  generatorCount: number;
+  activeAlerts: number;
+  criticalLoadCount: number;
+  totalCriticalPowerKW: number;
+  renewablePercentage: number;
+  energyBalance: {
+    totalSupplyKW: number;
+    totalLoadKW: number;
+    netBalanceKW: number;
+    netDeficitKW: number;
+    netSurplusKW: number;
+  };
+  riskAssessment: {
+    energyStress: boolean;
+    criticalLoadRisk: boolean;
+    stressMarginKW: number;
+    criticalMarginKW: number;
+  };
+  hasTelemetryData: boolean;
+  solarPowerKW?: number | null;
+  solarSource?: SolarProvenanceSource;
+  isTelemetryLive?: boolean;
+  solarAvailable?: boolean;
+}
+
+export interface DashboardData {
+  station: Station;
+  weather: WeatherData | null;
+  energy: EnergyLoadRecord | null;
+  renewable: RenewableRecord | null;
+  battery: any;
+  generators: Generator[];
+  criticalLoads: CriticalLoadItem[];
+  alerts: AlertRecord[];
+  points: HourlyForecastPoint[];
+  solarPowerKW: number | null;
+  solarSource: SolarProvenanceSource;
+  isTelemetryLive: boolean;
+  solarAvailable: boolean;
+  summary: DashboardSummary;
 }
 
 export interface ForecastMetrics {
@@ -553,10 +604,10 @@ export interface ResilienceScenarioListResponse {
 }
 
 export interface ResilienceMetricDelta {
-  baseline: number;
-  scenario: number;
-  absolute_delta: number;
-  percent_delta: number | null;
+  baseline?: number | null;
+  scenario?: number | null;
+  absolute_delta?: number | null;
+  percent_delta?: number | null;
 }
 
 export interface ResilienceMetrics {
@@ -636,5 +687,70 @@ export interface ResilienceSimulationResult {
   recommendation?: string;
   message?: string;
 }
+
+// ---------------------------------------------------------
+// Historical Solar Generation (Modeled from Climatology)
+// ---------------------------------------------------------
+
+export type SolarSourceType = 'MEASURED' | 'CLIMATOLOGICAL_ESTIMATE' | 'UNAVAILABLE';
+
+export interface SolarGenerationHistoryRecord {
+  id: string;
+  stationId: string;
+  timestamp: string;
+  irradianceWm2: number | null;
+  solarPowerKW: number | null;
+  solarSource: 'CLIMATOLOGICAL_ESTIMATE' | 'UNAVAILABLE' | string;
+  modelVersion?: string;
+  pvCapacityKw?: number;
+  performanceRatio?: number;
+  sourceRadiationYear?: number | null;
+  sourceRadiationMonth?: number;
+  sourceRadiationHour?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SolarGenerationHistoryPagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface SolarGenerationHistoryResponse {
+  station: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  records: SolarGenerationHistoryRecord[];
+  pagination: SolarGenerationHistoryPagination;
+}
+
+export interface SolarGenerationHistorySummary {
+  station: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  hasData: boolean;
+  totalPoints: number;
+  availablePoints: number;
+  unavailablePoints: number;
+  start: string | null;
+  end: string | null;
+  minSolarPowerKW: number | null;
+  maxSolarPowerKW: number | null;
+  avgSolarPowerKW: number | null;
+  minIrradianceWm2: number | null;
+  maxIrradianceWm2: number | null;
+  avgIrradianceWm2: number | null;
+  source: string;
+  provenance: string;
+  pvCapacityKw: number;
+  performanceRatio: number;
+}
+
 
 

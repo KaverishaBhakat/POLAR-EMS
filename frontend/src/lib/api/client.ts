@@ -32,6 +32,9 @@ import {
   ResilienceSimulationResult,
   ResilienceMetrics,
   ResilienceComparison,
+  SolarGenerationHistoryRecord,
+  SolarGenerationHistorySummary,
+  SolarGenerationHistoryResponse,
 } from '../types';
 import { STATIONS } from '../mock-data/stations';
 import { WEATHER_DATA } from '../mock-data/weather';
@@ -1527,5 +1530,61 @@ export const apiClient = {
     const result = await response.json();
     return result.data;
   },
+
+  // Historical Modeled Solar Generation (from 1985–2000 Climatology)
+  async getSolarGenerationHistory(
+    stationId: StationId | string,
+    params?: { start?: string; end?: string; limit?: number; page?: number }
+  ): Promise<SolarGenerationHistoryResponse> {
+    const query = new URLSearchParams();
+    if (params?.start) query.set('start', params.start);
+    if (params?.end) query.set('end', params.end);
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.page) query.set('page', String(params.page));
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    const response = await fetch(
+      `${API_BASE_URL}/solar-generation-history/${stationId}${queryString}`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      }
+    );
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch historical solar generation for ${stationId}`);
+    }
+    const result = await response.json();
+    return result.data;
+  },
+
+  async getSolarGenerationHistorySummary(
+    stationId: StationId | string,
+    params?: { start?: string; end?: string }
+  ): Promise<SolarGenerationHistorySummary> {
+    const query = new URLSearchParams();
+    if (params?.start) query.set('start', params.start);
+    if (params?.end) query.set('end', params.end);
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    const response = await fetch(
+      `${API_BASE_URL}/solar-generation-history/${stationId}/summary${queryString}`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      }
+    );
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch historical solar summary for ${stationId}`);
+    }
+    const result = await response.json();
+    return result.data;
+  },
 };
+
 

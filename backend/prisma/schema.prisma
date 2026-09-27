@@ -40,6 +40,8 @@ model Station {
   renewableGeneration RenewableGeneration[]
   simulations         Simulation[]
   weatherData         WeatherData[]
+  pvConfig            PVSystemConfig?
+  solarGenerationHistory SolarGenerationHistory[]
 
   @@map("stations")
 }
@@ -234,3 +236,66 @@ enum Role {
   OPERATOR
   VIEWER
 }
+
+/// Climatological monthly/hourly solar radiation baseline dataset (e.g. 1985-2000 IMD/Antarctic expedition archives).
+/// Represents monthly averaged diurnal global solar radiation curves, NOT continuous timestamped telemetry observations.
+model SolarRadiationClimatology {
+  id             String   @id @default(uuid())
+  year           Int
+  month          Int
+  hour           Int
+  radiationValue Float?
+  irradianceWm2  Float?
+  source         String   @default("radiation(2).txt")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([year, month, hour])
+  @@index([month, hour])
+  @@index([year, month, hour])
+  @@map("solar_radiation_climatology")
+}
+
+/// Photovoltaic system hardware capacity and derating configuration for a station node.
+model PVSystemConfig {
+  id               String   @id @default(uuid())
+  stationId        String   @unique
+  capacityKw       Float
+  performanceRatio Float
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  station          Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
+
+  @@map("pv_system_configs")
+}
+
+/// Modeled historical photovoltaic generation time series derived from real meteorological observation timestamps
+/// and monthly-hourly solar radiation climatological priors.
+/// Scientifically segregated from measured SCADA telemetry (renewable_generation).
+model SolarGenerationHistory {
+  id                   String   @id @default(uuid())
+  stationId            String
+  timestamp            DateTime
+
+  irradianceWm2        Float?
+  solarPowerKW         Float?
+
+  solarSource          String   @default("CLIMATOLOGICAL_ESTIMATE")
+  modelVersion         String?  @default("IEC-61724-1-CLIMATOLOGY-V1")
+  pvCapacityKw         Float?
+  performanceRatio     Float?
+
+  sourceRadiationYear  Int?
+  sourceRadiationMonth Int?
+  sourceRadiationHour  Int?
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  station              Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
+
+  @@unique([stationId, timestamp])
+  @@index([stationId, timestamp])
+  @@map("solar_generation_history")
+}
+

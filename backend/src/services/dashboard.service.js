@@ -1,5 +1,6 @@
 const { prisma } = require('../config/database');
 const stationService = require('./station.service');
+const pvGenerationService = require('./pv-generation.service');
 const {
   calculateRenewablePenetration,
   calculateEnergyBalance,
@@ -7,6 +8,65 @@ const {
 } = require('../utils/calculations');
 
 class DashboardService {
+  /**
+   * Resolves hybrid solar power value with explicit provenance.
+   * Priority:
+   * 1. Measured telemetry (MEASURED)
+   * 2. Climatological PV generation estimate (CLIMATOLOGICAL_ESTIMATE)
+   * 3. Solar resource unavailable / polar night null (UNAVAILABLE)
+   *
+   * @param {string} stationId
+   * @param {string|Date} timestamp
+   * @param {Object} [measuredRecord] - renewableGeneration record if found
+   * @returns {Promise<{solarPowerKW: number|null, solarSource: 'MEASURED'|'CLIMATOLOGICAL_ESTIMATE'|'UNAVAILABLE', isTelemetryLive: boolean, solarAvailable: boolean}>}
+   */
+  async resolveSolarPowerForDashboard(stationId, timestamp, measuredRecord) {
+    // 1. MEASURED PRIORITY:
+    // Check explicitly for null / undefined, because 0 is a valid measured solar reading
+    if (
+      measuredRecord &&
+      measuredRecord.solarPower !== null &&
+      measuredRecord.solarPower !== undefined
+    ) {
+      return {
+        solarPowerKW: measuredRecord.solarPower,
+        solarSource: 'MEASURED',
+        isTelemetryLive: true,
+        solarAvailable: true,
+      };
+    }
+
+    // 2. CLIMATOLOGICAL FALLBACK:
+    if (stationId) {
+      try {
+        const targetTimestamp = timestamp || (measuredRecord && measuredRecord.timestamp) || new Date();
+        const pvEstimate = await pvGenerationService.estimatePvGeneration({
+          stationId,
+          timestamp: targetTimestamp,
+        });
+
+        if (pvEstimate && pvEstimate.available && pvEstimate.estimatedPvPowerKw !== null) {
+          return {
+            solarPowerKW: pvEstimate.estimatedPvPowerKw,
+            solarSource: 'CLIMATOLOGICAL_ESTIMATE',
+            isTelemetryLive: false,
+            solarAvailable: true,
+          };
+        }
+      } catch (err) {
+        // Fall through to UNAVAILABLE if station has no solar resource or error
+      }
+    }
+
+    // 3. UNAVAILABLE:
+    return {
+      solarPowerKW: null,
+      solarSource: 'UNAVAILABLE',
+      isTelemetryLive: false,
+      solarAvailable: false,
+    };
+  }
+
   /**
    * Builds the consolidated real-time dashboard telemetry for a station
    */
@@ -81,9 +141,18 @@ class DashboardService {
       }),
     ]);
 
+    // Resolve hybrid solar snapshot with explicit provenance
+    const solarInfo = await this.resolveSolarPowerForDashboard(
+      station.id,
+      latestRenewable?.timestamp || latestEnergy?.timestamp || latestWeather?.timestamp || new Date(),
+      latestRenewable
+    );
+
     // Compute key metrics dynamically
     const currentLoad = latestEnergy ? latestEnergy.totalLoad : 0;
-    const renewableGeneration = latestRenewable ? latestRenewable.totalRenewable : 0;
+    const renewableGeneration = latestRenewable
+      ? latestRenewable.totalRenewable
+      : (solarInfo.solarPowerKW || 0);
     const renewablePercentage = calculateRenewablePenetration(renewableGeneration, currentLoad);
 
     // Primary battery summary
@@ -118,26 +187,42 @@ class DashboardService {
     const riskAssessment = evaluateSystemRisk(totalAvailableSupply, currentLoad, totalCriticalPower);
 
     // Format hourly trend points from database time-series
-    const hourlyPoints = recentEnergy.slice().reverse().map((e, idx) => {
-      const ren = recentRenewable.find((r) => r.timestamp.getTime() === e.timestamp.getTime()) || recentRenewable[idx];
-      const w = recentWeather.find((w) => w.timestamp.getTime() === e.timestamp.getTime()) || recentWeather[idx];
-      const d = new Date(e.timestamp);
-      const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      return {
-        hour: `${d.getHours()}:00`,
-        time: timeStr,
-        actualLoadKW: e.totalLoad,
-        predictedLoadKW: e.totalLoad,
-        lowerConfidenceKW: Math.round(e.totalLoad * 0.92 * 10) / 10,
-        upperConfidenceKW: Math.round(e.totalLoad * 1.08 * 10) / 10,
-        solarForecastKW: ren ? ren.solarPower : 0,
-        windForecastKW: ren ? ren.windPower : 0,
-        totalRenewableKW: ren ? ren.totalRenewable : 0,
-        temperatureC: w ? w.temperature : -15.0,
-        windSpeedMs: w ? w.windSpeed : 10.0,
-        solarRadiationWm2: w ? w.solarRadiation : 0,
-      };
-    });
+    const hourlyPoints = await Promise.all(
+      recentEnergy.slice().reverse().map(async (e, idx) => {
+        const ren = recentRenewable.find((r) => r.timestamp.getTime() === e.timestamp.getTime()) || recentRenewable[idx];
+        const w = recentWeather.find((w) => w.timestamp.getTime() === e.timestamp.getTime()) || recentWeather[idx];
+        const d = new Date(e.timestamp);
+        const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const pointSolar = await this.resolveSolarPowerForDashboard(
+          station.id,
+          e.timestamp,
+          ren
+        );
+
+        const windVal = ren && ren.windPower !== null && ren.windPower !== undefined ? ren.windPower : 0;
+        const totalRenVal = ren && ren.totalRenewable !== null && ren.totalRenewable !== undefined
+          ? ren.totalRenewable
+          : ((pointSolar.solarPowerKW || 0) + windVal);
+
+        return {
+          hour: `${d.getHours()}:00`,
+          time: timeStr,
+          timestamp: e.timestamp,
+          actualLoadKW: e.totalLoad,
+          predictedLoadKW: e.totalLoad,
+          lowerConfidenceKW: Math.round(e.totalLoad * 0.92 * 10) / 10,
+          upperConfidenceKW: Math.round(e.totalLoad * 1.08 * 10) / 10,
+          solarForecastKW: pointSolar.solarPowerKW,
+          solarSource: pointSolar.solarSource,
+          windForecastKW: windVal,
+          totalRenewableKW: totalRenVal,
+          temperatureC: w ? w.temperature : -15.0,
+          windSpeedMs: w ? w.windSpeed : 10.0,
+          solarRadiationWm2: w ? w.solarRadiation : 0,
+        };
+      })
+    );
 
     return {
       station,
@@ -194,6 +279,10 @@ class DashboardService {
       })),
       alerts: activeAlerts,
       points: hourlyPoints,
+      solarPowerKW: solarInfo.solarPowerKW,
+      solarSource: solarInfo.solarSource,
+      isTelemetryLive: solarInfo.isTelemetryLive,
+      solarAvailable: solarInfo.solarAvailable,
       summary: {
         currentLoad,
         renewableGeneration,
@@ -207,9 +296,14 @@ class DashboardService {
         energyBalance: balance,
         riskAssessment,
         hasTelemetryData: Boolean(latestWeather || latestEnergy || latestRenewable),
+        solarPowerKW: solarInfo.solarPowerKW,
+        solarSource: solarInfo.solarSource,
+        isTelemetryLive: solarInfo.isTelemetryLive,
+        solarAvailable: solarInfo.solarAvailable,
       },
     };
   }
 }
 
 module.exports = new DashboardService();
+

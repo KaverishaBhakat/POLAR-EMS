@@ -33,6 +33,7 @@ import {
 } from 'recharts';
 import { inspectTelemetryData, sanitizeNumeric, sortChronological } from '@/lib/utils/chartData';
 import { ChartTelemetryStatus } from '@/components/charts/ChartTelemetryStatus';
+import { HistoricalSolarChart } from '@/components/solar/HistoricalSolarChart';
 
 export default function RenewablePage() {
   const { activeStationId, station, addToast } = useStation();
@@ -649,6 +650,15 @@ export default function RenewablePage() {
           )}
         </>
       )}
+
+      {/* 4. Modeled Historical Solar Climatology Time Series */}
+      <div className="pt-4 border-t border-[#1B2C42]/80">
+        <HistoricalSolarChart
+          stationId={activeStationId}
+          stationName={station?.name}
+        />
+      </div>
     </div>
   );
 }
+

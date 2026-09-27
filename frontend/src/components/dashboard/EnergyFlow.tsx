@@ -5,7 +5,10 @@ import { Sun, Wind, BatteryCharging, Zap, Cpu, ArrowRight } from 'lucide-react';
 import { StatusBadge } from '../common/StatusBadge';
 
 interface EnergyFlowProps {
-  solarKW: number;
+  solarKW: number | null;
+  solarSource?: 'MEASURED' | 'CLIMATOLOGICAL_ESTIMATE' | 'UNAVAILABLE';
+  isTelemetryLive?: boolean;
+  solarAvailable?: boolean;
   windKW: number;
   generatorKW: number;
   batteryFlowKW: number; // positive = charging, negative = discharging
@@ -15,6 +18,9 @@ interface EnergyFlowProps {
 
 export const EnergyFlow: React.FC<EnergyFlowProps> = ({
   solarKW,
+  solarSource = 'MEASURED',
+  isTelemetryLive = true,
+  solarAvailable = true,
   windKW,
   generatorKW,
   batteryFlowKW,
@@ -23,7 +29,8 @@ export const EnergyFlow: React.FC<EnergyFlowProps> = ({
 }) => {
   const isCharging = batteryFlowKW >= 0;
   const absBatteryFlow = Math.abs(batteryFlowKW);
-  const totalGeneration = solarKW + windKW + generatorKW;
+  const effectiveSolar = solarKW !== null && solarKW !== undefined ? solarKW : 0;
+  const totalGeneration = effectiveSolar + (windKW || 0) + (generatorKW || 0);
 
   return (
     <div className="relative bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5">
@@ -51,13 +58,42 @@ export const EnergyFlow: React.FC<EnergyFlowProps> = ({
                 <Sun size={18} />
               </div>
               <div>
-                <p className="text-xs font-mono font-medium text-slate-200 uppercase">Solar Array</p>
-                <p className="text-[10px] text-slate-400 font-mono">100 kW PV Bifacial</p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="text-xs font-mono font-medium text-slate-200 uppercase">Solar Array</p>
+                  {solarSource === 'MEASURED' && (
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                      LIVE / MEASURED
+                    </span>
+                  )}
+                  {solarSource === 'CLIMATOLOGICAL_ESTIMATE' && (
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40">
+                      CLIMATOLOGICAL ESTIMATE
+                    </span>
+                  )}
+                  {solarSource === 'UNAVAILABLE' && (
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                      UNAVAILABLE
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                  {solarSource === 'MEASURED'
+                    ? '100 kW PV Telemetry'
+                    : solarSource === 'CLIMATOLOGICAL_ESTIMATE'
+                    ? 'Climatology Resource Model'
+                    : 'Polar Night / No Solar'}
+                </p>
               </div>
             </div>
             <div className="text-right font-mono">
-              <span className="text-base font-bold text-amber-300">{solarKW}</span>
-              <span className="text-[10px] text-slate-400 ml-1">kW</span>
+              {solarKW !== null && solarKW !== undefined ? (
+                <>
+                  <span className="text-base font-bold text-amber-300">{solarKW}</span>
+                  <span className="text-[10px] text-slate-400 ml-1">kW</span>
+                </>
+              ) : (
+                <span className="text-xs font-bold text-slate-400 uppercase">UNAVAILABLE</span>
+              )}
             </div>
           </div>
 
@@ -166,7 +202,7 @@ export const EnergyFlow: React.FC<EnergyFlowProps> = ({
               <div className="bg-[#0D1724] p-1.5 rounded border border-[#1B2C42]">
                 <div className="text-slate-400">Renewable Share</div>
                 <div className="text-cyan-300 font-bold text-xs mt-0.5">
-                  {loadKW > 0 ? (((solarKW + windKW) / loadKW) * 100).toFixed(1) : '0.0'}%
+                  {loadKW > 0 ? (((effectiveSolar + (windKW || 0)) / loadKW) * 100).toFixed(1) : '0.0'}%
                 </div>
               </div>
               <div className="bg-[#0D1724] p-1.5 rounded border border-[#1B2C42]">

@@ -42,9 +42,9 @@ export const EnergyOverviewChart: React.FC<EnergyOverviewChartProps> = ({ data }
       ...item,
       actualLoadKW: sanitizeNumeric(item.actualLoadKW),
       predictedLoadKW: sanitizeNumeric(item.predictedLoadKW),
-      totalRenewableKW: sanitizeNumeric(item.totalRenewableKW, 0) ?? 0,
-      solarForecastKW: sanitizeNumeric(item.solarForecastKW, 0) ?? 0,
-      windForecastKW: sanitizeNumeric(item.windForecastKW, 0) ?? 0,
+      totalRenewableKW: sanitizeNumeric(item.totalRenewableKW),
+      solarForecastKW: sanitizeNumeric(item.solarForecastKW),
+      windForecastKW: sanitizeNumeric(item.windForecastKW),
     }));
   }, [data, timeRange]);
 

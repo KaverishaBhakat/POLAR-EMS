@@ -22,6 +22,9 @@ const dashboardRoutes = require('./routes/dashboard.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const simulationRoutes = require('./routes/simulation.routes');
 const ingestRoutes = require('./routes/ingest.routes');
+const solarResourceRoutes = require('./routes/solar-resource.routes');
+const pvGenerationRoutes = require('./routes/pv-generation.routes');
+const solarGenHistoryRoutes = require('./routes/solar-generation-history.routes');
 
 // Future AI Services Placeholders
 const forecastService = require('./services/forecast.service');
@@ -91,6 +94,9 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/simulation', simulationRoutes);
 app.use('/api/ingest', ingestRoutes);
+app.use('/api/solar-resource', solarResourceRoutes);
+app.use('/api/pv-generation', pvGenerationRoutes);
+app.use('/api/solar-generation-history', solarGenHistoryRoutes);
 
 // AI / ML Forecasting microservice integration routes
 app.get('/api/forecast/:stationId/weather', async (req, res) => {

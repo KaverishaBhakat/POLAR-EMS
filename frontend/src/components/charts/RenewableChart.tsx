@@ -30,9 +30,9 @@ export const RenewableChart: React.FC<RenewableChartProps> = ({ data }) => {
     if (!data || !Array.isArray(data)) return [];
     return data.map((d) => ({
       ...d,
-      solarForecastKW: sanitizeNumeric(d.solarForecastKW, 0) ?? 0,
-      windForecastKW: sanitizeNumeric(d.windForecastKW, 0) ?? 0,
-      totalRenewableKW: sanitizeNumeric(d.totalRenewableKW, 0) ?? 0,
+      solarForecastKW: sanitizeNumeric(d.solarForecastKW),
+      windForecastKW: sanitizeNumeric(d.windForecastKW),
+      totalRenewableKW: sanitizeNumeric(d.totalRenewableKW),
     }));
   }, [data]);
 
@@ -83,7 +83,7 @@ export const RenewableChart: React.FC<RenewableChartProps> = ({ data }) => {
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (!active || !payload || !payload.length) return null;
-                  const total = payload.reduce((acc, p: any) => acc + (p.value || 0), 0);
+                  const total = payload.reduce((acc, p: any) => acc + (p.value !== null && p.value !== undefined ? p.value : 0), 0);
                   return (
                     <div className="bg-[#0A121E]/95 border border-cyan-500/40 p-3 rounded shadow-2xl font-mono text-xs text-slate-200">
                       <p className="text-cyan-400 font-bold mb-1 border-b border-[#1B2C42] pb-0.5">
@@ -93,7 +93,7 @@ export const RenewableChart: React.FC<RenewableChartProps> = ({ data }) => {
                         <div key={entry.name} className="flex justify-between gap-3 py-0.5">
                           <span style={{ color: entry.color }}>{entry.name}:</span>
                           <span className="font-bold text-white">
-                            {entry.value != null ? `${entry.value} kW` : '0 kW'}
+                            {entry.value !== null && entry.value !== undefined ? `${entry.value} kW` : 'UNAVAILABLE'}
                           </span>
                         </div>
                       ))}
@@ -115,6 +115,7 @@ export const RenewableChart: React.FC<RenewableChartProps> = ({ data }) => {
                 stroke="#F59E0B"
                 fill="url(#solarFill)"
                 strokeWidth={2}
+                connectNulls={false}
               />
               <Area
                 type="monotone"
@@ -124,6 +125,7 @@ export const RenewableChart: React.FC<RenewableChartProps> = ({ data }) => {
                 stroke="#06B6D4"
                 fill="url(#windFill)"
                 strokeWidth={2}
+                connectNulls={false}
               />
             </AreaChart>
           </ResponsiveContainer>

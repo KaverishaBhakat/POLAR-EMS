@@ -145,11 +145,11 @@ export const BaselineComparisonPanel: React.FC<BaselineComparisonPanelProps> = (
               const absDelta = row.data.absolute_delta;
               const pctDelta = row.data.percent_delta;
 
-              const isPositive = absDelta > 0.001;
-              const isNegative = absDelta < -0.001;
-              const isZero = !isPositive && !isNegative;
+              const isPositive = absDelta !== null && absDelta !== undefined && absDelta > 0.001;
+              const isNegative = absDelta !== null && absDelta !== undefined && absDelta < -0.001;
 
-              const formatVal = (val: number) => {
+              const formatVal = (val: number | null | undefined) => {
+                if (val === null || val === undefined || isNaN(val)) return 'N/A';
                 if (row.digits === 0) return Math.round(val).toLocaleString();
                 return val.toFixed(row.digits);
               };
@@ -185,7 +185,7 @@ export const BaselineComparisonPanel: React.FC<BaselineComparisonPanelProps> = (
                   </td>
 
                   <td className="py-2.5 px-3 text-right font-mono">
-                    {pctDelta !== null && pctDelta !== undefined ? (
+                    {pctDelta !== null && pctDelta !== undefined && !isNaN(pctDelta) ? (
                       <span
                         className={`inline-flex items-center gap-0.5 font-bold ${
                           pctDelta > 0

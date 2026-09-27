@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { TrendingUp, ArrowUpRight, ArrowDownRight, Minus, AlertCircle } from 'lucide-react';
+import { TrendingUp, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import { ResilienceComparison, ResilienceMetrics } from '@/lib/types';
 
 interface ScenarioImpactSummaryProps {
@@ -83,15 +83,17 @@ export const ScenarioImpactSummary: React.FC<ScenarioImpactSummaryProps> = ({
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {impactCards.map((card) => {
-          const hasPct = card.pctDelta !== null && card.pctDelta !== undefined;
+          const hasPct = card.pctDelta !== null && card.pctDelta !== undefined && !isNaN(card.pctDelta);
           const isUp = hasPct && (card.pctDelta ?? 0) > 0;
           const isDown = hasPct && (card.pctDelta ?? 0) < 0;
+          const hasScenVal = card.scenVal !== null && card.scenVal !== undefined && !isNaN(card.scenVal);
+          const hasAbsDelta = card.absDelta !== null && card.absDelta !== undefined && !isNaN(card.absDelta);
 
           return (
             <div
               key={card.label}
               className={`p-3 rounded-lg border bg-[#080E17] flex flex-col justify-between ${
-                card.isCritical && card.scenVal > 0
+                card.isCritical && hasScenVal && (card.scenVal ?? 0) > 0
                   ? 'border-rose-500/50 bg-rose-950/20'
                   : 'border-[#1B2C42]'
               }`}
@@ -122,20 +124,28 @@ export const ScenarioImpactSummary: React.FC<ScenarioImpactSummaryProps> = ({
                 ) : (
                   <div
                     className={`text-lg sm:text-xl font-extrabold ${
-                      card.scenVal > 0 ? 'text-rose-400' : 'text-emerald-400'
+                      hasScenVal && (card.scenVal ?? 0) > 0
+                        ? card.isCritical
+                          ? 'text-rose-400'
+                          : 'text-amber-400'
+                        : 'text-emerald-400'
                     }`}
                   >
-                    {card.scenVal.toFixed(1)} {card.unit}
+                    {hasScenVal ? `${card.scenVal!.toFixed(1)} ${card.unit}` : 'N/A'}
                   </div>
                 )}
               </div>
 
               <p className="text-[9px] text-slate-400 truncate">
                 {card.isCritical
-                  ? card.scenVal === 0
+                  ? !hasScenVal || card.scenVal === 0
                     ? '0 kWh (100% Protected)'
-                    : `Shed: ${card.scenVal.toFixed(1)} kWh`
-                  : `Delta: ${card.absDelta !== undefined && card.absDelta > 0 ? '+' : ''}${card.absDelta?.toFixed(1)} ${card.unit}`}
+                    : `Shed: ${card.scenVal!.toFixed(1)} kWh`
+                  : hasAbsDelta
+                  ? `Delta: ${card.absDelta! > 0 ? '+' : ''}${card.absDelta!.toFixed(1)} ${card.unit}`
+                  : hasScenVal
+                  ? `Scenario: ${card.scenVal!.toFixed(1)} ${card.unit}`
+                  : 'Delta: N/A'}
               </p>
             </div>
           );

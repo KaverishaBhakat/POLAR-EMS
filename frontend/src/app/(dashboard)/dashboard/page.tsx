@@ -11,6 +11,7 @@ import { GeneratorStatus } from '@/components/dashboard/GeneratorStatus';
 import { CriticalLoads } from '@/components/dashboard/CriticalLoads';
 import { AIInsight } from '@/components/dashboard/AIInsight';
 import { EnergyOverviewChart } from '@/components/charts/EnergyOverviewChart';
+import { HistoricalSolarChart } from '@/components/solar/HistoricalSolarChart';
 import { LoadingSkeleton } from '@/components/common/Toast';
 import { Zap, Sun, BatteryCharging, Fuel, ShieldCheck, Leaf, Activity, UploadCloud, ArrowRight } from 'lucide-react';
 
@@ -147,7 +148,16 @@ export default function DashboardPage() {
     ? dashboardBackend.summary.fuelLevel
     : 78.5;
 
-  const displaySolarKW = dashboardBackend?.renewable?.solarPower ?? (energy?.solarGenerationKW || 0);
+  const solarPowerKW = dashboardBackend
+    ? (dashboardBackend.solarPowerKW ?? (dashboardBackend.renewable?.solarPower ?? null))
+    : (energy?.solarGenerationKW ?? null);
+
+  const solarSource: 'MEASURED' | 'CLIMATOLOGICAL_ESTIMATE' | 'UNAVAILABLE' =
+    dashboardBackend?.solarSource || (dashboardBackend?.renewable ? 'MEASURED' : 'UNAVAILABLE');
+
+  const isTelemetryLive = dashboardBackend?.isTelemetryLive ?? Boolean(dashboardBackend?.renewable);
+  const solarAvailable = dashboardBackend?.solarAvailable ?? (solarPowerKW !== null);
+
   const displayWindKW = dashboardBackend?.renewable?.windPower ?? (energy?.windGenerationKW || 0);
   const displayBatteryFlow = dashboardBackend?.battery?.flowKW ?? (energy?.batteryFlowKW || 0);
   const displayTotalCriticalKW = dashboardBackend?.summary?.totalCriticalPowerKW ?? (energy?.criticalLoadKW || 73.2);
@@ -234,9 +244,12 @@ export default function DashboardPage() {
             isPositiveGood: true,
             isUp: true,
           }}
-          tooltip="Combined power output from photovoltaic solar arrays and high-latitude wind turbines."
+          tooltip={`Combined power output from photovoltaic solar arrays (${solarSource === 'MEASURED' ? 'Live SCADA' : solarSource === 'CLIMATOLOGICAL_ESTIMATE' ? 'Climatological Estimate' : 'Unavailable'}) and wind turbines.`}
           accentColor="cyan"
-          status={{ variant: 'CHARGING', label: hasLiveTelemetry ? 'SOLAR+WIND' : 'STANDBY' }}
+          status={{
+            variant: solarSource === 'MEASURED' ? 'CHARGING' : solarSource === 'CLIMATOLOGICAL_ESTIMATE' ? 'OPTIMIZED' : 'STANDBY',
+            label: solarSource === 'MEASURED' ? 'LIVE SCADA' : solarSource === 'CLIMATOLOGICAL_ESTIMATE' ? 'ESTIMATED PV' : 'STANDBY',
+          }}
         />
 
         {/* 3. Battery SOC */}
@@ -297,7 +310,10 @@ export default function DashboardPage() {
 
       {/* SECOND SECTION: Power Distribution SCADA Flow */}
       <EnergyFlow
-        solarKW={displaySolarKW}
+        solarKW={solarPowerKW}
+        solarSource={solarSource}
+        isTelemetryLive={isTelemetryLive}
+        solarAvailable={solarAvailable}
         windKW={displayWindKW}
         generatorKW={generators.filter((g) => g.status === 'RUNNING').reduce((acc, g) => acc + g.outputKW, 0)}
         batteryFlowKW={displayBatteryFlow}
@@ -305,13 +321,19 @@ export default function DashboardPage() {
         loadKW={displayLoadKW}
       />
 
-      {/* THIRD SECTION: Generator Status (G1 – G4) */}
+      {/* THIRD SECTION: 2019 Historical Solar Generation (Modeled from Climatology) */}
+      <HistoricalSolarChart
+        stationId={activeStationId}
+        stationName={stationDisplayName}
+      />
+
+      {/* FOURTH SECTION: Generator Status (G1 – G4) */}
       <GeneratorStatus generators={generators} />
 
-      {/* FOURTH SECTION: Critical Loads Priority Allocation */}
+      {/* FIFTH SECTION: Critical Loads Priority Allocation */}
       <CriticalLoads loads={criticalLoads} />
 
-      {/* FIFTH SECTION: AI Energy Insight Advisory */}
+      {/* SIXTH SECTION: AI Energy Insight Advisory */}
       {insight && <AIInsight insight={insight} />}
     </div>
   );
