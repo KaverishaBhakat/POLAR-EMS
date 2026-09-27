@@ -19,6 +19,7 @@ const readline = require('readline');
 const { prisma } = require('../config/database');
 const { estimateSolarIrradiance } = require('./solar-resource-estimation.service');
 const { resolveStationPvConfig } = require('./pv-generation.service');
+const stationService = require('./station.service');
 const ApiError = require('../utils/ApiError');
 
 const MODEL_VERSION = 'IEC-61724-1-CLIMATOLOGY-V1';
@@ -240,13 +241,7 @@ async function generateHistoricalSolarSeries({ stationId, datasetPath, dryRun = 
  * Retrieves paginated historical modeled solar generation records.
  */
 async function getHistoricalSolarSeries(stationId, { start, end, limit = 100, page = 1 }) {
-  const station = await prisma.station.findUnique({
-    where: { id: stationId },
-  });
-
-  if (!station) {
-    throw ApiError.notFound(`Station with ID '${stationId}' not found`, 'STATION_NOT_FOUND');
-  }
+  const station = await stationService.getStationById(stationId);
 
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
   const limitNum = Math.min(500, Math.max(1, parseInt(limit, 10) || 100));
@@ -295,14 +290,11 @@ async function getHistoricalSolarSeries(stationId, { start, end, limit = 100, pa
  * Retrieves summary statistics for the historical modeled solar series.
  */
 async function getHistoricalSolarSummary(stationId, { start, end }) {
+  const baseStation = await stationService.getStationById(stationId);
   const station = await prisma.station.findUnique({
-    where: { id: stationId },
+    where: { id: baseStation.id },
     include: { pvConfig: true },
   });
-
-  if (!station) {
-    throw ApiError.notFound(`Station with ID '${stationId}' not found`, 'STATION_NOT_FOUND');
-  }
 
   const where = { stationId: station.id };
   if (start || end) {

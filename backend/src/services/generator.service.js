@@ -82,16 +82,18 @@ class GeneratorService {
   /**
    * Get generator readings history
    */
-  async getGeneratorReadings(id, { limit = 50, page = 1 }) {
+  async getGeneratorReadings(id, { limit = 50, page = 1 } = {}) {
     await this.getGeneratorById(id);
-    const skip = (page - 1) * limit;
+    const limitNum = parseInt(limit, 10) || 50;
+    const pageNum = parseInt(page, 10) || 1;
+    const skip = (pageNum - 1) * limitNum;
 
     const [total, records] = await Promise.all([
       prisma.generatorReading.count({ where: { generatorId: id } }),
       prisma.generatorReading.findMany({
         where: { generatorId: id },
         orderBy: { timestamp: 'desc' },
-        take: limit,
+        take: limitNum,
         skip,
       }),
     ]);
@@ -100,9 +102,9 @@ class GeneratorService {
       records,
       meta: {
         total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
       },
     };
   }

@@ -17,13 +17,14 @@ describe('Solar Generation History API & Provenance', () => {
   });
 
   describe('GET /api/solar-generation-history/:stationId/summary', () => {
-    it('should return summary metrics with explicit climatological provenance', async () => {
+    it('should return summary metrics with explicit climatological provenance using UUID', async () => {
       const res = await request(app)
         .get(`/api/solar-generation-history/${maitriStationId}/summary`)
         .expect(200);
 
       expect(res.body.success).toBe(true);
       expect(res.body.data.hasData).toBe(true);
+      expect(res.body.data.station.code).toBe('MAITRI');
       expect(res.body.data.totalPoints).toBe(8760);
       expect(res.body.data.availablePoints).toBe(8040);
       expect(res.body.data.unavailablePoints).toBe(720);
@@ -32,15 +33,35 @@ describe('Solar Generation History API & Provenance', () => {
       expect(res.body.data.avgSolarPowerKW).toBeGreaterThan(0);
     });
 
-    it('should return 404 for invalid station ID', async () => {
+    it('should resolve station code MAITRI for summary', async () => {
+      const res = await request(app)
+        .get('/api/solar-generation-history/MAITRI/summary')
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.station.id).toBe(maitriStationId);
+      expect(res.body.data.totalPoints).toBe(8760);
+    });
+
+    it('should resolve lowercase station code maitri for summary', async () => {
+      const res = await request(app)
+        .get('/api/solar-generation-history/maitri/summary')
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.station.id).toBe(maitriStationId);
+      expect(res.body.data.totalPoints).toBe(8760);
+    });
+
+    it('should return 404 for invalid station ID or code', async () => {
       await request(app)
-        .get('/api/solar-generation-history/00000000-0000-0000-0000-000000000000/summary')
+        .get('/api/solar-generation-history/invalid_station_xyz/summary')
         .expect(404);
     });
   });
 
   describe('GET /api/solar-generation-history/:stationId', () => {
-    it('should return paginated historical records preserving NULL polar night values', async () => {
+    it('should return paginated historical records using UUID', async () => {
       const res = await request(app)
         .get(`/api/solar-generation-history/${maitriStationId}?limit=10&page=1`)
         .expect(200);
@@ -56,9 +77,42 @@ describe('Solar Generation History API & Provenance', () => {
       }
     });
 
+    it('should resolve uppercase station code MAITRI', async () => {
+      const res = await request(app)
+        .get('/api/solar-generation-history/MAITRI?limit=5&page=1')
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.station.id).toBe(maitriStationId);
+      expect(res.body.data.station.code).toBe('MAITRI');
+      expect(res.body.data.pagination.total).toBe(8760);
+      expect(res.body.data.records).toHaveLength(5);
+    });
+
+    it('should resolve lowercase station code maitri', async () => {
+      const res = await request(app)
+        .get('/api/solar-generation-history/maitri?limit=5&page=1')
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.station.id).toBe(maitriStationId);
+      expect(res.body.data.station.code).toBe('MAITRI');
+      expect(res.body.data.pagination.total).toBe(8760);
+      expect(res.body.data.records).toHaveLength(5);
+    });
+
+    it('should return 404 for non-existent station identifier', async () => {
+      const res = await request(app)
+        .get('/api/solar-generation-history/unknown_station_999')
+        .expect(404);
+
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('STATION_NOT_FOUND');
+    });
+
     it('should return UNAVAILABLE for June polar night records', async () => {
       const res = await request(app)
-        .get(`/api/solar-generation-history/${maitriStationId}?start=2019-06-15T00:00:00Z&end=2019-06-15T23:59:59Z&limit=24`)
+        .get(`/api/solar-generation-history/MAITRI?start=2019-06-15T00:00:00Z&end=2019-06-15T23:59:59Z&limit=24`)
         .expect(200);
 
       expect(res.body.success).toBe(true);

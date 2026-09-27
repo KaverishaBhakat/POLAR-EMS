@@ -58,16 +58,18 @@ class BatteryService {
   /**
    * Get battery telemetry readings
    */
-  async getBatteryReadings(id, { limit = 50, page = 1 }) {
+  async getBatteryReadings(id, { limit = 50, page = 1 } = {}) {
     await this.getBatteryById(id);
-    const skip = (page - 1) * limit;
+    const limitNum = parseInt(limit, 10) || 50;
+    const pageNum = parseInt(page, 10) || 1;
+    const skip = (pageNum - 1) * limitNum;
 
     const [total, records] = await Promise.all([
       prisma.batteryReading.count({ where: { batteryId: id } }),
       prisma.batteryReading.findMany({
         where: { batteryId: id },
         orderBy: { timestamp: 'desc' },
-        take: limit,
+        take: limitNum,
         skip,
       }),
     ]);
@@ -76,9 +78,9 @@ class BatteryService {
       records,
       meta: {
         total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
       },
     };
   }

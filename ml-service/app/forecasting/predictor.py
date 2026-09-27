@@ -109,6 +109,30 @@ def generate_forecast_step_features(
     return feat_df
 
 
+COMPASS_POINTS = {
+    'N': 0.0, 'NNE': 22.5, 'NE': 45.0, 'ENE': 67.5,
+    'E': 90.0, 'ESE': 112.5, 'SE': 135.0, 'SSE': 157.5,
+    'S': 180.0, 'SSW': 202.5, 'SW': 225.0, 'WSW': 247.5,
+    'W': 270.0, 'WNW': 292.5, 'NW': 315.0, 'NNW': 337.5
+}
+
+
+def safe_float(val: Any, default: float = 0.0) -> float:
+    """Safely converts numeric or string/compass values to float."""
+    if val is None:
+        return default
+    if isinstance(val, (int, float)):
+        return float(val) if not np.isnan(val) else default
+    val_str = str(val).strip().upper()
+    if val_str in COMPASS_POINTS:
+        return COMPASS_POINTS[val_str]
+    try:
+        f = float(val_str)
+        return f if not np.isnan(f) else default
+    except (ValueError, TypeError):
+        return default
+
+
 def generate_weather_step_features(
     history_df: pd.DataFrame,
     target_ts: pd.Timestamp,
@@ -143,7 +167,7 @@ def generate_weather_step_features(
     row_dict["month_cos"] = np.cos(2 * np.pi * (ts.month - 1) / 12.0)
 
     # 2. Extract temperature history
-    temp_vals = history_df["temperature"].dropna().values
+    temp_vals = [safe_float(v) for v in history_df["temperature"].dropna().values]
 
     # Lag features
     for lag in [1, 2, 3, 6, 12, 24]:
@@ -170,13 +194,13 @@ def generate_weather_step_features(
     # 3. Exogenous weather variables
     # Default fallbacks from history if not passed directly
     if latest_pressure is None:
-        latest_pressure = float(history_df["pressure"].dropna().iloc[-1]) if "pressure" in history_df and not history_df["pressure"].dropna().empty else 970.0
+        latest_pressure = safe_float(history_df["pressure"].dropna().iloc[-1] if "pressure" in history_df and not history_df["pressure"].dropna().empty else 970.0, 970.0)
     if latest_humidity is None:
-        latest_humidity = float(history_df["humidity"].dropna().iloc[-1]) if "humidity" in history_df and not history_df["humidity"].dropna().empty else 60.0
+        latest_humidity = safe_float(history_df["humidity"].dropna().iloc[-1] if "humidity" in history_df and not history_df["humidity"].dropna().empty else 60.0, 60.0)
     if latest_wind_speed is None:
-        latest_wind_speed = float(history_df["wind_speed"].dropna().iloc[-1]) if "wind_speed" in history_df and not history_df["wind_speed"].dropna().empty else 10.0
+        latest_wind_speed = safe_float(history_df["wind_speed"].dropna().iloc[-1] if "wind_speed" in history_df and not history_df["wind_speed"].dropna().empty else 10.0, 10.0)
     if latest_wind_dir is None:
-        latest_wind_dir = float(history_df["wind_direction"].dropna().iloc[-1]) if "wind_direction" in history_df and not history_df["wind_direction"].dropna().empty else 120.0
+        latest_wind_dir = safe_float(history_df["wind_direction"].dropna().iloc[-1] if "wind_direction" in history_df and not history_df["wind_direction"].dropna().empty else 120.0, 120.0)
 
     row_dict["pressure"] = latest_pressure
     row_dict["humidity"] = latest_humidity
@@ -185,7 +209,7 @@ def generate_weather_step_features(
 
     # Exogenous lagged variables
     if "pressure" in history_df and len(history_df["pressure"].dropna()) >= 1:
-        p_vals = history_df["pressure"].dropna().values
+        p_vals = [safe_float(v, latest_pressure) for v in history_df["pressure"].dropna().values]
         row_dict["pressure_lag_1"] = float(p_vals[-1])
         row_dict["pressure_diff_3h"] = float(p_vals[-1] - p_vals[-4]) if len(p_vals) >= 4 else 0.0
     else:
@@ -193,12 +217,14 @@ def generate_weather_step_features(
         row_dict["pressure_diff_3h"] = 0.0
 
     if "wind_speed" in history_df and len(history_df["wind_speed"].dropna()) >= 1:
-        row_dict["wind_speed_lag_1"] = float(history_df["wind_speed"].dropna().values[-1])
+        ws_vals = [safe_float(v, latest_wind_speed) for v in history_df["wind_speed"].dropna().values]
+        row_dict["wind_speed_lag_1"] = float(ws_vals[-1])
     else:
         row_dict["wind_speed_lag_1"] = latest_wind_speed
 
     if "humidity" in history_df and len(history_df["humidity"].dropna()) >= 1:
-        row_dict["humidity_lag_1"] = float(history_df["humidity"].dropna().values[-1])
+        h_vals = [safe_float(v, latest_humidity) for v in history_df["humidity"].dropna().values]
+        row_dict["humidity_lag_1"] = float(h_vals[-1])
     else:
         row_dict["humidity_lag_1"] = latest_humidity
 

@@ -17,6 +17,7 @@
 
 const { prisma } = require('../config/database');
 const { estimateSolarIrradiance } = require('./solar-resource-estimation.service');
+const stationService = require('./station.service');
 const ApiError = require('../utils/ApiError');
 
 // Standard fallback parameters when station has not configured custom hardware
@@ -28,14 +29,11 @@ const GSTC_WM2 = 1000.0;
  * Resolves PV system hardware capacity and performance ratio for a given station.
  */
 const resolveStationPvConfig = async (stationId, overrideCapacity, overridePr) => {
+  const baseStation = await stationService.getStationById(stationId);
   const station = await prisma.station.findUnique({
-    where: { id: stationId },
+    where: { id: baseStation.id },
     include: { pvConfig: true },
   });
-
-  if (!station) {
-    throw ApiError.notFound(`Station with ID '${stationId}' not found`, 'STATION_NOT_FOUND');
-  }
 
   let capacityKw = DEFAULT_PV_CAPACITY_KW;
   let performanceRatio = DEFAULT_PERFORMANCE_RATIO;
