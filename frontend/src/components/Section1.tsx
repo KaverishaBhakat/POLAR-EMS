@@ -67,35 +67,16 @@ export const Section1: React.FC<Section1Props> = ({ opacity }) => {
           </div>
         </Stagger>
 
-        {/* CTA Buttons: Sign Up & Enter Dashboard */}
+        {/* Hero CTA Button: ONE Primary Action */}
         <Stagger show={isVisible} delay={400}>
-          <div className="flex flex-wrap items-center gap-3 pt-3 pointer-events-auto">
-            {/* Primary Sign Up Button */}
-            <Link
-              href="/signup"
-              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs tracking-wider uppercase transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.7)] hover:scale-105"
-            >
-              <UserPlus size={16} />
-              <span>Sign Up / Register Station</span>
-              <ArrowRight size={14} />
-            </Link>
-
-            {/* Secondary Enter Dashboard Button */}
+          <div className="flex flex-wrap items-center gap-4 pt-3 pointer-events-auto">
             <Link
               href="/dashboard"
-              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#08111D]/90 hover:bg-[#0E1D32] border border-cyan-500/50 text-white font-bold text-xs tracking-wider uppercase transition-all duration-300 backdrop-blur-md shadow-md hover:border-cyan-400"
+              className="flex items-center gap-3 px-7 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs sm:text-sm tracking-wider uppercase transition-all duration-300 shadow-[0_0_25px_rgba(6,182,212,0.45)] hover:shadow-[0_0_35px_rgba(6,182,212,0.7)] hover:scale-105 group"
             >
-              <Compass size={16} className="text-cyan-400" />
-              <span>Enter SCADA Dashboard</span>
-            </Link>
-
-            {/* Quick Sign In link */}
-            <Link
-              href="/login"
-              className="flex items-center gap-1 text-xs text-[#0A1626] hover:text-cyan-600 font-bold uppercase tracking-wider px-2 py-1 transition-colors"
-            >
-              <LogIn size={13} />
-              <span>Sign In</span>
+              <Compass size={18} />
+              <span>ENTER SCADA DASHBOARD</span>
+              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
         </Stagger>

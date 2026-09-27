@@ -84,6 +84,7 @@ app.use('/api/energy', energyRoutes);
 app.use('/api/renewable', renewableRoutes);
 app.use('/api/generators', generatorRoutes);
 app.use('/api/batteries', batteryRoutes);
+app.use('/api/battery', batteryRoutes);
 app.use('/api/critical-loads', criticalLoadRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/dashboard', dashboardRoutes);

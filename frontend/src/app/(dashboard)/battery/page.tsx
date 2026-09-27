@@ -23,7 +23,23 @@ import {
   Gauge,
   Layers,
   Sparkles,
+  TrendingUp,
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+  ReferenceLine,
+} from 'recharts';
+import { inspectTelemetryData, sanitizeNumeric, sortChronological } from '@/lib/utils/chartData';
+import { ChartTelemetryStatus } from '@/components/charts/ChartTelemetryStatus';
 
 export default function BatteryPage() {
   const { activeStationId, station, addToast } = useStation();
@@ -34,6 +50,11 @@ export default function BatteryPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [readingsLoading, setReadingsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const fetchBatteryData = useCallback(async () => {
     setLoading(true);
@@ -70,10 +91,16 @@ export default function BatteryPage() {
     setReadingsLoading(true);
 
     apiClient
-      .getBatteryReadings(selectedBatteryId, { limit: 20 })
+      .getBatteryReadings(selectedBatteryId, { limit: 50 })
       .then((res) => {
         if (isMounted) {
-          setReadings(res.records);
+          const sorted: BatteryReadingRecord[] = sortChronological(res.records || [], (r) => r.timestamp || r.createdAt).map((r) => ({
+            ...r,
+            soc: sanitizeNumeric(r.soc, 0) ?? 0,
+            chargePower: sanitizeNumeric(r.chargePower, 0) ?? 0,
+            dischargePower: sanitizeNumeric(r.dischargePower, 0) ?? 0,
+          }));
+          setReadings(sorted);
         }
       })
       .catch((err) => {
@@ -495,6 +522,92 @@ export default function BatteryPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* BESS State of Charge & Power Flow Chart */}
+                {readings.length > 0 && (
+                  <div className="bg-[#0B1524] border border-[#1B2C42] rounded-lg p-5 font-mono space-y-4">
+                    <div className="flex items-center justify-between pb-2.5 border-b border-[#1B2C42]">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4 text-cyan-400" />
+                          BESS SOC Trajectory &amp; Power Flow
+                        </h3>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Chronological telemetry readings for {selectedBattery.name} from PostgreSQL
+                        </p>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                        {readings.length} READINGS
+                      </span>
+                    </div>
+
+                    {/* Telemetry Sufficiency Status */}
+                    <ChartTelemetryStatus
+                      inspection={inspectTelemetryData(readings, (r) => r.timestamp || r.createdAt)}
+                      domainName="battery BESS"
+                    />
+
+                    <div className="h-64 w-full min-h-[260px]">
+                      {!isMounted ? (
+                        <div className="w-full h-full bg-[#0A121E]/60 rounded animate-pulse" />
+                      ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart
+                            data={readings.map((r) => ({
+                              time: new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
+                              soc: r.soc,
+                              chargePower: r.chargePower || 0,
+                              dischargePower: r.dischargePower || 0,
+                              netFlow: (r.chargePower || 0) - (r.dischargePower || 0),
+                            }))}
+                            margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                          >
+                            <defs>
+                              <linearGradient id="bessSocGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
+                                <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
+                            <XAxis dataKey="time" stroke="#64748b" fontSize={10} />
+                            <YAxis domain={[0, 100]} stroke="#64748b" fontSize={10} unit="%" />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: '#0A121E',
+                                borderColor: '#1B2C42',
+                                borderRadius: '6px',
+                                fontFamily: 'monospace',
+                                fontSize: '11px',
+                              }}
+                            />
+                            <ReferenceLine
+                              y={selectedBattery.minimumSOC || 20}
+                              stroke="#ef4444"
+                              strokeDasharray="3 3"
+                              label={{ value: 'Min SOC', fill: '#ef4444', fontSize: 9, position: 'insideBottomRight' }}
+                            />
+                            <ReferenceLine
+                              y={selectedBattery.maximumSOC || 95}
+                              stroke="#10b981"
+                              strokeDasharray="3 3"
+                              label={{ value: 'Max SOC', fill: '#10b981', fontSize: 9, position: 'insideTopRight' }}
+                            />
+                            <Area
+                              type="monotone"
+                              dataKey="soc"
+                              name="Battery SOC (%)"
+                              stroke="#06b6d4"
+                              strokeWidth={2}
+                              fill="url(#bessSocGrad)"
+                              dot={{ r: 3, fill: '#06b6d4' }}
+                              activeDot={{ r: 5, fill: '#22d3ee' }}
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Telemetry Reading History Table */}
                 <div className="bg-[#0B1524] border border-[#1B2C42] rounded-lg p-5 font-mono space-y-4">

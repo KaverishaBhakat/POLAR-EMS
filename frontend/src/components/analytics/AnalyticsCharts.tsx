@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   ResponsiveContainer,
   BarChart,
@@ -16,6 +16,8 @@ import {
   Area,
 } from 'recharts';
 import { HistoricalAnalyticsPoint } from '@/lib/types';
+import { inspectTelemetryData, sanitizeNumeric } from '@/lib/utils/chartData';
+import { ChartTelemetryStatus } from '@/components/charts/ChartTelemetryStatus';
 import { Fuel, Leaf, Gauge, Database } from 'lucide-react';
 
 interface AnalyticsChartsProps {
@@ -24,7 +26,32 @@ interface AnalyticsChartsProps {
 }
 
 export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ data, stationName }) => {
-  if (!data || data.length === 0) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const sanitizedData = useMemo(() => {
+    if (!data || !Array.isArray(data)) return [];
+    return data.map((d) => ({
+      ...d,
+      actualFuelL: sanitizeNumeric(d.actualFuelL, 0) ?? 0,
+      baselineFuelL: sanitizeNumeric(d.baselineFuelL, 0) ?? 0,
+      fuelSavedL: sanitizeNumeric(d.fuelSavedL, 0) ?? 0,
+      renewablePenetrationPercent: sanitizeNumeric(d.renewablePenetrationPercent, 0) ?? 0,
+      avgGenEfficiencyPercent: sanitizeNumeric(d.avgGenEfficiencyPercent, 0) ?? 0,
+      co2AvoidedKg: sanitizeNumeric(d.co2AvoidedKg, 0) ?? 0,
+      avgLoadKW: sanitizeNumeric(d.avgLoadKW, 0) ?? 0,
+      peakLoadKW: sanitizeNumeric(d.peakLoadKW, 0) ?? 0,
+    }));
+  }, [data]);
+
+  const inspection = useMemo(() => {
+    return inspectTelemetryData(sanitizedData, (d) => d.dateKey || d.date);
+  }, [sanitizedData]);
+
+  if (!sanitizedData || sanitizedData.length === 0) {
     return (
       <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-8 text-center font-mono">
         <div className="inline-flex p-3 rounded-full bg-cyan-950/40 border border-cyan-500/30 text-cyan-400 mb-3">
@@ -40,25 +67,40 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ data, stationN
     );
   }
 
+  if (!isMounted) {
+    return (
+      <div className="space-y-4">
+        <div className="h-72 w-full bg-[#0E1724]/90 rounded-lg animate-pulse" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="h-64 bg-[#0E1724]/90 rounded-lg animate-pulse" />
+          <div className="h-64 bg-[#0E1724]/90 rounded-lg animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 font-mono">
+      {/* Telemetry Sufficiency Status */}
+      <ChartTelemetryStatus inspection={inspection} domainName="longitudinal historical analytics" />
+
       {/* 1. Daily Fuel Consumption: Actual vs Baseline */}
       <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5">
         <div className="flex items-center justify-between mb-4 pb-2.5 border-b border-[#1B2C42]/50">
           <div>
-            <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase font-mono flex items-center gap-2">
+            <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
               <Fuel className="w-4 h-4 text-amber-400" />
               Daily Diesel Fuel Consumption vs Conventional Baseline
             </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5 font-mono">
+            <p className="text-[11px] text-slate-400 mt-0.5">
               Direct comparison of daily liters consumed vs un-optimized baseline
             </p>
           </div>
         </div>
 
-        <div className="w-full h-72 sm:h-80">
+        <div className="w-full h-72 sm:h-80 min-h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+            <BarChart data={sanitizedData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" vertical={false} />
               <XAxis dataKey="date" stroke="#64748B" fontSize={11} fontFamily="monospace" tickLine={false} />
               <YAxis stroke="#64748B" fontSize={11} fontFamily="monospace" tickLine={false} unit=" L" />
@@ -93,14 +135,14 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ data, stationN
         {/* Renewable Penetration */}
         <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5">
           <div className="mb-3 pb-2 border-b border-[#1B2C42]/50">
-            <h3 className="text-xs font-semibold tracking-wider text-slate-200 uppercase font-mono flex items-center gap-2">
+            <h3 className="text-xs font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
               <Leaf className="w-4 h-4 text-cyan-400" />
               Daily Renewable Energy Penetration (%)
             </h3>
           </div>
-          <div className="w-full h-64">
+          <div className="w-full h-64 min-h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <AreaChart data={sanitizedData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="renPenGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.4} />
@@ -118,6 +160,7 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ data, stationN
                   stroke="#06B6D4"
                   fill="url(#renPenGrad)"
                   strokeWidth={2}
+                  dot={{ r: 3, fill: '#06B6D4' }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -127,14 +170,14 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ data, stationN
         {/* Generator Thermal Efficiency */}
         <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5">
           <div className="mb-3 pb-2 border-b border-[#1B2C42]/50">
-            <h3 className="text-xs font-semibold tracking-wider text-slate-200 uppercase font-mono flex items-center gap-2">
+            <h3 className="text-xs font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
               <Gauge className="w-4 h-4 text-blue-400" />
               Fleet Average Generator Efficiency (%)
             </h3>
           </div>
-          <div className="w-full h-64">
+          <div className="w-full h-64 min-h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <LineChart data={sanitizedData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" vertical={false} />
                 <XAxis dataKey="date" stroke="#64748B" fontSize={10} fontFamily="monospace" tickLine={false} />
                 <YAxis stroke="#64748B" fontSize={10} fontFamily="monospace" tickLine={false} unit="%" domain={[0, 100]} />
@@ -145,7 +188,7 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ data, stationN
                   name="Efficiency (%)"
                   stroke="#3B82F6"
                   strokeWidth={2.5}
-                  dot={{ r: 3, fill: '#3B82F6' }}
+                  dot={{ r: 4, fill: '#3B82F6' }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -155,4 +198,3 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ data, stationN
     </div>
   );
 };
-

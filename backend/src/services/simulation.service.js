@@ -4,6 +4,69 @@ const { runRuleBasedSimulation } = require('../utils/calculations');
 const ApiError = require('../utils/ApiError');
 
 class SimulationService {
+  constructor() {
+    this.mlServiceUrl = process.env.ML_SERVICE_URL || 'http://localhost:8001';
+  }
+
+  /**
+   * Proxies active simulation scenarios from the Python ML service.
+   */
+  async getSimulationScenarios() {
+    try {
+      const response = await fetch(`${this.mlServiceUrl}/simulation/scenarios`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+      const err = await response.json().catch(() => ({}));
+      return {
+        status: 'ERROR',
+        message: err.detail || 'Failed to fetch simulation scenarios from ML service',
+        scenarios: [],
+      };
+    } catch (e) {
+      return {
+        status: 'DEGRADED',
+        source: 'FALLBACK',
+        message: `Simulation microservice unavailable: ${e.message}`,
+        scenarios: [],
+      };
+    }
+  }
+
+  /**
+   * Proxies what-if resilience simulation execution from the Python ML service.
+   */
+  async runResilienceSimulation(stationId, scenarioId, { horizonHours = 24, initialSoc = 75.0 } = {}) {
+    try {
+      const url = `${this.mlServiceUrl}/simulation/run/${encodeURIComponent(stationId)}/${encodeURIComponent(scenarioId)}?horizon_hours=${horizonHours}&initial_soc=${initialSoc}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+      const err = await response.json().catch(() => ({}));
+      return {
+        status: 'ERROR',
+        message: err.detail || 'Simulation execution failed on ML service',
+      };
+    } catch (e) {
+      return {
+        status: 'DEGRADED',
+        source: 'FALLBACK',
+        message: `Simulation microservice unavailable: ${e.message}`,
+        stationId,
+        scenarioId,
+      };
+    }
+  }
+
   /**
    * Executes a deterministic rule-based what-if scenario simulation and persists inputs/outputs
    */

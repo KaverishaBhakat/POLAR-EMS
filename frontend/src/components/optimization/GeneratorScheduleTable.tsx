@@ -15,12 +15,12 @@ export const GeneratorScheduleTable: React.FC<GeneratorScheduleTableProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const activePoints = dispatchSchedule.filter((pt) => {
-    const output = pt.generator_output_kW ?? (pt.generator1KW + pt.generator2KW + (pt.generator3KW || 0));
+    const output = pt.generator_output_kW ?? ((pt.generator1KW || 0) + (pt.generator2KW || 0) + (pt.generator3KW || 0));
     return output > 0;
   });
 
   const totalGenEnergy = dispatchSchedule.reduce((acc, pt) => {
-    const output = pt.generator_output_kW ?? (pt.generator1KW + pt.generator2KW + (pt.generator3KW || 0));
+    const output = pt.generator_output_kW ?? ((pt.generator1KW || 0) + (pt.generator2KW || 0) + (pt.generator3KW || 0));
     return acc + output;
   }, 0);
 
@@ -57,7 +57,7 @@ export const GeneratorScheduleTable: React.FC<GeneratorScheduleTableProps> = ({
         </div>
         <div className="grid grid-cols-12 sm:grid-cols-24 gap-1">
           {dispatchSchedule.map((pt, idx) => {
-            const output = pt.generator_output_kW ?? (pt.generator1KW + pt.generator2KW + (pt.generator3KW || 0));
+            const output = pt.generator_output_kW ?? ((pt.generator1KW || 0) + (pt.generator2KW || 0) + (pt.generator3KW || 0));
             const isRunning = output > 0;
             const timeLabel = pt.time || `${String(idx).padStart(2, '0')}:00`;
 
@@ -110,7 +110,7 @@ export const GeneratorScheduleTable: React.FC<GeneratorScheduleTableProps> = ({
             </thead>
             <tbody className="divide-y divide-[#1B2C42]/50 text-slate-300">
               {(isExpanded ? dispatchSchedule : activePoints).map((pt, idx) => {
-                const output = pt.generator_output_kW ?? (pt.generator1KW + pt.generator2KW + (pt.generator3KW || 0));
+                const output = pt.generator_output_kW ?? ((pt.generator1KW || 0) + (pt.generator2KW || 0) + (pt.generator3KW || 0));
                 const load = pt.load_kW ?? pt.totalLoadKW ?? 60.0;
                 const isRunning = output > 0;
                 const loadShare = load > 0 ? ((output / load) * 100).toFixed(1) : '0.0';

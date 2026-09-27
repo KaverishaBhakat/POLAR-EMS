@@ -298,19 +298,31 @@ export interface HourlyDispatchPoint {
   generator_output_kW?: number;
   critical_load_kW?: number;
   critical_load_shed_kW?: number;
-  
-  // Legacy / backwards-compatible fields
-  solarKW: number;
-  pvAvailableKW?: number;
-  windKW: number;
-  batteryDischargeKW: number;
-  batteryChargeKW: number;
-  generator1KW: number;
-  generator2KW: number;
-  generator3KW: number;
-  totalLoadKW: number;
-  netDeficitKW: number;
+  // ML Service response direct fields
+  solar?: number;
+  wind?: number;
+  demand?: number;
+  generator1Power?: number;
+  generator2Power?: number;
+  totalGeneratorPower?: number;
+  batteryCharge?: number;
+  batteryDischarge?: number;
   batterySOC?: number;
+  flexibleLoadShedding?: number;
+  renewableCurtailment?: number;
+  criticalLoadProtected?: boolean;
+
+  // Legacy / backwards-compatible fields
+  solarKW?: number;
+  pvAvailableKW?: number;
+  windKW?: number;
+  batteryDischargeKW?: number;
+  batteryChargeKW?: number;
+  generator1KW?: number;
+  generator2KW?: number;
+  generator3KW?: number;
+  totalLoadKW?: number;
+  netDeficitKW?: number;
   flexibleLoadSheddingKW?: number;
   renewableCurtailmentKW?: number;
 }
@@ -517,4 +529,112 @@ export interface HistoricalAnalyticsResponse {
   summary: AnalyticsSummary;
   timeline: HistoricalAnalyticsPoint[];
 }
+
+// ---------------------------------------------------------------------------
+// Resilience Simulation Interfaces
+// ---------------------------------------------------------------------------
+
+export interface ResilienceSimulationScenario {
+  scenario_id: string;
+  scenario_type: string;
+  scenario_name: string;
+  description: string;
+  category: string;
+  is_active: boolean;
+  provenance: Record<string, any>;
+  assumptions: Record<string, any>;
+}
+
+export interface ResilienceScenarioListResponse {
+  status: 'SUCCESS' | 'ERROR' | 'DEGRADED';
+  count: number;
+  scenarios: ResilienceSimulationScenario[];
+  message?: string;
+}
+
+export interface ResilienceMetricDelta {
+  baseline: number;
+  scenario: number;
+  absolute_delta: number;
+  percent_delta: number | null;
+}
+
+export interface ResilienceMetrics {
+  scenario_name: string;
+  scenario_id: string;
+  scenario_type: string;
+  data_classification: string;
+  is_demonstration_scenario: boolean;
+  resilience_status: 'PROTECTED' | 'AT_RISK' | string;
+  critical_load_status: 'PROTECTED' | 'AT_RISK' | string;
+  failed_generator_identifier: string | null;
+  failed_generator_energy_kwh: number;
+  remaining_generator_energy_kwh: number;
+  remaining_generator_runtime_hours: number;
+  total_demand_kwh: number;
+  total_renewable_available_kwh: number;
+  total_renewable_used_kwh: number;
+  total_pv_available_kwh: number;
+  total_wind_available_kwh: number;
+  total_generator_energy_kwh: number;
+  total_battery_charge_kwh: number;
+  total_battery_discharge_kwh: number;
+  initial_battery_soc_percent: number;
+  minimum_battery_soc_percent: number;
+  maximum_battery_soc_percent: number;
+  generator_runtime_hours: number;
+  estimated_fuel_liters: number;
+  total_critical_load_shed_kwh: number;
+  critical_load_reliability_percent: number;
+  renewable_utilization_percent: number;
+  baseline_average_wind_speed_ms?: number;
+  scenario_average_wind_speed_ms?: number;
+  baseline_maximum_wind_speed_ms?: number;
+  scenario_maximum_wind_speed_ms?: number;
+  baseline_hours_above_cut_out?: number;
+  scenario_hours_above_cut_out?: number;
+  baseline_hours_zero_wind_generation?: number;
+  scenario_hours_zero_wind_generation?: number;
+}
+
+export interface ResilienceComparison {
+  total_demand_kwh: ResilienceMetricDelta;
+  fuel_consumption_liters: ResilienceMetricDelta;
+  generator_energy_kwh: ResilienceMetricDelta;
+  failed_generator_energy_kwh?: ResilienceMetricDelta;
+  remaining_generator_energy_kwh?: ResilienceMetricDelta;
+  generator_runtime_hours: ResilienceMetricDelta;
+  initial_battery_soc_percent: ResilienceMetricDelta;
+  battery_discharge_kwh: ResilienceMetricDelta;
+  battery_charge_kwh: ResilienceMetricDelta;
+  minimum_battery_soc_percent: ResilienceMetricDelta;
+  maximum_battery_soc_percent: ResilienceMetricDelta;
+  pv_available_kwh: ResilienceMetricDelta;
+  wind_available_kwh: ResilienceMetricDelta;
+  total_renewable_energy_kwh: ResilienceMetricDelta;
+  renewable_utilization_percent: ResilienceMetricDelta;
+  average_wind_speed_ms?: ResilienceMetricDelta;
+  maximum_wind_speed_ms?: ResilienceMetricDelta;
+  hours_above_cut_out?: ResilienceMetricDelta;
+  hours_zero_wind_generation?: ResilienceMetricDelta;
+  critical_load_shed_kwh: ResilienceMetricDelta;
+  critical_load_reliability_percent: ResilienceMetricDelta;
+  objective_value: ResilienceMetricDelta;
+}
+
+export interface ResilienceSimulationResult {
+  status: 'SUCCESS' | 'ERROR' | 'DEGRADED';
+  stationId: string;
+  horizonHours: number;
+  isDemonstrationScenario: boolean;
+  scenario: ResilienceSimulationScenario;
+  resilienceMetrics: ResilienceMetrics;
+  comparison: ResilienceComparison;
+  dispatch: HourlyDispatchPoint[];
+  objectiveValue?: number;
+  solverStatus?: string;
+  recommendation?: string;
+  message?: string;
+}
+
 

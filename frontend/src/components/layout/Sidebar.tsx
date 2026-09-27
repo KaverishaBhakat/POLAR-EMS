@@ -25,6 +25,7 @@ import {
   Leaf,
   Cpu,
   BatteryCharging,
+  ShieldCheck,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -37,6 +38,7 @@ const NAV_ITEMS = [
   { name: 'Data Ingestion', href: '/data-upload', icon: UploadCloud, badge: 'INGEST' },
   { name: 'Forecast', href: '/forecast', icon: TrendingUp, badge: 'AI' },
   { name: 'Optimization', href: '/optimization', icon: Sliders, badge: 'SAVE 21%' },
+  { name: 'Resilience', href: '/resilience', icon: ShieldCheck, badge: 'STRESS' },
   { name: 'Simulation', href: '/simulation', icon: PlaySquare, badge: 'TEST' },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Stations', href: '/stations', icon: MapPin },

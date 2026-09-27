@@ -10,6 +10,10 @@ const { authenticate, authorize } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
+// ML Resilience & Simulation Microservice Proxy Endpoints
+router.get('/scenarios', simulationController.getSimulationScenarios);
+router.get('/run/:stationId/:scenarioId', simulationController.runResilienceSimulation);
+
 router.post(
   '/run',
   authenticate,

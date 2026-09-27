@@ -81,9 +81,17 @@ export default function SimulationPage() {
             Polar Scenario Simulator
           </h1>
           <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Test POLAR-EMS under extreme Antarctic operating conditions & meteorological disruptions | {station?.name}
+            Interactive physics parameter modeling &amp; load-shedding sandbox | {station?.name}
           </p>
         </div>
+
+        <a
+          href="/resilience"
+          className="flex items-center gap-2 px-3.5 py-2 rounded bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/25 text-xs font-mono font-bold transition-all shadow-[0_0_10px_rgba(6,182,212,0.15)]"
+        >
+          <span>VIEW RESILIENCE DASHBOARD</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-200">6 SCENARIOS</span>
+        </a>
       </div>
 
       {/* Scenario Presets Bar */}

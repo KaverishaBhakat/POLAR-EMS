@@ -216,7 +216,7 @@ export const WeatherForecastChart: React.FC<WeatherForecastChartProps> = ({
       </div>
 
       {/* 24-Hour Forecast Chart */}
-      <div className="w-full h-72 sm:h-80 mb-4">
+      <div className="w-full h-72 sm:h-80 min-h-[280px] mb-4">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
             <defs>

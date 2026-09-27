@@ -27,6 +27,11 @@ import {
   SystemAlert,
   WeatherData,
   WeatherForecastData,
+  ResilienceSimulationScenario,
+  ResilienceScenarioListResponse,
+  ResilienceSimulationResult,
+  ResilienceMetrics,
+  ResilienceComparison,
 } from '../types';
 import { STATIONS } from '../mock-data/stations';
 import { WEATHER_DATA } from '../mock-data/weather';
@@ -978,6 +983,306 @@ export const apiClient = {
     // Simulate model inference time
     await new Promise((resolve) => setTimeout(resolve, 600));
     return runSimulationCalculation(params, stationId);
+  },
+
+  // ---------------------------------------------------------------------------
+  // ML Resilience & Contingency Simulation Engine
+  // ---------------------------------------------------------------------------
+  async getSimulationScenarios(): Promise<ResilienceScenarioListResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/simulation/scenarios`);
+      if (response.ok) {
+        const result = await response.json();
+        const data = result.data || result;
+        if (data && Array.isArray(data.scenarios)) {
+          return {
+            status: data.status || 'SUCCESS',
+            count: data.count || data.scenarios.length,
+            scenarios: data.scenarios,
+          };
+        }
+      }
+    } catch {
+      // Offline fallback handling
+    }
+
+    // Default registered scenarios fallback if backend proxy is starting up
+    return {
+      status: 'SUCCESS',
+      count: 6,
+      scenarios: [
+        {
+          scenario_id: 'polar-night',
+          scenario_type: 'POLAR_NIGHT',
+          scenario_name: 'Polar Night',
+          description: 'Simulates mid-winter polar night conditions where solar irradiance and PV generation are 0.0 kW for all 24 hours, testing station resilience using katabatic wind, battery energy storage, and primary diesel generator commitment.',
+          category: 'ENVIRONMENTAL_STRESS',
+          is_active: true,
+          provenance: {
+            scenario_type: 'POLAR_NIGHT',
+            data_classification: 'SCENARIO',
+            pv_modification: 'PV generation forced to 0.0 kW for all 24 hours.',
+            wind_source: 'Maitri 2019 observed wind speed converted to modeled turbine power via scenario power curve.',
+            demand_source: 'Deterministic scenario demand model (base 65 kW, diurnal 55.2–83.6 kW).',
+            battery_source: 'Scenario initial SOC (75.0%) and physical limits [20%, 95%].',
+            generator_source: 'Scenario generator fleet (GEN-01 100 kW, GEN-02 80 kW).',
+            is_demonstration_scenario: true,
+            disclaimer: 'This is a modeled what-if resilience scenario, not a measured historical telemetry record.',
+          },
+          assumptions: {
+            pv_availability_multiplier: 0.0,
+            wind_availability_multiplier: 1.0,
+            demand_multiplier: 1.0,
+            initial_soc_override: null,
+            generator_availability: { 'GEN-01': true, 'GEN-02': true },
+            critical_load_protection: true,
+          },
+        },
+        {
+          scenario_id: 'generator-failure',
+          scenario_type: 'GENERATOR_FAILURE',
+          scenario_name: 'Primary Generator Failure',
+          description: 'Simulates the unavailability of the primary diesel generator for the full 24-hour horizon.',
+          category: 'RESILIENCE',
+          is_active: true,
+          provenance: {
+            scenario_type: 'GENERATOR_FAILURE',
+            data_classification: 'SCENARIO',
+            failed_generator_id: 'GEN-01',
+            failed_generator_name: 'Primary Genset (100 kW)',
+            failed_generator_rating_kw: 100.0,
+            failure_rationale: 'GEN-01 represents the primary and largest single generator unit (100 kW vs 80 kW GEN-02). Its outage represents the single most severe N-1 generation contingency.',
+            pv_source: 'Historical December climatology scenario (100 kW capacity, PR=0.80).',
+            wind_source: 'Maitri 2019 observed wind speed converted to modeled turbine power via scenario power curve.',
+            demand_source: 'Deterministic scenario demand model (base 65 kW, diurnal 55.2–83.6 kW).',
+            battery_source: 'Scenario initial SOC (75.0%) and physical limits [20%, 95%].',
+            generator_source: 'Scenario generator fleet with GEN-01 forced offline and GEN-02 (80 kW) remaining operational.',
+            is_demonstration_scenario: true,
+            disclaimer: 'All Generator Failure results are modeled what-if results and are not measurements of an actual Maitri generator failure.',
+          },
+          assumptions: {
+            failed_generator_id: 'GEN-01',
+            g1_available: false,
+            g2_available: true,
+            generator_availability: { 'GEN-01': false, 'GEN-02': true },
+            pv_availability_multiplier: 1.0,
+            wind_availability_multiplier: 1.0,
+            demand_multiplier: 1.0,
+            initial_soc_override: null,
+            critical_load_protection: true,
+          },
+        },
+        {
+          scenario_id: 'low-battery',
+          scenario_type: 'LOW_BATTERY',
+          scenario_name: 'Critically Low Battery State',
+          description: 'Simulates a contingency condition where the microgrid enters the 24-hour horizon with a critically low initial battery state of charge (20.0%, at the operational lower limit), evaluating whether station renewables and generator dispatch can protect critical life-support loads and replenish energy storage.',
+          category: 'RESILIENCE',
+          is_active: true,
+          provenance: {
+            scenario_type: 'LOW_BATTERY',
+            data_classification: 'SCENARIO',
+            battery_modification: 'Initial BESS state of charge set to 20.0% (70.0 kWh), representing the lower operational reserve floor.',
+            battery_capacity_kwh: 350.0,
+            pv_source: 'Historical December climatology scenario (100 kW capacity, PR=0.80).',
+            wind_source: 'Maitri 2019 observed wind speed converted to modeled turbine power via scenario power curve.',
+            demand_source: 'Deterministic scenario demand model (base 65 kW, diurnal 55.2–83.6 kW).',
+            generator_source: 'Scenario generator fleet (GEN-01 100 kW, GEN-02 80 kW).',
+            is_demonstration_scenario: true,
+            disclaimer: 'All Low Battery results are modeled what-if results and are not measurements of an actual Maitri battery depletion event.',
+          },
+          assumptions: {
+            initial_soc: 20.0,
+            initial_battery_soc_percent: 20.0,
+            g1_available: true,
+            g2_available: true,
+            generator_availability: { 'GEN-01': true, 'GEN-02': true },
+            pv_availability_multiplier: 1.0,
+            wind_availability_multiplier: 1.0,
+            demand_multiplier: 1.0,
+            critical_load_protection: true,
+          },
+        },
+        {
+          scenario_id: 'renewable-drop',
+          scenario_type: 'RENEWABLE_DROP',
+          scenario_name: 'Renewable Generation Drop',
+          description: 'Simulates a severe 80% reduction across both solar PV and wind generation for the full 24-hour horizon, testing station resilience and thermal dispatch when only 20% of renewable generation remains available.',
+          category: 'RESILIENCE',
+          is_active: true,
+          provenance: {
+            scenario_type: 'RENEWABLE_DROP',
+            data_classification: 'SCENARIO',
+            pv_modification: 'Solar PV generation scaled by 0.20 (80% reduction) for all 24 hours.',
+            wind_modification: 'Wind generation scaled by 0.20 (80% reduction) for all 24 hours.',
+            retention_factor: 0.20,
+            drop_factor: 0.80,
+            pv_source: 'Historical December climatology scenario (100 kW baseline capacity, PR=0.80) scaled to 20% availability.',
+            wind_source: 'Maitri 2019 observed wind speed converted to modeled turbine power (50 kW baseline capacity) scaled to 20% availability.',
+            demand_source: 'Deterministic scenario demand model (base 65 kW, diurnal 55.2–83.6 kW).',
+            battery_source: 'Baseline initial SOC (75.0%) and physical limits [20%, 95%].',
+            generator_source: 'Baseline generator fleet (GEN-01 100 kW, GEN-02 80 kW, both available).',
+            is_demonstration_scenario: true,
+            disclaimer: 'The 80% renewable reduction is a scenario assumption for resilience testing and does not represent a measured Maitri event.',
+          },
+          assumptions: {
+            pv_availability_multiplier: 0.20,
+            wind_availability_multiplier: 0.20,
+            demand_multiplier: 1.0,
+            initial_soc_override: null,
+            g1_available: true,
+            g2_available: true,
+            generator_availability: { 'GEN-01': true, 'GEN-02': true },
+            critical_load_protection: true,
+          },
+        },
+        {
+          scenario_id: 'severe-blizzard',
+          scenario_type: 'SEVERE_BLIZZARD',
+          scenario_name: 'Severe Blizzard',
+          description: 'A modeled polar-weather contingency combining reduced solar availability, increased station electrical demand, and elevated wind conditions over the 24-hour horizon.',
+          category: 'RESILIENCE',
+          is_active: true,
+          provenance: {
+            scenario_type: 'SEVERE_BLIZZARD',
+            data_classification: 'SCENARIO',
+            solar_reduction: 0.70,
+            demand_multiplier: 1.20,
+            wind_speed_multiplier: 1.25,
+            wind_power_model: 'existing_maitri_turbine_power_curve',
+            battery_mutation: 'none',
+            generator_mutation: 'none',
+            pv_source: 'Historical December climatology scenario (100 kW baseline capacity, PR=0.80) with 70% solar reduction (30% retained).',
+            wind_source: 'Maitri 2019 observed wind speed multiplied by 1.25 and evaluated through the existing piecewise aerodynamic turbine power curve.',
+            demand_source: 'Deterministic baseline demand increased by 20% to represent severe weather thermal/heating load surge.',
+            battery_source: 'Baseline initial SOC (75.0%) and physical limits [20%, 95%].',
+            generator_source: 'Baseline generator fleet (GEN-01 100 kW, GEN-02 80 kW, both available).',
+            is_demonstration_scenario: true,
+            disclaimer: 'This is a scenario assumption for resilience testing. It is NOT a claim that a particular blizzard occurred at Maitri during the modeled period.',
+          },
+          assumptions: {
+            solar_reduction: 0.70,
+            pv_retention_multiplier: 0.30,
+            pv_availability_multiplier: 0.30,
+            demand_multiplier: 1.20,
+            wind_speed_multiplier: 1.25,
+            wind_power_model: 'existing_maitri_turbine_power_curve',
+            battery_mutation: 'none',
+            generator_mutation: 'none',
+            initial_soc_override: null,
+            g1_available: true,
+            g2_available: true,
+            generator_availability: { 'GEN-01': true, 'GEN-02': true },
+            critical_load_protection: true,
+          },
+        },
+        {
+          scenario_id: 'high-demand',
+          scenario_type: 'HIGH_DEMAND',
+          scenario_name: 'High Demand',
+          description: 'A modeled station-wide electrical demand surge used to evaluate whether the energy-management system can maintain critical loads during periods of unusually high consumption.',
+          category: 'RESILIENCE',
+          is_active: true,
+          provenance: {
+            scenario_type: 'HIGH_DEMAND',
+            data_classification: 'SCENARIO',
+            demand_multiplier: 1.40,
+            demand_increase_percent: 40,
+            pv_mutation: 'none',
+            wind_mutation: 'none',
+            battery_mutation: 'none',
+            generator_mutation: 'none',
+            critical_load_mutation: 'none',
+            demand_source: 'Deterministic baseline demand increased by 40% across all 24 hours to represent station-wide electrical demand surge.',
+            pv_source: 'Historical December climatology scenario (100 kW baseline capacity, PR=0.80) preserved unchanged.',
+            wind_source: 'Maitri 2019 observed wind speed converted to modeled turbine power via scenario power curve preserved unchanged.',
+            battery_source: 'Baseline initial SOC (75.0%) and physical limits [20%, 95%] preserved unchanged.',
+            generator_source: 'Baseline generator fleet (GEN-01 100 kW, GEN-02 80 kW, both available).',
+            is_demonstration_scenario: true,
+            disclaimer: 'A 40% station-wide electrical demand increase represents a deliberately stressful contingency combining elevated heating requirements, laboratory/operational activity, communications, water systems, refrigeration, and other auxiliary electrical loads. This is a scenario assumption for resilience testing, not measured Maitri electrical-load telemetry.',
+          },
+          assumptions: {
+            demand_multiplier: 1.40,
+            demand_increase_percent: 40,
+            pv_mutation: 'none',
+            wind_mutation: 'none',
+            battery_mutation: 'none',
+            generator_mutation: 'none',
+            critical_load_mutation: 'none',
+            pv_availability_multiplier: 1.0,
+            wind_availability_multiplier: 1.0,
+            initial_soc_override: null,
+            g1_available: true,
+            g2_available: true,
+            generator_availability: { 'GEN-01': true, 'GEN-02': true },
+            critical_load_protection: true,
+          },
+        },
+      ],
+    };
+  },
+
+  async runResilienceSimulation(
+    stationId: StationId | string,
+    scenarioId: string,
+    options?: { horizonHours?: number; initialSoc?: number; signal?: AbortSignal }
+  ): Promise<ResilienceSimulationResult> {
+    const horizon = options?.horizonHours || 24;
+    const soc = options?.initialSoc ?? 75.0;
+
+    try {
+      const url = `${API_BASE_URL}/simulation/run/${encodeURIComponent(stationId)}/${encodeURIComponent(scenarioId)}?horizon_hours=${horizon}&initial_soc=${soc}`;
+      const response = await fetch(url, { signal: options?.signal });
+
+      if (response.ok) {
+        const result = await response.json();
+        const data = result.data || result;
+        if (data && data.resilienceMetrics && data.dispatch) {
+          return {
+            status: data.status || 'SUCCESS',
+            stationId: data.stationId || stationId,
+            horizonHours: data.horizonHours || horizon,
+            isDemonstrationScenario: data.isDemonstrationScenario ?? true,
+            scenario: data.scenario,
+            resilienceMetrics: data.resilienceMetrics,
+            comparison: data.comparison,
+            dispatch: data.dispatch,
+            objectiveValue: data.objectiveValue,
+            solverStatus: data.solverStatus || 'OPTIMAL',
+            recommendation: data.recommendation,
+          };
+        }
+      } else {
+        const err = await response.json().catch(() => ({}));
+        return {
+          status: 'ERROR',
+          stationId: String(stationId),
+          horizonHours: horizon,
+          isDemonstrationScenario: true,
+          message: err.message || err.detail || `Failed to execute simulation for scenario '${scenarioId}'.`,
+          scenario: {} as any,
+          resilienceMetrics: {} as any,
+          comparison: {} as any,
+          dispatch: [],
+        };
+      }
+    } catch (e: any) {
+      if (e?.name === 'AbortError') {
+        throw e;
+      }
+    }
+
+    return {
+      status: 'DEGRADED',
+      stationId: String(stationId),
+      horizonHours: horizon,
+      isDemonstrationScenario: true,
+      message: 'Connection to resilience simulation microservice unavailable.',
+      scenario: {} as any,
+      resilienceMetrics: {} as any,
+      comparison: {} as any,
+      dispatch: [],
+    };
   },
 
   // System Alerts (Live PostgreSQL Integration)

@@ -31,6 +31,8 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts';
+import { inspectTelemetryData, sanitizeNumeric, sortChronological } from '@/lib/utils/chartData';
+import { ChartTelemetryStatus } from '@/components/charts/ChartTelemetryStatus';
 
 export default function RenewablePage() {
   const { activeStationId, station, addToast } = useStation();
@@ -42,6 +44,11 @@ export default function RenewablePage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'total' | 'sources' | 'solar' | 'wind'>('total');
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const fetchRenewableData = useCallback(async () => {
     setLoading(true);
@@ -61,11 +68,12 @@ export default function RenewablePage() {
 
       // 3. Fetch historical records (up to 50 readings)
       const histData = await apiClient.getRenewableHistory(activeStationId, { limit: 50, page: 1 });
-      const sortedHistory = [...(histData.records || [])].sort((a, b) => {
-        const tA = new Date(a.timestamp || a.createdAt || 0).getTime();
-        const tB = new Date(b.timestamp || b.createdAt || 0).getTime();
-        return tA - tB;
-      });
+      const sortedHistory: RenewableRecord[] = sortChronological(histData.records || [], (r) => r.timestamp || r.createdAt).map((r) => ({
+        ...r,
+        totalRenewable: sanitizeNumeric(r.totalRenewable, 0) ?? 0,
+        solarPower: sanitizeNumeric(r.solarPower, 0) ?? 0,
+        windPower: sanitizeNumeric(r.windPower, 0) ?? 0,
+      }));
       setHistory(sortedHistory);
       setTotalRecords(histData.meta?.total || sortedHistory.length);
     } catch (err: any) {
@@ -402,166 +410,185 @@ export default function RenewablePage() {
                 </div>
               </div>
 
+              {/* Telemetry Sufficiency Status */}
+              <ChartTelemetryStatus
+                inspection={inspectTelemetryData(history, (r) => r.timestamp || r.createdAt)}
+                domainName="renewable generation"
+                className="mb-3"
+              />
+
               {/* Chart Visual */}
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  {activeTab === 'total' ? (
-                    <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="renGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
-                      <XAxis
-                        dataKey="timestamp"
-                        tickFormatter={formatTimeLabel}
-                        stroke="#64748b"
-                        fontSize={10}
-                      />
-                      <YAxis stroke="#64748b" fontSize={10} unit=" kW" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#0A121E',
-                          borderColor: '#1B2C42',
-                          borderRadius: '6px',
-                          fontFamily: 'monospace',
-                          fontSize: '11px',
-                        }}
-                        labelFormatter={(v) => formatDateLabel(v)}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="totalRenewable"
-                        name="Total Renewable (kW)"
-                        stroke="#10b981"
-                        strokeWidth={2}
-                        fill="url(#renGradient)"
-                      />
-                    </AreaChart>
-                  ) : activeTab === 'sources' ? (
-                    <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="solarArea" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
-                        </linearGradient>
-                        <linearGradient id="windArea" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
-                      <XAxis
-                        dataKey="timestamp"
-                        tickFormatter={formatTimeLabel}
-                        stroke="#64748b"
-                        fontSize={10}
-                      />
-                      <YAxis stroke="#64748b" fontSize={10} unit=" kW" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#0A121E',
-                          borderColor: '#1B2C42',
-                          borderRadius: '6px',
-                          fontFamily: 'monospace',
-                          fontSize: '11px',
-                        }}
-                        labelFormatter={(v) => formatDateLabel(v)}
-                      />
-                      <Legend wrapperStyle={{ fontSize: '10px' }} />
-                      <Area
-                        type="monotone"
-                        dataKey="solarPower"
-                        name="Solar PV (kW)"
-                        stroke="#f59e0b"
-                        strokeWidth={2}
-                        stackId="1"
-                        fill="url(#solarArea)"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="windPower"
-                        name="Wind Turbines (kW)"
-                        stroke="#06b6d4"
-                        strokeWidth={2}
-                        stackId="1"
-                        fill="url(#windArea)"
-                      />
-                    </AreaChart>
-                  ) : activeTab === 'solar' ? (
-                    <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="solarOnly" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
-                      <XAxis
-                        dataKey="timestamp"
-                        tickFormatter={formatTimeLabel}
-                        stroke="#64748b"
-                        fontSize={10}
-                      />
-                      <YAxis stroke="#64748b" fontSize={10} unit=" kW" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#0A121E',
-                          borderColor: '#1B2C42',
-                          borderRadius: '6px',
-                          fontFamily: 'monospace',
-                          fontSize: '11px',
-                        }}
-                        labelFormatter={(v) => formatDateLabel(v)}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="solarPower"
-                        name="Solar PV Array (kW)"
-                        stroke="#f59e0b"
-                        strokeWidth={2}
-                        fill="url(#solarOnly)"
-                      />
-                    </AreaChart>
-                  ) : (
-                    <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="windOnly" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
-                      <XAxis
-                        dataKey="timestamp"
-                        tickFormatter={formatTimeLabel}
-                        stroke="#64748b"
-                        fontSize={10}
-                      />
-                      <YAxis stroke="#64748b" fontSize={10} unit=" kW" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#0A121E',
-                          borderColor: '#1B2C42',
-                          borderRadius: '6px',
-                          fontFamily: 'monospace',
-                          fontSize: '11px',
-                        }}
-                        labelFormatter={(v) => formatDateLabel(v)}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="windPower"
-                        name="Wind Turbine Fleet (kW)"
-                        stroke="#06b6d4"
-                        strokeWidth={2}
-                        fill="url(#windOnly)"
-                      />
-                    </AreaChart>
-                  )}
-                </ResponsiveContainer>
+              <div className="h-72 w-full min-h-[280px]">
+                {!isMounted ? (
+                  <div className="w-full h-full bg-[#0A121E]/60 rounded-lg animate-pulse" />
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    {activeTab === 'total' ? (
+                      <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="renGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
+                        <XAxis
+                          dataKey="timestamp"
+                          tickFormatter={formatTimeLabel}
+                          stroke="#64748b"
+                          fontSize={10}
+                        />
+                        <YAxis stroke="#64748b" fontSize={10} unit=" kW" />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#0A121E',
+                            borderColor: '#1B2C42',
+                            borderRadius: '6px',
+                            fontFamily: 'monospace',
+                            fontSize: '11px',
+                          }}
+                          labelFormatter={(v) => formatDateLabel(v)}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="totalRenewable"
+                          name="Total Renewable (kW)"
+                          stroke="#10b981"
+                          strokeWidth={2}
+                          fill="url(#renGradient)"
+                          dot={{ r: 3, fill: '#10b981' }}
+                          activeDot={{ r: 5, fill: '#34d399' }}
+                        />
+                      </AreaChart>
+                    ) : activeTab === 'sources' ? (
+                      <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="solarArea" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
+                          </linearGradient>
+                          <linearGradient id="windArea" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
+                        <XAxis
+                          dataKey="timestamp"
+                          tickFormatter={formatTimeLabel}
+                          stroke="#64748b"
+                          fontSize={10}
+                        />
+                        <YAxis stroke="#64748b" fontSize={10} unit=" kW" />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#0A121E',
+                            borderColor: '#1B2C42',
+                            borderRadius: '6px',
+                            fontFamily: 'monospace',
+                            fontSize: '11px',
+                          }}
+                          labelFormatter={(v) => formatDateLabel(v)}
+                        />
+                        <Legend wrapperStyle={{ fontSize: '10px' }} />
+                        <Area
+                          type="monotone"
+                          dataKey="solarPower"
+                          name="Solar PV (kW)"
+                          stroke="#f59e0b"
+                          strokeWidth={2}
+                          stackId="1"
+                          fill="url(#solarArea)"
+                          dot={{ r: 3, fill: '#f59e0b' }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="windPower"
+                          name="Wind Turbines (kW)"
+                          stroke="#06b6d4"
+                          strokeWidth={2}
+                          stackId="1"
+                          fill="url(#windArea)"
+                          dot={{ r: 3, fill: '#06b6d4' }}
+                        />
+                      </AreaChart>
+                    ) : activeTab === 'solar' ? (
+                      <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="solarOnly" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
+                        <XAxis
+                          dataKey="timestamp"
+                          tickFormatter={formatTimeLabel}
+                          stroke="#64748b"
+                          fontSize={10}
+                        />
+                        <YAxis stroke="#64748b" fontSize={10} unit=" kW" />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#0A121E',
+                            borderColor: '#1B2C42',
+                            borderRadius: '6px',
+                            fontFamily: 'monospace',
+                            fontSize: '11px',
+                          }}
+                          labelFormatter={(v) => formatDateLabel(v)}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="solarPower"
+                          name="Solar PV Array (kW)"
+                          stroke="#f59e0b"
+                          strokeWidth={2}
+                          fill="url(#solarOnly)"
+                          dot={{ r: 3, fill: '#f59e0b' }}
+                          activeDot={{ r: 5, fill: '#fbbf24' }}
+                        />
+                      </AreaChart>
+                    ) : (
+                      <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="windOnly" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
+                        <XAxis
+                          dataKey="timestamp"
+                          tickFormatter={formatTimeLabel}
+                          stroke="#64748b"
+                          fontSize={10}
+                        />
+                        <YAxis stroke="#64748b" fontSize={10} unit=" kW" />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#0A121E',
+                            borderColor: '#1B2C42',
+                            borderRadius: '6px',
+                            fontFamily: 'monospace',
+                            fontSize: '11px',
+                          }}
+                          labelFormatter={(v) => formatDateLabel(v)}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="windPower"
+                          name="Wind Turbines (kW)"
+                          stroke="#06b6d4"
+                          strokeWidth={2}
+                          fill="url(#windOnly)"
+                          dot={{ r: 3, fill: '#06b6d4' }}
+                          activeDot={{ r: 5, fill: '#22d3ee' }}
+                        />
+                      </AreaChart>
+                    )}
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
           )}

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -19,6 +19,12 @@ interface EnergyDispatchChartProps {
 }
 
 export const EnergyDispatchChart: React.FC<EnergyDispatchChartProps> = ({ data }) => {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Normalize data points to handle both direct OR-Tools fields and legacy mock fields
   const formattedData = data.map((pt, idx) => {
     const pvUsed = pt.pv_used_kW ?? pt.solarKW ?? 0;
@@ -56,8 +62,11 @@ export const EnergyDispatchChart: React.FC<EnergyDispatchChartProps> = ({ data }
         </div>
       </div>
 
-      <div className="w-full h-80 sm:h-96">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="w-full h-80 sm:h-96 min-h-[300px]">
+        {!isMounted ? (
+          <div className="w-full h-full bg-[#0A121E]/60 rounded animate-pulse" />
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={formattedData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
             <defs>
               <linearGradient id="solarStack" x1="0" y1="0" x2="0" y2="1">
@@ -198,6 +207,7 @@ export const EnergyDispatchChart: React.FC<EnergyDispatchChartProps> = ({ data }
             />
           </ComposedChart>
         </ResponsiveContainer>
+        )}
       </div>
     </div>
   );

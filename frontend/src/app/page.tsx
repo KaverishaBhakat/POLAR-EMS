@@ -75,25 +75,15 @@ export default function LandingPage() {
 
         {/* Fixed Quick Launch Bar at bottom-left */}
         <div className="absolute bottom-6 sm:bottom-8 left-4 sm:left-8 md:left-12 z-50 pointer-events-auto flex items-center gap-2 font-mono">
-          {/* Sign Up Button Pill */}
-          <Link
-            href="/signup"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs tracking-wider uppercase transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.45)] hover:scale-105"
-            title="Create Authorized Station Operator Account"
-          >
-            <UserPlus size={14} />
-            <span>Sign Up</span>
-          </Link>
-
           {/* Control Center Access Button Pill */}
           <Link
             href="/dashboard"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#08111D]/90 hover:bg-[#0E1D32] border border-cyan-500/50 hover:border-cyan-400 text-white text-xs tracking-wider uppercase transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.25)] backdrop-blur-md group"
+            className="flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-[#08111D]/90 hover:bg-[#0E1D32] border border-cyan-500/50 hover:border-cyan-400 text-white text-xs tracking-wider uppercase transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.25)] backdrop-blur-md group"
             title="Enter Live POLAR-EMS SCADA Dashboard"
           >
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
             <Compass size={15} className="text-cyan-400" />
-            <span className="font-bold hidden sm:inline">SCADA Dashboard</span>
+            <span className="font-bold">SCADA Dashboard</span>
             <ArrowRight size={13} className="text-cyan-400 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>

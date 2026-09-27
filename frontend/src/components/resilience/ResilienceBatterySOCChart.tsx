@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -14,68 +14,58 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { HourlyDispatchPoint } from '@/lib/types';
-import { BatteryCharging, ShieldAlert, CheckCircle } from 'lucide-react';
+import { BatteryCharging } from 'lucide-react';
 
-interface BatterySOCChartProps {
+interface ResilienceBatterySOCChartProps {
   data: HourlyDispatchPoint[];
   minSOCLimit?: number;
   maxSOCLimit?: number;
 }
 
-export const BatterySOCChart: React.FC<BatterySOCChartProps> = ({
+export const ResilienceBatterySOCChart: React.FC<ResilienceBatterySOCChartProps> = ({
   data,
-  minSOCLimit = 20,
-  maxSOCLimit = 95,
+  minSOCLimit = 20.0,
+  maxSOCLimit = 95.0,
 }) => {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  // Compute actual min and max SOC in data
   const socValues = data.map((d) => d.battery_soc_percent ?? d.batterySOC ?? 75.0);
   const currentMinSOC = socValues.length > 0 ? Math.min(...socValues) : 20.0;
-  const currentMaxSOC = socValues.length > 0 ? Math.max(...socValues) : 78.5;
+  const currentMaxSOC = socValues.length > 0 ? Math.max(...socValues) : 95.0;
 
   const chartData = data.map((pt, idx) => ({
-    time: pt.time || `${String(pt.hour ?? idx).padStart(2, '0')}:00`,
-    batterySOC: pt.battery_soc_percent ?? pt.batterySOC ?? 75.0,
-    chargeKW: pt.battery_charge_kW ?? pt.batteryChargeKW ?? 0,
-    dischargeKW: pt.battery_discharge_kW ?? pt.batteryDischargeKW ?? 0,
+    time: pt.time || `${String(pt.hour ?? idx + 1).padStart(2, '0')}:00`,
+    batterySOC: Number((pt.battery_soc_percent ?? pt.batterySOC ?? 75.0).toFixed(1)),
+    chargeKW: Number((pt.battery_charge_kW ?? pt.batteryCharge ?? 0).toFixed(1)),
+    dischargeKW: Number((pt.battery_discharge_kW ?? pt.batteryDischarge ?? 0).toFixed(1)),
   }));
 
   return (
-    <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5 font-mono">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-2.5 border-b border-[#1B2C42]/50">
+    <div className="bg-[#0E1724]/95 rounded-lg border border-[#1B2C42] p-4 sm:p-5 font-mono">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1B2C42]/60 pb-3 mb-4">
         <div>
-          <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
+          <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
             <BatteryCharging className="w-4 h-4 text-cyan-400" />
-            24-Hour Battery State of Charge (SOC) & Safety Envelopes
+            24-Hour Battery State of Charge (SOC) &amp; Reserve Floor
           </h3>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            OR-Tools bounded storage trajectory with strict 20.0% life-support reserve constraint
+            Bounded storage trajectory with 20.0% life-support reserve constraint
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="text-[11px] px-2.5 py-1 rounded bg-[#0A1828] border border-cyan-500/30 text-cyan-300">
             SOC RANGE: <span className="font-bold text-white">{currentMinSOC.toFixed(1)}% – {currentMaxSOC.toFixed(1)}%</span>
           </span>
           <span className="text-[11px] px-2.5 py-1 rounded bg-[#0A1828] border border-rose-500/30 text-rose-300">
-            MIN LIMIT: <span className="font-bold text-white">{minSOCLimit}%</span>
+            MIN LIMIT: <span className="font-bold text-white">{minSOCLimit.toFixed(1)}%</span>
           </span>
         </div>
       </div>
 
-      <div className="w-full h-72 sm:h-80 min-h-[280px]">
-        {!isMounted ? (
-          <div className="w-full h-full bg-[#0A121E]/60 rounded animate-pulse" />
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
+      <div className="w-full h-72 sm:h-80">
+        <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
             <defs>
-              <linearGradient id="socGradient" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="resilienceSocGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.7} />
                 <stop offset="95%" stopColor="#06B6D4" stopOpacity={0.05} />
               </linearGradient>
@@ -99,7 +89,7 @@ export const BatterySOCChart: React.FC<BatterySOCChartProps> = ({
                 return (
                   <div className="bg-[#0A121E]/95 border border-cyan-500/40 p-3 rounded shadow-2xl font-mono text-xs text-slate-200 min-w-[200px]">
                     <p className="text-cyan-400 font-bold mb-1 border-b border-[#1B2C42] pb-1">
-                      TIME: {label}
+                      HOUR: {label}
                     </p>
                     <div className="flex justify-between py-0.5">
                       <span className="text-cyan-300">Battery SOC:</span>
@@ -164,12 +154,11 @@ export const BatterySOCChart: React.FC<BatterySOCChartProps> = ({
               name="Battery SOC (%)"
               stroke="#06B6D4"
               strokeWidth={2.5}
-              fill="url(#socGradient)"
+              fill="url(#resilienceSocGradient)"
               dot={{ r: 3, fill: '#06B6D4', strokeWidth: 1, stroke: '#FFFFFF' }}
             />
           </AreaChart>
         </ResponsiveContainer>
-        )}
       </div>
     </div>
   );

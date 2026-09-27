@@ -21,6 +21,7 @@ import {
   Leaf,
   Cpu,
   BatteryCharging,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface MobileMenuProps {
@@ -38,6 +39,7 @@ const DASHBOARD_ROUTES = [
   { name: 'Antarctic Stations (Maitri & Bharati)', href: '/stations', icon: MapPin },
   { name: 'AI Load & Weather Forecast', href: '/forecast', icon: TrendingUp, badge: 'AI' },
   { name: 'MILP Dispatch Optimization', href: '/optimization', icon: Sliders, badge: 'SAVE 21%' },
+  { name: 'Resilience & Contingencies', href: '/resilience', icon: ShieldCheck, badge: 'STRESS' },
   { name: 'Extreme Simulation Lab', href: '/simulation', icon: PlaySquare, badge: 'TEST' },
   { name: 'Microgrid ESG Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Telemetry Alerts & Safety', href: '/alerts', icon: Bell },

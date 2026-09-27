@@ -50,10 +50,10 @@ model WeatherData {
   timestamp      DateTime
   temperature    Float
   pressure       Float
-  humidity       Float
+  humidity       Float?
   windSpeed      Float
-  windDirection  String
-  solarRadiation Float
+  windDirection  String?
+  solarRadiation Float?
   createdAt      DateTime @default(now())
   station        Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
 
