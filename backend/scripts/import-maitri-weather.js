@@ -131,9 +131,13 @@ async function importMaitriWeather() {
       continue;
     }
 
-    // Parse timestamp
+    // Parse timestamp (explicitly in UTC to preserve literal source clock times)
     const rawTimestamp = parts[0];
-    const timestampDate = new Date(rawTimestamp);
+    let isoTimestamp = rawTimestamp.trim().replace(' ', 'T');
+    if (!isoTimestamp.endsWith('Z') && !isoTimestamp.includes('+')) {
+      isoTimestamp += 'Z';
+    }
+    const timestampDate = new Date(isoTimestamp);
     if (isNaN(timestampDate.getTime())) {
       rowsSkippedInvalid++;
       continue;

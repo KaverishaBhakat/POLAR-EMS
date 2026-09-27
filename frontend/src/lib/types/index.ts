@@ -39,11 +39,11 @@ export interface WeatherData {
   temperature: number; // °C
   apparentTemperature?: number; // °C (derived wind chill)
   windSpeed: number; // m/s
-  windDirection: string;
+  windDirection?: string | null;
   windGust?: number; // m/s (derived peak gust)
-  humidity: number; // %
+  humidity?: number | null; // %
   pressure: number; // hPa
-  solarRadiation: number; // W/m²
+  solarRadiation?: number | null; // W/m²
   visibility?: string; // km
   blizzardRisk?: 'LOW' | 'ELEVATED' | 'HIGH' | 'CRITICAL' | string;
   condition?: string;

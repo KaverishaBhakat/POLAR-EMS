@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useStation } from '@/lib/context/StationContext';
 import { apiClient } from '@/lib/api/client';
 import { WeatherData } from '@/lib/types';
@@ -18,6 +18,7 @@ import {
   Database,
   Radio,
   Clock,
+  Info,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -30,7 +31,7 @@ import {
   Tooltip,
   CartesianGrid,
 } from 'recharts';
-import { inspectTelemetryData, sanitizeNumeric, sortChronological } from '@/lib/utils/chartData';
+import { inspectTelemetryData, sortChronological } from '@/lib/utils/chartData';
 import { ChartTelemetryStatus } from '@/components/charts/ChartTelemetryStatus';
 
 export default function WeatherPage() {
@@ -52,24 +53,34 @@ export default function WeatherPage() {
     setLoading(true);
     setError(null);
     try {
-      // 1. Fetch live current weather from PostgreSQL
+      // 1. Fetch live current weather from PostgreSQL for real-time KPI observation
       const current = await apiClient.getCurrentWeather(activeStationId);
       setCurrentWeather(current);
 
-      // 2. Fetch historical records (up to 50 readings)
-      const histData = await apiClient.getWeatherHistory(activeStationId, { limit: 50, page: 1 });
-      // Sort ascending by timestamp for chronological chart plotting & sanitize numbers
-      const sortedHistory: WeatherData[] = sortChronological(histData.records || [], (r) => r.timestamp || r.createdAt).map((r) => ({
+      // 2. Fetch historical records using range API (1985-01-01 to 2016-12-31, limit 1000)
+      const rangeRecords = await apiClient.getWeatherRange(activeStationId, {
+        start: '1985-01-01T00:00:00.000Z',
+        end: '2016-12-31T23:59:59.999Z',
+        limit: 1000,
+      });
+
+      // 3. Sort ascending by timestamp for chronological chart plotting, preserving NULL values
+      const sortedHistory: WeatherData[] = sortChronological(
+        rangeRecords || [],
+        (r) => r.timestamp || r.createdAt
+      ).map((r) => ({
         ...r,
-        temperature: sanitizeNumeric(r.temperature, 0) ?? 0,
-        apparentTemperature: sanitizeNumeric(r.apparentTemperature, 0) ?? undefined,
-        windSpeed: sanitizeNumeric(r.windSpeed, 0) ?? 0,
-        solarRadiation: sanitizeNumeric(r.solarRadiation, 0) ?? 0,
-        pressure: sanitizeNumeric(r.pressure, 0) ?? 0,
-        humidity: sanitizeNumeric(r.humidity, 0) ?? 0,
+        temperature: typeof r.temperature === 'number' ? r.temperature : 0,
+        apparentTemperature: typeof r.apparentTemperature === 'number' ? r.apparentTemperature : undefined,
+        windSpeed: typeof r.windSpeed === 'number' ? r.windSpeed : 0,
+        solarRadiation: typeof r.solarRadiation === 'number' ? r.solarRadiation : null,
+        pressure: typeof r.pressure === 'number' ? r.pressure : 0,
+        humidity: typeof r.humidity === 'number' ? r.humidity : null,
+        windDirection: r.windDirection || null,
       }));
+
       setHistory(sortedHistory);
-      setTotalRecords(histData.meta?.total || sortedHistory.length);
+      setTotalRecords(sortedHistory.length);
     } catch (err: any) {
       console.error(`Failed to fetch weather telemetry for ${activeStationId}:`, err);
       setError(err.message || 'Unable to retrieve meteorological telemetry from PostgreSQL backend');
@@ -82,18 +93,31 @@ export default function WeatherPage() {
     fetchWeatherData();
   }, [fetchWeatherData]);
 
-  // Format chart timestamp
+  // Date-aware X-axis tick formatter for multi-decade historical timeline (e.g. "Jan 1985", "Dec 2016")
   const formatTimeLabel = (ts?: string | Date) => {
     if (!ts) return '';
     const d = new Date(ts);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   };
 
+  // Full timestamp formatter for tooltips & table
   const formatDateLabel = (ts?: string | Date) => {
     if (!ts) return 'N/A';
     const d = new Date(ts);
-    return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}`;
+    return d.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
   };
+
+  // Check if historical dataset contains any non-null solar radiation measurements
+  const hasSolarData = useMemo(() => {
+    return history.some((r) => r.solarRadiation !== null && r.solarRadiation !== undefined);
+  }, [history]);
 
   if (loading) {
     return (
@@ -159,7 +183,7 @@ export default function WeatherPage() {
             Polar Meteorology & Weather Telemetry
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Real-time automated weather station sensors, atmospheric pressure & solar irradiance |{' '}
+            Historical automated weather station sensors & real-time telemetry |{' '}
             <span className="text-cyan-300 font-semibold">{station?.name || activeStationId.toUpperCase()}</span>
           </p>
         </div>
@@ -168,7 +192,7 @@ export default function WeatherPage() {
           <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded bg-[#0A1828] border border-cyan-500/40 text-cyan-300">
             <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
             <span>
-              {hasData ? `${totalRecords} POSTGRESQL READINGS` : 'NO TELEMETRY RECORDED'}
+              {hasData ? `${totalRecords} HISTORICAL OBSERVATIONS` : 'NO TELEMETRY RECORDED'}
             </span>
           </span>
           <button
@@ -177,7 +201,7 @@ export default function WeatherPage() {
               addToast({
                 type: 'INFO',
                 title: 'Weather Telemetry Refreshed',
-                message: `Loaded latest meteorological sensors for ${station?.name || activeStationId}.`,
+                message: `Loaded historical meteorological sensors for ${station?.name || activeStationId}.`,
               });
             }}
             title="Refresh Weather Telemetry"
@@ -212,7 +236,7 @@ export default function WeatherPage() {
         </div>
       ) : (
         <>
-          {/* 1. Live Weather Current Observation Cards */}
+          {/* 1. Live Weather Current Observation Cards (2026 Telemetry Snapshot) */}
           {currentWeather && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -221,7 +245,7 @@ export default function WeatherPage() {
                     Latest AWS Surface Observation
                   </span>
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 tracking-wider">
-                    POSTGRESQL TELEMETRY
+                    POSTGRESQL REAL-TIME TELEMETRY
                   </span>
                 </div>
                 {currentWeather.timestamp && (
@@ -273,7 +297,7 @@ export default function WeatherPage() {
                     {currentWeather.windDirection || 'N/A'}
                   </div>
                   <div className="text-[9px] text-slate-400 mt-0.5">
-                    {currentWeather.windSpeed > 15 ? 'Katabatic Flow' : 'Steady Vector'}
+                    {currentWeather.windSpeed && currentWeather.windSpeed > 15 ? 'Katabatic Flow' : 'Steady Vector'}
                   </div>
                 </div>
 
@@ -311,24 +335,24 @@ export default function WeatherPage() {
                     {currentWeather.humidity != null ? `${currentWeather.humidity}%` : 'N/A'}
                   </div>
                   <div className="text-[9px] text-slate-400 mt-0.5">
-                    {currentWeather.humidity > 80 ? 'High Moisture' : 'Dry Polar Air'}
+                    {currentWeather.humidity && currentWeather.humidity > 80 ? 'High Moisture' : 'Dry Polar Air'}
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* 2. Meteorological Sensor Trends Chart */}
+          {/* 2. Meteorological Sensor Trends Chart (Historical Dataset 1985–2016) */}
           {history.length > 0 && (
             <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[#1B2C42]/60">
                 <div>
                   <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
                     <CloudSun className="w-4 h-4 text-cyan-400" />
-                    Historical Weather Observations ({history.length} Data Points)
+                    Historical Weather Observations ({history.length} Data Points: 1985–2016)
                   </h3>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    Chronological meteorological sensor feed retrieved from PostgreSQL `weather_data`
+                    Chronological IMD meteorological sensor telemetry retrieved from PostgreSQL `weather_data`
                   </p>
                 </div>
 
@@ -404,6 +428,7 @@ export default function WeatherPage() {
                           tickFormatter={formatTimeLabel}
                           stroke="#64748b"
                           fontSize={10}
+                          minTickGap={40}
                         />
                         <YAxis stroke="#64748b" fontSize={10} unit="°C" />
                         <Tooltip
@@ -423,7 +448,7 @@ export default function WeatherPage() {
                           stroke="#06b6d4"
                           strokeWidth={2}
                           fill="url(#tempGradient)"
-                          dot={{ r: 3, fill: '#06b6d4' }}
+                          dot={{ r: 2, fill: '#06b6d4' }}
                           activeDot={{ r: 5, fill: '#22d3ee' }}
                         />
                         <Line
@@ -433,7 +458,8 @@ export default function WeatherPage() {
                           stroke="#38bdf8"
                           strokeDasharray="4 4"
                           strokeWidth={1.5}
-                          dot={{ r: 2.5, fill: '#38bdf8' }}
+                          dot={false}
+                          connectNulls={false}
                         />
                       </AreaChart>
                     ) : activeTab === 'wind' ? (
@@ -450,6 +476,7 @@ export default function WeatherPage() {
                           tickFormatter={formatTimeLabel}
                           stroke="#64748b"
                           fontSize={10}
+                          minTickGap={40}
                         />
                         <YAxis stroke="#64748b" fontSize={10} unit="m/s" />
                         <Tooltip
@@ -469,47 +496,62 @@ export default function WeatherPage() {
                           stroke="#3b82f6"
                           strokeWidth={2}
                           fill="url(#windGradient)"
-                          dot={{ r: 3, fill: '#3b82f6' }}
+                          dot={{ r: 2, fill: '#3b82f6' }}
                           activeDot={{ r: 5, fill: '#60a5fa' }}
                         />
                       </AreaChart>
                     ) : activeTab === 'solar' ? (
-                      <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="solarGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
-                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
-                        <XAxis
-                          dataKey="timestamp"
-                          tickFormatter={formatTimeLabel}
-                          stroke="#64748b"
-                          fontSize={10}
-                        />
-                        <YAxis stroke="#64748b" fontSize={10} unit="W/m²" />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: '#0A121E',
-                            borderColor: '#1B2C42',
-                            borderRadius: '6px',
-                            fontFamily: 'monospace',
-                            fontSize: '11px',
-                          }}
-                          labelFormatter={(v) => formatDateLabel(v)}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="solarRadiation"
-                          name="Solar Irradiance (W/m²)"
-                          stroke="#f59e0b"
-                          strokeWidth={2}
-                          fill="url(#solarGradient)"
-                          dot={{ r: 3, fill: '#f59e0b' }}
-                          activeDot={{ r: 5, fill: '#fbbf24' }}
-                        />
-                      </AreaChart>
+                      hasSolarData ? (
+                        <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="solarGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                              <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
+                          <XAxis
+                            dataKey="timestamp"
+                            tickFormatter={formatTimeLabel}
+                            stroke="#64748b"
+                            fontSize={10}
+                            minTickGap={40}
+                          />
+                          <YAxis stroke="#64748b" fontSize={10} unit="W/m²" />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: '#0A121E',
+                              borderColor: '#1B2C42',
+                              borderRadius: '6px',
+                              fontFamily: 'monospace',
+                              fontSize: '11px',
+                            }}
+                            labelFormatter={(v) => formatDateLabel(v)}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="solarRadiation"
+                            name="Solar Irradiance (W/m²)"
+                            stroke="#f59e0b"
+                            strokeWidth={2}
+                            fill="url(#solarGradient)"
+                            dot={{ r: 2, fill: '#f59e0b' }}
+                            activeDot={{ r: 5, fill: '#fbbf24' }}
+                          />
+                        </AreaChart>
+                      ) : (
+                        <div className="h-full w-full flex flex-col items-center justify-center bg-[#0A121E]/60 rounded-lg border border-[#1B2C42]/50 text-center p-6 space-y-2.5">
+                          <div className="p-3 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                            <Sun className="w-6 h-6" />
+                          </div>
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-200 uppercase tracking-wider">
+                            Solar radiation data unavailable for historical Maitri observations
+                          </h4>
+                          <p className="text-[11px] text-slate-400 max-w-md">
+                            The historical IMD Maitri dataset (1985–2016) does not contain solar radiation sensor instrumentation. Values are preserved as NULL in the database without synthetic estimation.
+                          </p>
+                        </div>
+                      )
                     ) : (
                       <LineChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
@@ -518,6 +560,7 @@ export default function WeatherPage() {
                           tickFormatter={formatTimeLabel}
                           stroke="#64748b"
                           fontSize={10}
+                          minTickGap={40}
                         />
                         <YAxis stroke="#64748b" fontSize={10} unit="hPa" domain={['auto', 'auto']} />
                         <Tooltip
@@ -536,7 +579,7 @@ export default function WeatherPage() {
                           name="Atmospheric Pressure (hPa)"
                           stroke="#c084fc"
                           strokeWidth={2}
-                          dot={{ r: 3, fill: '#c084fc' }}
+                          dot={{ r: 2, fill: '#c084fc' }}
                           activeDot={{ r: 5, fill: '#d8b4fe' }}
                         />
                       </LineChart>
@@ -560,13 +603,13 @@ export default function WeatherPage() {
                   </span>
                 </div>
                 <span className="text-[11px] text-slate-400">
-                  Displaying latest {history.length} records
+                  Displaying {history.length} historical observations (1985–2016)
                 </span>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto max-h-96 overflow-y-auto">
                 <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-[#0A121E] text-slate-400 uppercase text-[10px] border-b border-[#1B2C42]">
+                  <thead className="bg-[#0A121E] text-slate-400 uppercase text-[10px] border-b border-[#1B2C42] sticky top-0 z-10">
                     <tr>
                       <th className="py-2.5 px-3">Timestamp</th>
                       <th className="py-2.5 px-3">Temp (°C)</th>
@@ -584,12 +627,24 @@ export default function WeatherPage() {
                         <td className="py-2 px-3 text-cyan-300 font-bold whitespace-nowrap">
                           {formatDateLabel(record.timestamp || record.createdAt)}
                         </td>
-                        <td className="py-2 px-3 text-slate-200">{record.temperature}°C</td>
-                        <td className="py-2 px-3 text-blue-300">{record.windSpeed} m/s</td>
-                        <td className="py-2 px-3 text-slate-400">{record.windDirection || 'N/A'}</td>
-                        <td className="py-2 px-3 text-purple-300">{record.pressure} hPa</td>
-                        <td className="py-2 px-3 text-amber-300">{record.solarRadiation}</td>
-                        <td className="py-2 px-3 text-slate-300">{record.humidity}%</td>
+                        <td className="py-2 px-3 text-slate-200">
+                          {record.temperature != null ? `${record.temperature}°C` : <span className="text-slate-500 italic">N/A</span>}
+                        </td>
+                        <td className="py-2 px-3 text-blue-300">
+                          {record.windSpeed != null ? `${record.windSpeed} m/s` : <span className="text-slate-500 italic">N/A</span>}
+                        </td>
+                        <td className="py-2 px-3 text-slate-400">
+                          {record.windDirection || <span className="text-slate-500 italic">N/A</span>}
+                        </td>
+                        <td className="py-2 px-3 text-purple-300">
+                          {record.pressure != null ? `${record.pressure} hPa` : <span className="text-slate-500 italic">N/A</span>}
+                        </td>
+                        <td className="py-2 px-3 text-amber-300">
+                          {record.solarRadiation != null ? record.solarRadiation : <span className="text-slate-500 italic">N/A</span>}
+                        </td>
+                        <td className="py-2 px-3 text-slate-300">
+                          {record.humidity != null ? `${record.humidity}%` : <span className="text-slate-500 italic">N/A</span>}
+                        </td>
                         <td className="py-2 px-3 text-right text-[9px] text-slate-500 font-mono truncate max-w-[120px]">
                           {record.id ? record.id.substring(0, 8) + '...' : 'PG-NODE'}
                         </td>

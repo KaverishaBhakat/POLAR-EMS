@@ -341,10 +341,14 @@ export const apiClient = {
       stationId,
       timestamp: w.timestamp,
       temperature: w.temperature,
-      apparentTemperature: Math.round((w.temperature - (w.windSpeed * 0.7)) * 10) / 10,
+      apparentTemperature:
+        w.temperature != null && w.windSpeed != null
+          ? Math.round((w.temperature - (w.windSpeed * 0.7)) * 10) / 10
+          : undefined,
       windSpeed: w.windSpeed,
-      windDirection: w.windDirection || 'N/A',
-      windGust: Math.round(w.windSpeed * 1.35 * 10) / 10,
+      windDirection: w.windDirection || null,
+      windGust:
+        w.windSpeed != null ? Math.round(w.windSpeed * 1.35 * 10) / 10 : undefined,
       humidity: w.humidity,
       pressure: w.pressure,
       solarRadiation: w.solarRadiation,
