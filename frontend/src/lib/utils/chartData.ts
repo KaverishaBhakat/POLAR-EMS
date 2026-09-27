@@ -47,9 +47,20 @@ export function sortChronological<T>(
   return [...items].sort((a, b) => {
     const rawA = getTimestamp(a);
     const rawB = getTimestamp(b);
-    const tA = rawA ? new Date(rawA).getTime() : 0;
-    const tB = rawB ? new Date(rawB).getTime() : 0;
-    return tA - tB;
+    if (rawA == null && rawB == null) return 0;
+    if (rawA == null) return -1;
+    if (rawB == null) return 1;
+
+    const dateA = new Date(rawA);
+    const dateB = new Date(rawB);
+    const timeA = dateA.getTime();
+    const timeB = dateB.getTime();
+
+    if (!isNaN(timeA) && !isNaN(timeB)) {
+      return timeA - timeB;
+    }
+
+    return String(rawA).localeCompare(String(rawB), undefined, { numeric: true });
   });
 }
 
@@ -57,25 +68,29 @@ export function sortChronological<T>(
  * Format timestamp for chart X-axis labels (HH:mm)
  */
 export function formatChartTime(ts?: string | Date | number): string {
-  if (!ts) return '';
+  if (ts === null || ts === undefined || ts === '') return '';
   const d = new Date(ts);
-  if (isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  if (!isNaN(d.getTime())) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+  return String(ts);
 }
 
 /**
  * Format timestamp for chart tooltips (Month DD, HH:mm:ss)
  */
 export function formatChartDateTime(ts?: string | Date | number): string {
-  if (!ts) return 'N/A';
+  if (ts === null || ts === undefined || ts === '') return 'N/A';
   const d = new Date(ts);
-  if (isNaN(d.getTime())) return 'N/A';
-  return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${d.toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  })}`;
+  if (!isNaN(d.getTime())) {
+    return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${d.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    })}`;
+  }
+  return String(ts);
 }
 
 /**
@@ -111,8 +126,14 @@ export function inspectTelemetryData<T>(
     const sorted = sortChronological(list, getTimestamp);
     const firstTs = getTimestamp(sorted[0]);
     const lastTs = getTimestamp(sorted[sorted.length - 1]);
-    if (firstTs) earliest = new Date(firstTs).toISOString();
-    if (lastTs) latest = new Date(lastTs).toISOString();
+    if (firstTs !== undefined && firstTs !== null) {
+      const d = new Date(firstTs);
+      earliest = !isNaN(d.getTime()) ? d.toISOString() : String(firstTs);
+    }
+    if (lastTs !== undefined && lastTs !== null) {
+      const d = new Date(lastTs);
+      latest = !isNaN(d.getTime()) ? d.toISOString() : String(lastTs);
+    }
   }
 
   const isSingleObservation = count === 1;
