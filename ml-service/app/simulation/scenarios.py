@@ -229,6 +229,51 @@ SCENARIO_REGISTRY: Dict[str, ScenarioMetadata] = {
             "critical_load_protection": True
         }
     ),
+    ScenarioId.HIGH_DEMAND.value: ScenarioMetadata(
+        scenario_id=ScenarioId.HIGH_DEMAND.value,
+        scenario_type="HIGH_DEMAND",
+        scenario_name="High Demand",
+        description="A modeled station-wide electrical demand surge used to evaluate whether the energy-management system can maintain critical loads during periods of unusually high consumption.",
+        category="RESILIENCE",
+        is_active=True,
+        provenance={
+            "scenario_type": "HIGH_DEMAND",
+            "data_classification": "SCENARIO",
+            "demand_multiplier": 1.40,
+            "demand_increase_percent": 40,
+            "pv_mutation": "none",
+            "wind_mutation": "none",
+            "battery_mutation": "none",
+            "generator_mutation": "none",
+            "critical_load_mutation": "none",
+            "demand_source": "Deterministic baseline demand increased by 40% across all 24 hours to represent station-wide electrical demand surge.",
+            "pv_source": "Historical December climatology scenario (100 kW baseline capacity, PR=0.80) preserved unchanged.",
+            "wind_source": "Maitri 2019 observed wind speed converted to modeled turbine power via scenario power curve preserved unchanged.",
+            "battery_source": "Baseline initial SOC (75.0%) and physical limits [20%, 95%] preserved unchanged.",
+            "generator_source": "Baseline generator fleet (GEN-01 100 kW, GEN-02 80 kW, both available).",
+            "is_demonstration_scenario": True,
+            "disclaimer": "A 40% station-wide electrical demand increase represents a deliberately stressful contingency combining elevated heating requirements, laboratory/operational activity, communications, water systems, refrigeration, and other auxiliary electrical loads. This is a scenario assumption for resilience testing, not measured Maitri electrical-load telemetry."
+        },
+        assumptions={
+            "demand_multiplier": 1.40,
+            "demand_increase_percent": 40,
+            "pv_mutation": "none",
+            "wind_mutation": "none",
+            "battery_mutation": "none",
+            "generator_mutation": "none",
+            "critical_load_mutation": "none",
+            "pv_availability_multiplier": 1.0,
+            "wind_availability_multiplier": 1.0,
+            "initial_soc_override": None,
+            "g1_available": True,
+            "g2_available": True,
+            "generator_availability": {
+                "GEN-01": True,
+                "GEN-02": True
+            },
+            "critical_load_protection": True
+        }
+    ),
 }
 
 

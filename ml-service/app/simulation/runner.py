@@ -45,7 +45,7 @@ def run_resilience_simulation(
     if not scenario_def:
         return {
             "status": "ERROR",
-            "message": f"Unknown or unregistered scenario: '{scenario_id}'. Available: ['polar-night', 'generator-failure', 'low-battery', 'renewable-drop', 'severe-blizzard']",
+            "message": f"Unknown or unregistered scenario: '{scenario_id}'. Available: ['polar-night', 'generator-failure', 'low-battery', 'renewable-drop', 'severe-blizzard', 'high-demand']",
             "stationId": station_id.upper(),
         }
 
@@ -173,6 +173,25 @@ def run_resilience_simulation(
             "Severe Blizzard What-If Simulation: Compound weather stress combining 70% solar PV reduction, "
             "20% station electrical demand surge (heating/thermal load), and 25% elevated wind speeds evaluated "
             "through the existing piecewise aerodynamic turbine power curve."
+        )
+
+    elif norm_scenario_id == ScenarioId.HIGH_DEMAND.value:
+        # High Demand Transformation: 40% increase to baseline hourly station demand
+        scenario_inputs["demand"] = [round(float(v) * 1.40, 1) for v in baseline_inputs["demand"]]
+
+        meta["scenario_type"] = "HIGH_DEMAND"
+        meta["scenario_id"] = ScenarioId.HIGH_DEMAND.value
+        meta["demand_mode"] = "SURGE_DEMAND_140_PERCENT"
+        meta["demand_multiplier"] = 1.40
+        meta["demand_increase_percent"] = 40
+        meta["pv_mutation"] = "none"
+        meta["wind_mutation"] = "none"
+        meta["battery_mutation"] = "none"
+        meta["generator_mutation"] = "none"
+        meta["critical_load_mutation"] = "none"
+        meta["source_description"] = (
+            "High Demand What-If Simulation: 40% station-wide electrical demand surge across all 24 hours. "
+            "Microgrid generation resources (solar PV, wind turbine, BESS, and dual-generator fleet) remain unchanged."
         )
 
     scenario_inputs["scenarioMetadata"] = meta
@@ -482,6 +501,14 @@ def run_resilience_simulation(
             f"Under the modeled Severe Blizzard scenario (compound stress: 70% solar PV reduction, 20% demand increase, "
             f"and 25% elevated wind speeds), the microgrid remains {critical_load_status} with {crit_reliability}% critical-load reliability. "
             f"Elevated wind generation ({total_wind_avail:.1f} kWh vs {b_wind:.1f} kWh baseline) partially offsets the solar loss ({total_pv_avail:.1f} kWh vs {b_pv:.1f} kWh). "
+            f"Primary generator GEN-01 supplies {total_gen_energy:.1f} kWh across {gen_hours} committed runtime hours "
+            f"with estimated fuel consumption of {fuel_liters:.1f} L ({fuel_liters - b_fuel:+.1f} L vs baseline) to safely meet increased station demand ({total_demand_kwh:.1f} kWh)."
+        )
+    elif norm_scenario_id == ScenarioId.HIGH_DEMAND.value:
+        recommendation = (
+            f"Under the modeled High Demand scenario (40% station-wide electrical load surge), "
+            f"the microgrid remains {critical_load_status} with {crit_reliability}% critical-load reliability. "
+            f"Preserved renewable resources ({total_renew_avail:.1f} kWh) are utilized at {renew_util_pct:.1f}% efficiency. "
             f"Primary generator GEN-01 supplies {total_gen_energy:.1f} kWh across {gen_hours} committed runtime hours "
             f"with estimated fuel consumption of {fuel_liters:.1f} L ({fuel_liters - b_fuel:+.1f} L vs baseline) to safely meet increased station demand ({total_demand_kwh:.1f} kWh)."
         )
