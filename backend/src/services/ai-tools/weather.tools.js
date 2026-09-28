@@ -22,7 +22,7 @@ async function getCurrentWeather({ stationId }) {
   const weather = await weatherService.getLatestWeather(station.id);
 
   // Determine provenance based on data origin
-  const isHistoricalAWS = station.code === 'MAITRI' && new Date(weather.timestamp).getUTCFullYear() === 2019;
+  const isHistoricalAWS = station.code === 'MAITRI' || station.code === 'BHARATI';
   const provenance = isHistoricalAWS ? 'REAL / MEASURED' : 'MODELED / SCENARIO';
 
   return {
@@ -85,7 +85,7 @@ async function getWeatherHistory({ stationId, start, end, limit = 24 }) {
     limit: limitNum,
   });
 
-  const isHistoricalAWS = station.code === 'MAITRI';
+  const isHistoricalAWS = station.code === 'MAITRI' || station.code === 'BHARATI';
   const provenance = isHistoricalAWS ? 'REAL / MEASURED' : 'MODELED / SCENARIO';
 
   return {

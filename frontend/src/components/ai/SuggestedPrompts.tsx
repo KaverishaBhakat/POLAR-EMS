@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useStation } from '@/lib/context/StationContext';
 import {
   Activity,
   TrendingUp,
@@ -25,73 +26,104 @@ interface PromptCategory {
   prompts: string[];
 }
 
-const CATEGORIES: PromptCategory[] = [
-  {
-    id: 'operations',
-    label: 'Current Operations',
-    icon: Activity,
-    prompts: [
-      'What is the current weather at Maitri?',
-      'What is the current battery SOC?',
-      'What is the current energy load?',
-      'Are there any active alerts?',
-    ],
-  },
-  {
-    id: 'forecasting',
-    label: 'Forecasting',
-    icon: TrendingUp,
-    prompts: [
-      'What will the temperature be over the next 24 hours?',
-      'Show me the recent renewable generation.',
-      'How has the energy load changed?',
-    ],
-  },
-  {
-    id: 'optimization',
-    label: 'Optimization',
-    icon: Sliders,
-    prompts: [
-      'How should the generators and battery be dispatched?',
-      'What is the optimal fuel-saving strategy for Maitri?',
-    ],
-  },
-  {
-    id: 'resilience',
-    label: 'Resilience & Scenarios',
-    icon: ShieldCheck,
-    prompts: [
-      'What happens during Polar Night?',
-      'What happens if the primary generator fails?',
-      'How does the microgrid handle blizzard conditions?',
-    ],
-  },
-  {
-    id: 'knowledge',
-    label: 'Polar Knowledge Base',
-    icon: BookOpen,
-    prompts: [
-      'How does the BESS architecture work?',
-      'How does POLAR-EMS manage renewable energy?',
-      'What is the difference between measured and modeled telemetry?',
-    ],
-  },
-];
-
 export const SuggestedPrompts: React.FC<SuggestedPromptsProps> = ({
   onSelectPrompt,
   compact = false,
 }) => {
+  const { activeStationId } = useStation();
   const [activeTab, setActiveTab] = useState<string>('operations');
 
+  const isBharati = activeStationId === 'bharati';
+  const stationName = isBharati ? 'Bharati' : 'Maitri';
+
+  const categories: PromptCategory[] = [
+    {
+      id: 'operations',
+      label: 'Current Operations',
+      icon: Activity,
+      prompts: isBharati
+        ? [
+            'What is the current weather at Bharati?',
+            'What is the latest Bharati temperature?',
+            'Show me the recent weather history for Bharati.',
+            'What is the current battery SOC at Bharati?',
+          ]
+        : [
+            'What is the current weather at Maitri?',
+            'What is the current battery SOC?',
+            'What is the current energy load?',
+            'Are there any active alerts?',
+          ],
+    },
+    {
+      id: 'forecasting',
+      label: 'Forecasting & History',
+      icon: TrendingUp,
+      prompts: isBharati
+        ? [
+            'Show me the recent weather history for Bharati.',
+            'What are the extreme wind and temperature records at Bharati?',
+            'How much renewable energy is Bharati generating?',
+            'What is the barometric pressure history at Bharati?',
+          ]
+        : [
+            'What will the temperature be over the next 24 hours?',
+            'Show me the recent renewable generation.',
+            'How has the energy load changed?',
+          ],
+    },
+    {
+      id: 'optimization',
+      label: 'Optimization',
+      icon: Sliders,
+      prompts: isBharati
+        ? [
+            'Is dispatch optimization currently configured for Bharati?',
+            'What datasets are needed for Bharati dispatch optimization?',
+          ]
+        : [
+            'How should the generators and battery be dispatched?',
+            'What is the optimal fuel-saving strategy for Maitri?',
+          ],
+    },
+    {
+      id: 'resilience',
+      label: 'Resilience & Scenarios',
+      icon: ShieldCheck,
+      prompts: [
+        'What happens during Polar Night at Bharati?',
+        'What happens if the primary generator fails?',
+        'How does the microgrid handle blizzard conditions in Antarctica?',
+      ],
+    },
+    {
+      id: 'knowledge',
+      label: 'Polar Knowledge Base',
+      icon: BookOpen,
+      prompts: [
+        'How does the BESS architecture work in polar stations?',
+        'How does POLAR-EMS manage renewable energy and provenance?',
+        'What is the difference between REAL / MEASURED and MODELED telemetry?',
+      ],
+    },
+  ];
+
   if (compact) {
-    const quickPrompts = [
-      'What is the current battery SOC?',
-      'What is the current weather at Maitri?',
-      'What happens during Polar Night?',
-      'How should generators and battery be dispatched?',
-      'How does the BESS architecture work?',
-    ];
+    const quickPrompts = isBharati
+      ? [
+          'What is the current weather at Bharati?',
+          'What is the latest Bharati temperature?',
+          'Show me the recent weather history for Bharati.',
+          'What is the current battery SOC at Bharati?',
+          'What happens during Polar Night at Bharati?',
+        ]
+      : [
+          'What is the current battery SOC?',
+          'What is the current weather at Maitri?',
+          'What happens during Polar Night?',
+          'How should generators and battery be dispatched?',
+          'How does the BESS architecture work?',
+        ];
 
     return (
       <div className="flex flex-wrap gap-2">
@@ -99,7 +131,7 @@ export const SuggestedPrompts: React.FC<SuggestedPromptsProps> = ({
           <button
             key={i}
             onClick={() => onSelectPrompt(prompt)}
-            className="text-left text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-[#5E6AD2]/40 text-[#8A8F98] hover:text-[#EDEDEF] transition-all flex items-center gap-2 group"
+            className="text-left text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-[#5E6AD2]/40 text-[#8A8F98] hover:text-[#EDEDEF] transition-all flex items-center gap-2 group cursor-pointer"
           >
             <Sparkles size={12} className="text-[#5E6AD2] flex-shrink-0" />
             <span className="truncate">{prompt}</span>
@@ -109,7 +141,7 @@ export const SuggestedPrompts: React.FC<SuggestedPromptsProps> = ({
     );
   }
 
-  const currentCategory = CATEGORIES.find((c) => c.id === activeTab) || CATEGORIES[0];
+  const currentCategory = categories.find((c) => c.id === activeTab) || categories[0];
 
   return (
     <div className="rounded-2xl bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] overflow-hidden shadow-linear-card">
@@ -118,7 +150,7 @@ export const SuggestedPrompts: React.FC<SuggestedPromptsProps> = ({
         <div className="flex items-center gap-2.5">
           <HelpCircle size={14} className="text-[#5E6AD2]" />
           <span className="text-xs font-medium tracking-tight text-[#EDEDEF]">
-            Suggested Operator Inquiries
+            Suggested Operator Inquiries ({stationName} Station Scope)
           </span>
         </div>
         <span className="text-[10px] text-[#8A8F98] font-mono">
@@ -128,14 +160,14 @@ export const SuggestedPrompts: React.FC<SuggestedPromptsProps> = ({
 
       {/* Tabs */}
       <div className="flex overflow-x-auto border-b border-white/[0.06] bg-black/20 scrollbar-thin px-2 py-1.5 gap-1">
-        {CATEGORIES.map((cat) => {
+        {categories.map((cat) => {
           const Icon = cat.icon;
           const isActive = activeTab === cat.id;
           return (
             <button
               key={cat.id}
               onClick={() => setActiveTab(cat.id)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                 isActive
                   ? 'bg-[#5E6AD2]/20 text-[#EDEDEF] border border-[#5E6AD2]/40 shadow-sm'
                   : 'text-[#8A8F98] hover:text-[#EDEDEF] hover:bg-white/[0.04]'
@@ -154,7 +186,7 @@ export const SuggestedPrompts: React.FC<SuggestedPromptsProps> = ({
           <button
             key={i}
             onClick={() => onSelectPrompt(prompt)}
-            className="text-left p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.05] hover:border-[#5E6AD2]/40 text-xs text-[#EDEDEF] transition-all flex items-center justify-between group"
+            className="text-left p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.05] hover:border-[#5E6AD2]/40 text-xs text-[#EDEDEF] transition-all flex items-center justify-between group cursor-pointer"
           >
             <span className="pr-3 leading-relaxed text-[#EDEDEF]/90">{prompt}</span>
             <ChevronRight

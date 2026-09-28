@@ -665,7 +665,10 @@ export const apiClient = {
   },
 
   // Real-time Energy Telemetry
-  async getEnergyData(stationId: StationId): Promise<EnergyData> {
+  async getEnergyData(stationId: StationId): Promise<EnergyData | null> {
+    if (stationId === 'bharati') {
+      return null;
+    }
     try {
       const response = await fetch(`${API_BASE_URL}/dashboard/${stationId}`, {
         method: 'GET',
@@ -826,6 +829,20 @@ export const apiClient = {
     metrics: ForecastMetrics;
     insights: AIInsight[];
   }> {
+    if (stationId === 'bharati') {
+      return {
+        points: [],
+        metrics: {
+          maeKW: 0,
+          rmseKW: 0,
+          accuracyPercent: 0,
+          confidencePercent: 0,
+          modelName: 'Bharati Forecast Unavailable (Trained on Maitri Climatology)',
+          lastUpdated: new Date().toISOString(),
+        },
+        insights: [],
+      };
+    }
     return {
       points: generateHourlyForecast(stationId),
       metrics: FORECAST_METRICS[stationId] || FORECAST_METRICS.maitri,
@@ -860,6 +877,32 @@ export const apiClient = {
 
   // AI Optimization
   async getOptimizationResult(stationId: StationId): Promise<OptimizationResultData> {
+    if (stationId === 'bharati') {
+      return {
+        status: 'ERROR',
+        message: 'Optimization unavailable for Bharati Station: A validated Bharati electrical-load, BESS, generator and renewable-generation dataset is required before station-specific dispatch optimization can be presented.',
+        metrics: {
+          baselineFuelL: 0,
+          optimizedFuelL: 0,
+          fuelSavedL: 0,
+          fuelSavedPercent: 0,
+          baselineRenewableUtilPercent: 0,
+          optimizedRenewableUtilPercent: 0,
+          baselineGeneratorRuntimeHours: 0,
+          optimizedGeneratorRuntimeHours: 0,
+          baselineCo2Kg: 0,
+          optimizedCo2Kg: 0,
+          co2AvoidedKg: 0,
+          criticalLoadReliabilityPercent: 0,
+          solverExecutionTimeMs: 0,
+          solverStatus: 'DEGRADED',
+        },
+        dispatchSchedule: [],
+        source: 'UNAVAILABLE',
+        stationId: 'bharati',
+        horizonHours: 24,
+      };
+    }
     try {
       const response = await fetch(`${API_BASE_URL}/optimization/${stationId}`);
       if (response.ok) {
@@ -924,6 +967,32 @@ export const apiClient = {
   },
 
   async runOptimization(stationId: StationId): Promise<OptimizationResultData> {
+    if (stationId === 'bharati') {
+      return {
+        status: 'ERROR',
+        message: 'Optimization unavailable for Bharati Station: A validated Bharati electrical-load, BESS, generator and renewable-generation dataset is required before station-specific dispatch optimization can be presented.',
+        metrics: {
+          baselineFuelL: 0,
+          optimizedFuelL: 0,
+          fuelSavedL: 0,
+          fuelSavedPercent: 0,
+          baselineRenewableUtilPercent: 0,
+          optimizedRenewableUtilPercent: 0,
+          baselineGeneratorRuntimeHours: 0,
+          optimizedGeneratorRuntimeHours: 0,
+          baselineCo2Kg: 0,
+          optimizedCo2Kg: 0,
+          co2AvoidedKg: 0,
+          criticalLoadReliabilityPercent: 0,
+          solverExecutionTimeMs: 0,
+          solverStatus: 'DEGRADED',
+        },
+        dispatchSchedule: [],
+        source: 'UNAVAILABLE',
+        stationId: 'bharati',
+        horizonHours: 24,
+      };
+    }
     try {
       const response = await fetch(`${API_BASE_URL}/optimization/${stationId}`);
       if (response.ok) {

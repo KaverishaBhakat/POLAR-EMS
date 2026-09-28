@@ -41,6 +41,7 @@ import {
 } from 'recharts';
 import { inspectTelemetryData, sanitizeNumeric, sortChronological } from '@/lib/utils/chartData';
 import { ChartTelemetryStatus } from '@/components/charts/ChartTelemetryStatus';
+import { StationUnavailableState } from '@/components/common/StationUnavailableState';
 
 export default function BatteryPage() {
   const { activeStationId, station, addToast } = useStation();
@@ -237,16 +238,14 @@ export default function BatteryPage() {
 
       {/* Empty State */}
       {batteries.length === 0 ? (
-        <GlassCard className="p-10 text-center space-y-4">
-          <Database className="w-10 h-10 text-foreground-muted mx-auto" />
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-foreground">No BESS Containers Configured</h3>
-            <p className="text-xs text-foreground-muted max-w-md mx-auto">
-              No battery storage records were found in PostgreSQL for station{' '}
-              <span className="text-accent font-semibold">{activeStationId.toUpperCase()}</span>.
-            </p>
-          </div>
-        </GlassCard>
+        <StationUnavailableState
+          title="BESS telemetry unavailable"
+          subsystemName="battery storage"
+          description="No measured Bharati battery telemetry is currently available."
+          stationName={station?.name || (activeStationId === 'bharati' ? 'Bharati Research Station' : 'Maitri Research Station')}
+          icon={BatteryCharging}
+          provenanceType="UNAVAILABLE"
+        />
       ) : (
         <>
           {/* Fleet Summary Top KPI Grid */}

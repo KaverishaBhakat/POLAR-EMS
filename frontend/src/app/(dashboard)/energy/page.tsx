@@ -38,6 +38,7 @@ import {
 import { inspectTelemetryData, sanitizeNumeric, sortChronological } from '@/lib/utils/chartData';
 import { ChartTelemetryStatus } from '@/components/charts/ChartTelemetryStatus';
 import { ProvenanceBadge } from '@/components/common/ProvenanceBadge';
+import { StationUnavailableState } from '@/components/common/StationUnavailableState';
 
 export default function EnergyPage() {
   const { activeStationId, station, addToast } = useStation();
@@ -203,27 +204,14 @@ export default function EnergyPage() {
 
       {!hasData ? (
         /* Empty State */
-        <GlassCard className="p-10 text-center space-y-4">
-          <Database className="w-10 h-10 text-foreground-muted mx-auto" />
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-foreground">
-              No Energy Load Telemetry in PostgreSQL for {station?.name || activeStationId.toUpperCase()}
-            </h3>
-            <p className="text-xs text-foreground-muted max-w-md mx-auto">
-              The database currently contains zero energy demand observations for this station node in the `energy_loads` table.
-            </p>
-          </div>
-          <div className="flex items-center justify-center gap-3">
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={RefreshCw}
-              onClick={fetchEnergyData}
-            >
-              Refresh Sensor Stream
-            </Button>
-          </div>
-        </GlassCard>
+        <StationUnavailableState
+          title="Electrical telemetry unavailable"
+          subsystemName="electrical load"
+          description="No measured Bharati electrical-load dataset is currently available."
+          stationName={station?.name || (activeStationId === 'bharati' ? 'Bharati Research Station' : 'Maitri Research Station')}
+          icon={Zap}
+          provenanceType="UNAVAILABLE"
+        />
       ) : (
         <>
           {/* 1. Live Energy KPI Sub-System Cards */}

@@ -20,6 +20,7 @@ import {
   Radio,
   Clock,
   Info,
+  ShieldAlert,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -44,7 +45,7 @@ export default function WeatherPage() {
   const [totalRecords, setTotalRecords] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'temperature' | 'wind' | 'solar' | 'pressure'>('temperature');
+  const [activeTab, setActiveTab] = useState<'temperature' | 'wind' | 'humidity' | 'pressure' | 'solar'>('temperature');
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -59,10 +60,10 @@ export default function WeatherPage() {
       const current = await apiClient.getCurrentWeather(activeStationId);
       setCurrentWeather(current);
 
-      // 2. Fetch historical records using range API (1985-01-01 to 2016-12-31, limit 1000)
+      // 2. Fetch historical records across full date envelope (1985 to 2025, limit 1000)
       const rangeRecords = await apiClient.getWeatherRange(activeStationId, {
         start: '1985-01-01T00:00:00.000Z',
-        end: '2016-12-31T23:59:59.999Z',
+        end: '2025-12-31T23:59:59.999Z',
         limit: 1000,
       });
 
@@ -95,11 +96,11 @@ export default function WeatherPage() {
     fetchWeatherData();
   }, [fetchWeatherData]);
 
-  // Date-aware X-axis tick formatter for multi-decade historical timeline
+  // Date-aware X-axis tick formatter for multi-year historical timeline
   const formatTimeLabel = (ts?: string | Date) => {
     if (!ts) return '';
     const d = new Date(ts);
-    return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
   };
 
   // Full timestamp formatter for tooltips & table
@@ -120,6 +121,16 @@ export default function WeatherPage() {
   const hasSolarData = useMemo(() => {
     return history.some((r) => r.solarRadiation !== null && r.solarRadiation !== undefined);
   }, [history]);
+
+  // Derive date range label from active records
+  const dateRangeLabel = useMemo(() => {
+    if (history.length === 0) return '';
+    const firstYear = new Date(history[0].timestamp || history[0].createdAt || Date.now()).getUTCFullYear();
+    const lastYear = new Date(history[history.length - 1].timestamp || history[history.length - 1].createdAt || Date.now()).getUTCFullYear();
+    return firstYear === lastYear ? `${firstYear}` : `${firstYear}–${lastYear}`;
+  }, [history]);
+
+  const isBharati = activeStationId === 'bharati';
 
   if (loading) {
     return (
@@ -179,13 +190,13 @@ export default function WeatherPage() {
       {/* Title & Station Context Header */}
       <PageHeader
         title="Meteorology & Atmospheric Telemetry"
-        description={`Historical IMD sensor observations & real-time automated weather stream | ${station?.name || activeStationId.toUpperCase()}`}
+        description={`Real observational AWS surface telemetry & historical meteorological time-series | ${station?.name || activeStationId.toUpperCase()}`}
         breadcrumbs={[
           { label: 'Operations', href: '/dashboard' },
           { label: 'Weather' },
         ]}
         badge={{
-          label: hasData ? `${totalRecords} HISTORICAL OBSERVATIONS` : 'NO TELEMETRY',
+          label: hasData ? `${totalRecords} HISTORICAL OBSERVATIONS (${dateRangeLabel || 'REAL'})` : 'NO TELEMETRY',
           variant: hasData ? 'default' : 'neutral',
         }}
         actions={
@@ -238,7 +249,7 @@ export default function WeatherPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                    Latest AWS Surface Observation
+                    Latest AWS Surface Observation ({isBharati ? 'Bharati Station' : 'Maitri Station'})
                   </span>
                   <ProvenanceBadge type="REAL_MEASURED" size="xs" />
                 </div>
@@ -258,10 +269,10 @@ export default function WeatherPage() {
                     <Thermometer size={14} className="text-accent" />
                   </div>
                   <div className="text-xl font-bold text-foreground font-mono">
-                    {currentWeather.temperature != null ? `${currentWeather.temperature}°C` : 'N/A'}
+                    {currentWeather.temperature != null ? `${currentWeather.temperature.toFixed(1)}°C` : 'N/A'}
                   </div>
                   <div className="text-[10px] text-foreground-muted mt-1">
-                    Chill: {currentWeather.apparentTemperature != null ? `${currentWeather.apparentTemperature}°C` : 'N/A'}{' '}
+                    Chill: {currentWeather.apparentTemperature != null ? `${currentWeather.apparentTemperature.toFixed(1)}°C` : 'N/A'}{' '}
                     <span className="text-[9px] text-accent-bright font-semibold">(Derived)</span>
                   </div>
                 </GlassCard>
@@ -273,10 +284,10 @@ export default function WeatherPage() {
                     <Wind size={14} className="text-blue-400" />
                   </div>
                   <div className="text-xl font-bold text-blue-300 font-mono">
-                    {currentWeather.windSpeed != null ? `${currentWeather.windSpeed} m/s` : 'N/A'}
+                    {currentWeather.windSpeed != null ? `${currentWeather.windSpeed.toFixed(1)} m/s` : 'N/A'}
                   </div>
                   <div className="text-[10px] text-foreground-muted mt-1">
-                    Gust: {currentWeather.windGust != null ? `${currentWeather.windGust} m/s` : 'N/A'}{' '}
+                    Gust: {currentWeather.windGust != null ? `${currentWeather.windGust.toFixed(1)} m/s` : 'N/A'}{' '}
                     <span className="text-[9px] text-blue-400 font-semibold">(Derived)</span>
                   </div>
                 </GlassCard>
@@ -302,12 +313,26 @@ export default function WeatherPage() {
                     <Gauge size={14} className="text-purple-400" />
                   </div>
                   <div className="text-xl font-bold text-purple-300 font-mono">
-                    {currentWeather.pressure != null ? `${currentWeather.pressure}` : 'N/A'}
+                    {currentWeather.pressure != null ? `${currentWeather.pressure.toFixed(1)}` : 'N/A'}
                   </div>
-                  <div className="text-[10px] text-foreground-muted mt-1">hPa (Surface)</div>
+                  <div className="text-[10px] text-foreground-muted mt-1">hPa (Surface Barometer)</div>
                 </GlassCard>
 
-                {/* 5. Solar Radiation */}
+                {/* 5. Relative Humidity */}
+                <GlassCard hover className="p-3.5">
+                  <div className="flex items-center justify-between text-foreground-muted text-[10px] mb-1 font-mono uppercase tracking-wider">
+                    <span>HUMIDITY</span>
+                    <Droplets size={14} className="text-accent-bright" />
+                  </div>
+                  <div className="text-xl font-bold text-foreground font-mono">
+                    {currentWeather.humidity != null ? `${currentWeather.humidity.toFixed(1)}%` : 'N/A'}
+                  </div>
+                  <div className="text-[10px] text-foreground-muted mt-1">
+                    {currentWeather.humidity && currentWeather.humidity > 80 ? 'High Moisture' : 'Polar Air Mass'}
+                  </div>
+                </GlassCard>
+
+                {/* 6. Solar Radiation */}
                 <GlassCard hover className="p-3.5 border-amber-500/20 bg-amber-500/[0.03]">
                   <div className="flex items-center justify-between text-foreground-muted text-[10px] mb-1 font-mono uppercase tracking-wider">
                     <span>SOLAR GHI</span>
@@ -316,27 +341,15 @@ export default function WeatherPage() {
                   <div className="text-xl font-bold text-amber-300 font-mono">
                     {currentWeather.solarRadiation != null ? `${currentWeather.solarRadiation}` : 'N/A'}
                   </div>
-                  <div className="text-[10px] text-foreground-muted mt-1">W/m² Irradiance</div>
-                </GlassCard>
-
-                {/* 6. Relative Humidity */}
-                <GlassCard hover className="p-3.5">
-                  <div className="flex items-center justify-between text-foreground-muted text-[10px] mb-1 font-mono uppercase tracking-wider">
-                    <span>HUMIDITY</span>
-                    <Droplets size={14} className="text-accent-bright" />
-                  </div>
-                  <div className="text-xl font-bold text-foreground font-mono">
-                    {currentWeather.humidity != null ? `${currentWeather.humidity}%` : 'N/A'}
-                  </div>
                   <div className="text-[10px] text-foreground-muted mt-1">
-                    {currentWeather.humidity && currentWeather.humidity > 80 ? 'High Moisture' : 'Dry Polar Air'}
+                    {currentWeather.solarRadiation != null ? 'W/m² Irradiance' : 'No Pyranometer Channel'}
                   </div>
                 </GlassCard>
               </div>
             </div>
           )}
 
-          {/* 2. Meteorological Sensor Trends Chart (Historical Dataset 1985–2016) */}
+          {/* 2. Meteorological Sensor Trends Chart */}
           {history.length > 0 && (
             <GlassCard className="p-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-white/6">
@@ -344,17 +357,17 @@ export default function WeatherPage() {
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-2">
                       <CloudSun className="w-4 h-4 text-accent" />
-                      Historical Weather Observations ({history.length} Data Points: 1985–2016)
+                      Historical Weather Observations ({history.length} Data Points: {dateRangeLabel})
                     </h3>
                     <ProvenanceBadge type="REAL_MEASURED" size="xs" />
                   </div>
                   <p className="text-xs text-foreground-muted mt-0.5">
-                    Chronological IMD meteorological sensor telemetry retrieved from PostgreSQL `weather_data`
+                    Chronological AWS meteorological observations retrieved from PostgreSQL `weather_data`
                   </p>
                 </div>
 
                 {/* Metric Tab Selectors */}
-                <div className="flex items-center gap-1 p-1 bg-white/[0.04] rounded-lg border border-white/6 text-xs">
+                <div className="flex items-center gap-1 p-1 bg-white/[0.04] rounded-lg border border-white/6 text-xs flex-wrap">
                   <button
                     onClick={() => setActiveTab('temperature')}
                     className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
@@ -373,17 +386,17 @@ export default function WeatherPage() {
                         : 'text-foreground-muted hover:text-foreground'
                     }`}
                   >
-                    Wind
+                    Wind Speed
                   </button>
                   <button
-                    onClick={() => setActiveTab('solar')}
+                    onClick={() => setActiveTab('humidity')}
                     className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                      activeTab === 'solar'
+                      activeTab === 'humidity'
                         ? 'bg-accent text-white shadow-sm'
                         : 'text-foreground-muted hover:text-foreground'
                     }`}
                   >
-                    Solar
+                    Humidity
                   </button>
                   <button
                     onClick={() => setActiveTab('pressure')}
@@ -394,6 +407,16 @@ export default function WeatherPage() {
                     }`}
                   >
                     Pressure
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('solar')}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                      activeTab === 'solar'
+                        ? 'bg-accent text-white shadow-sm'
+                        : 'text-foreground-muted hover:text-foreground'
+                    }`}
+                  >
+                    Solar
                   </button>
                 </div>
               </div>
@@ -499,6 +522,46 @@ export default function WeatherPage() {
                           activeDot={{ r: 5, fill: '#60a5fa' }}
                         />
                       </AreaChart>
+                    ) : activeTab === 'humidity' ? (
+                      <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="humidGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                        <XAxis
+                          dataKey="timestamp"
+                          tickFormatter={formatTimeLabel}
+                          stroke="#8A8F98"
+                          fontSize={10}
+                          minTickGap={40}
+                        />
+                        <YAxis stroke="#8A8F98" fontSize={10} unit="%" domain={[0, 100]} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#0a0a0c',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderRadius: '12px',
+                            fontFamily: 'monospace',
+                            fontSize: '11px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                          }}
+                          labelFormatter={(v) => formatDateLabel(v)}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="humidity"
+                          name="Relative Humidity (%)"
+                          stroke="#06b6d4"
+                          strokeWidth={2}
+                          fill="url(#humidGradient)"
+                          dot={{ r: 2, fill: '#06b6d4' }}
+                          activeDot={{ r: 5, fill: '#22d3ee' }}
+                          connectNulls={false}
+                        />
+                      </AreaChart>
                     ) : activeTab === 'solar' ? (
                       hasSolarData ? (
                         <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -544,11 +607,16 @@ export default function WeatherPage() {
                           <div className="p-3 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400">
                             <Sun className="w-6 h-6" />
                           </div>
-                          <h4 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wider">
-                            Solar radiation data unavailable for historical Maitri observations
-                          </h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wider">
+                              Solar radiation unavailable
+                            </h4>
+                            <ProvenanceBadge type="UNAVAILABLE" size="xs" />
+                          </div>
                           <p className="text-xs text-foreground-muted max-w-md">
-                            The historical IMD Maitri dataset (1985–2016) does not contain solar radiation sensor instrumentation. Values are preserved as NULL in the database without synthetic estimation.
+                            {isBharati
+                              ? 'Unavailable — no measured Bharati pyranometer data in the uploaded dataset. Values are preserved as NULL without synthetic estimation.'
+                              : 'The historical IMD Maitri dataset does not contain solar radiation sensor instrumentation. Values are preserved as NULL in the database without synthetic estimation.'}
                           </p>
                         </div>
                       )
@@ -604,7 +672,7 @@ export default function WeatherPage() {
                   </span>
                 </div>
                 <span className="text-xs text-foreground-muted font-mono">
-                  Displaying {history.length} historical observations (1985–2016)
+                  Displaying {history.length} historical observations ({dateRangeLabel})
                 </span>
               </div>
 
@@ -616,10 +684,10 @@ export default function WeatherPage() {
                       <th className="py-2.5 px-3">Temp (°C)</th>
                       <th className="py-2.5 px-3">Wind (m/s)</th>
                       <th className="py-2.5 px-3">Dir</th>
-                      <th className="py-2.5 px-3">Pressure</th>
+                      <th className="py-2.5 px-3">Pressure (hPa)</th>
+                      <th className="py-2.5 px-3">Humidity (%)</th>
                       <th className="py-2.5 px-3">Solar (W/m²)</th>
-                      <th className="py-2.5 px-3">Humidity</th>
-                      <th className="py-2.5 px-3 text-right">Record ID</th>
+                      <th className="py-2.5 px-3 text-right">Provenance</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/4 font-mono text-xs">
@@ -640,14 +708,14 @@ export default function WeatherPage() {
                         <td className="py-2 px-3 text-purple-300">
                           {record.pressure != null ? `${record.pressure} hPa` : <span className="text-foreground-muted italic">N/A</span>}
                         </td>
-                        <td className="py-2 px-3 text-amber-300">
-                          {record.solarRadiation != null ? record.solarRadiation : <span className="text-foreground-muted italic">N/A</span>}
-                        </td>
                         <td className="py-2 px-3 text-foreground">
-                          {record.humidity != null ? `${record.humidity}%` : <span className="text-foreground-muted italic">N/A</span>}
+                          {record.humidity != null ? `${record.humidity}%` : <span className="text-rose-400 italic">NULL (Sensor)</span>}
                         </td>
-                        <td className="py-2 px-3 text-right text-[10px] text-foreground-muted font-mono truncate max-w-[120px]">
-                          {record.id ? record.id.substring(0, 8) + '...' : 'PG-NODE'}
+                        <td className="py-2 px-3 text-amber-300">
+                          {record.solarRadiation != null ? `${record.solarRadiation}` : <span className="text-foreground-muted italic">NULL</span>}
+                        </td>
+                        <td className="py-2 px-3 text-right text-[10px] font-mono">
+                          <ProvenanceBadge type="REAL_MEASURED" size="xs" />
                         </td>
                       </tr>
                     ))}

@@ -36,6 +36,7 @@ import { inspectTelemetryData, sanitizeNumeric, sortChronological } from '@/lib/
 import { ChartTelemetryStatus } from '@/components/charts/ChartTelemetryStatus';
 import { HistoricalSolarChart } from '@/components/solar/HistoricalSolarChart';
 import { ProvenanceBadge } from '@/components/common/ProvenanceBadge';
+import { StationUnavailableState } from '@/components/common/StationUnavailableState';
 
 export default function RenewablePage() {
   const { activeStationId, station, addToast } = useStation();
@@ -203,27 +204,14 @@ export default function RenewablePage() {
 
       {!hasData ? (
         /* Empty State */
-        <GlassCard className="p-10 text-center space-y-4">
-          <Database className="w-10 h-10 text-foreground-muted mx-auto" />
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-foreground">
-              No Renewable Generation Telemetry in PostgreSQL for {station?.name || activeStationId.toUpperCase()}
-            </h3>
-            <p className="text-xs text-foreground-muted max-w-md mx-auto">
-              The database currently contains zero solar or wind generation observations for this station node in the `renewable_generation` table.
-            </p>
-          </div>
-          <div className="flex items-center justify-center gap-3">
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={RefreshCw}
-              onClick={fetchRenewableData}
-            >
-              Refresh Sensor Stream
-            </Button>
-          </div>
-        </GlassCard>
+        <StationUnavailableState
+          title="Renewable telemetry unavailable"
+          subsystemName="renewable generation"
+          description="Measured Bharati renewable-generation telemetry is not currently available."
+          stationName={station?.name || (activeStationId === 'bharati' ? 'Bharati Research Station' : 'Maitri Research Station')}
+          icon={Sun}
+          provenanceType="UNAVAILABLE"
+        />
       ) : (
         <>
           {/* 1. Live Renewable KPI Generation Cards */}
@@ -652,13 +640,15 @@ export default function RenewablePage() {
         </>
       )}
 
-      {/* 4. Modeled Historical Solar Climatology Time Series */}
-      <div className="pt-2">
-        <HistoricalSolarChart
-          stationId={activeStationId}
-          stationName={station?.name}
-        />
-      </div>
+      {/* 4. Modeled Historical Solar Climatology Time Series (Maitri) */}
+      {activeStationId !== 'bharati' && (
+        <div className="pt-2">
+          <HistoricalSolarChart
+            stationId={activeStationId}
+            stationName={station?.name}
+          />
+        </div>
+      )}
     </div>
   );
 }

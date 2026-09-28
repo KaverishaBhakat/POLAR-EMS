@@ -7,6 +7,7 @@ import { GeneratorRecord, GeneratorReadingRecord } from '@/lib/types';
 import { LoadingSkeleton } from '@/components/common/Toast';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { PageHeader, GlassCard, Button } from '@/components/ui';
+import { StationUnavailableState } from '@/components/common/StationUnavailableState';
 import {
   Cpu,
   Zap,
@@ -180,27 +181,14 @@ export default function GeneratorsPage() {
 
       {generators.length === 0 ? (
         /* Empty State */
-        <GlassCard className="p-10 text-center space-y-4">
-          <Database className="w-10 h-10 text-foreground-muted mx-auto" />
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-foreground">
-              No Generator Units in PostgreSQL for {station?.name || activeStationId.toUpperCase()}
-            </h3>
-            <p className="text-xs text-foreground-muted max-w-md mx-auto">
-              The database currently contains zero generator records for this station node in the `generators` table.
-            </p>
-          </div>
-          <div className="flex items-center justify-center gap-3">
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={RefreshCw}
-              onClick={fetchGeneratorsData}
-            >
-              Refresh Fleet
-            </Button>
-          </div>
-        </GlassCard>
+        <StationUnavailableState
+          title="Generator telemetry unavailable"
+          subsystemName="generator fleet"
+          description="No measured Bharati generator telemetry is currently available."
+          stationName={station?.name || (activeStationId === 'bharati' ? 'Bharati Research Station' : 'Maitri Research Station')}
+          icon={Fuel}
+          provenanceType="UNAVAILABLE"
+        />
       ) : (
         <>
           {/* 1. Fleet Top KPI Cards */}

@@ -9,6 +9,7 @@ import { RenewableChart } from '@/components/charts/RenewableChart';
 import { WeatherForecastChart } from '@/components/charts/WeatherForecastChart';
 import { WeatherTelemetry } from '@/components/forecast/WeatherTelemetry';
 import { ForecastDrivers } from '@/components/forecast/ForecastDrivers';
+import { StationUnavailableState } from '@/components/common/StationUnavailableState';
 import { LoadingSkeleton } from '@/components/common/Toast';
 import { TrendingUp, Cpu, Sparkles } from 'lucide-react';
 import { ProvenanceBadge } from '@/components/common/ProvenanceBadge';
@@ -63,7 +64,9 @@ export default function ForecastPage() {
     };
   }, [activeStationId]);
 
-  if (loading || !metrics) {
+  const isBharati = activeStationId === 'bharati';
+
+  if (loading || (!isBharati && !metrics)) {
     return (
       <div className="space-y-4">
         <LoadingSkeleton className="h-20" />
@@ -78,11 +81,11 @@ export default function ForecastPage() {
       {/* Page Header */}
       <PageHeader
         title="Machine Learning Energy & Weather Forecast"
-        subtitle={`24-hour lookahead regression: station demand, ambient temperature, and renewable generation | ${station?.name || 'Maitri'}`}
+        subtitle={`24-hour lookahead regression: station demand, ambient temperature, and renewable generation | ${station?.name || (isBharati ? 'Bharati Research Station' : 'Maitri Research Station')}`}
         icon={<TrendingUp className="w-5 h-5 text-accent-bright" />}
         badge={{
-          label: "ML / MODELED",
-          variant: "accent"
+          label: isBharati ? "FORECAST SCOPE" : "ML / MODELED",
+          variant: isBharati ? "neutral" : "accent"
         }}
         breadcrumbs={[
           { label: "Intelligence", href: "/forecast" },
@@ -90,26 +93,41 @@ export default function ForecastPage() {
         ]}
       />
 
-      {/* Weather Telemetry Inputs */}
+      {/* Real Weather Telemetry Observation */}
       <WeatherTelemetry weather={weather} />
 
-      {/* 24-Hour ML Ambient Temperature Forecast */}
-      <WeatherForecastChart
-        data={weatherForecast}
-        loading={weatherLoading}
-        error={weatherError}
-        onRefresh={fetchWeatherForecast}
-        stationName={station?.name || activeStationId.toUpperCase()}
-      />
+      {isBharati ? (
+        /* BHARATI FORECAST UNAVAILABLE NOTICE */
+        <StationUnavailableState
+          title="Bharati-specific forecast unavailable"
+          subsystemName="ML regression forecast"
+          description="The current machine learning forecasting models (demand & temperature regression) are trained and configured for Maitri Station historical climatology. Historical Bharati observations remain available under Meteorology."
+          stationName="Bharati Research Station"
+          icon={TrendingUp}
+          provenanceType="UNAVAILABLE"
+        />
+      ) : (
+        /* MAITRI ML FORECAST CHARTS */
+        <>
+          {/* 24-Hour ML Ambient Temperature Forecast */}
+          <WeatherForecastChart
+            data={weatherForecast}
+            loading={weatherLoading}
+            error={weatherError}
+            onRefresh={fetchWeatherForecast}
+            stationName={station?.name || activeStationId.toUpperCase()}
+          />
 
-      {/* A. Load Demand Forecast Chart with Confidence Intervals */}
-      <LoadForecastChart data={forecastPoints} metrics={metrics} />
+          {/* A. Load Demand Forecast Chart with Confidence Intervals */}
+          {metrics && <LoadForecastChart data={forecastPoints} metrics={metrics} />}
 
-      {/* B. Renewable Generation Forecast Chart (Solar + Wind) */}
-      <RenewableChart data={forecastPoints} />
+          {/* B. Renewable Generation Forecast Chart (Solar + Wind) */}
+          <RenewableChart data={forecastPoints} />
 
-      {/* C. Forecast Sensitivity Drivers & Correlation Matrix */}
-      <ForecastDrivers />
+          {/* C. Forecast Sensitivity Drivers & Correlation Matrix */}
+          <ForecastDrivers />
+        </>
+      )}
     </div>
   );
 }

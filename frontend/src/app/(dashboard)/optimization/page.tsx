@@ -14,6 +14,7 @@ import { OptimizationKPICards } from '@/components/optimization/OptimizationKPIC
 import { ScenarioDisclosure } from '@/components/optimization/ScenarioDisclosure';
 import { OptimizationDecision } from '@/components/optimization/OptimizationDecision';
 import { DataProvenance } from '@/components/optimization/DataProvenance';
+import { StationUnavailableState } from '@/components/common/StationUnavailableState';
 import { LoadingSkeleton } from '@/components/common/Toast';
 import { Sliders, Sparkles, AlertTriangle, RefreshCw, Layers, ShieldCheck } from 'lucide-react';
 import { PageHeader, GlassCard, Button } from '@/components/ui';
@@ -28,6 +29,14 @@ export default function OptimizationPage() {
   const [error, setError] = useState<string | null>(null);
 
   const loadOptimizationData = useCallback(async () => {
+    if (activeStationId === 'bharati') {
+      setLoading(false);
+      setOptimizationData(null);
+      setMetrics(null);
+      setDispatchSchedule([]);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -53,6 +62,8 @@ export default function OptimizationPage() {
     loadOptimizationData();
   }, [loadOptimizationData]);
 
+  const isBharati = activeStationId === 'bharati';
+
   // Loading State
   if (loading) {
     return (
@@ -71,8 +82,38 @@ export default function OptimizationPage() {
     );
   }
 
-  // Error / Unavailable State without crash
-  if (error && (!metrics || dispatchSchedule.length === 0)) {
+  // Bharati Unavailable State
+  if (isBharati) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Microgrid Dispatch Optimization"
+          subtitle="Station: Bharati Research Station (Larsemann Hills)"
+          icon={<Sliders className="w-5 h-5 text-emerald-400" />}
+          badge={{
+            label: "UNAVAILABLE FOR BHARATI",
+            variant: "warning"
+          }}
+          breadcrumbs={[
+            { label: "Intelligence", href: "/optimization" },
+            { label: "OR-Tools MILP" }
+          ]}
+        />
+
+        <StationUnavailableState
+          title="Optimization unavailable for Bharati"
+          subsystemName="dispatch optimization"
+          description="A validated Bharati electrical-load, BESS, generator and renewable-generation dataset is required before station-specific dispatch optimization can be presented."
+          stationName="Bharati Research Station"
+          icon={Sliders}
+          provenanceType="UNAVAILABLE"
+        />
+      </div>
+    );
+  }
+
+  // Error / Unavailable State without crash for Maitri
+  if (!metrics || !optimizationData || dispatchSchedule.length === 0) {
     return (
       <div className="space-y-6">
         <PageHeader
@@ -94,7 +135,7 @@ export default function OptimizationPage() {
               Optimization Model Unavailable
             </h2>
             <p className="text-xs text-slate-300 leading-relaxed font-mono">
-              {error}
+              {error || `Optimization dispatch data is currently loading or unavailable for ${station?.name || activeStationId}.`}
             </p>
             <p className="text-[11px] text-slate-400 font-mono">
               The OR-Tools MILP optimization pipeline currently features the December historical climatology solar model for <strong className="text-amber-300">Maitri Station</strong>.
@@ -116,7 +157,7 @@ export default function OptimizationPage() {
     );
   }
 
-  // Active / Ready State
+  // Active / Ready State for Maitri
   return (
     <div className="space-y-6">
       {/* 1. Header & Scenario Badge */}
@@ -138,58 +179,52 @@ export default function OptimizationPage() {
       {metrics && (
         <OptimizationRunner
           metrics={metrics}
-          onMetricsUpdate={(newM) => setMetrics(newM)}
+          onMetricsUpdate={(newMetrics) => setMetrics(newMetrics)}
           onResultUpdate={(newRes) => {
             setOptimizationData(newRes);
-            if (newRes.metrics) setMetrics(newRes.metrics);
-            if (newRes.dispatchSchedule) setDispatchSchedule(newRes.dispatchSchedule);
+            setMetrics(newRes.metrics);
+            setDispatchSchedule(newRes.dispatchSchedule || []);
           }}
         />
       )}
 
-      {/* 3. Scenario / Assumption Disclosure Notice (Section 7) */}
-      <ScenarioDisclosure
-        metadata={optimizationData?.scenarioMetadata}
-        stationName={station?.name || activeStationId}
-      />
-
-      {/* 4. Optimization KPI Cards (Section 6) */}
-      {optimizationData && metrics && (
+      {/* 3. Operational Dispatch Summary KPIs */}
+      {metrics && optimizationData && (
         <OptimizationKPICards
           optimizationData={optimizationData}
           metrics={metrics}
         />
       )}
 
-      {/* 5. Baseline vs POLAR-EMS Optimized Comparison (Fuel Saved Banner & 6 tiles) */}
-      {metrics && <OptimizationComparison metrics={metrics} />}
-
-      {/* 6. Dynamic Optimization Decision Explanation (Section 8) */}
-      {optimizationData && metrics && (
-        <OptimizationDecision
-          optimizationData={optimizationData}
-          metrics={metrics}
-          dispatchSchedule={dispatchSchedule}
-        />
-      )}
-
-      {/* 7. 24-Hour Stacked Generation Dispatch Schedule (Section 4) */}
-      <EnergyDispatchChart data={dispatchSchedule} />
-
-      {/* 8. 24-Hour Battery SOC & Safety Envelopes (Section 5) */}
-      <BatterySOCChart
-        data={dispatchSchedule}
-        minSOCLimit={optimizationData?.minimumBatterySOC ?? 20}
-        maxSOCLimit={optimizationData?.maximumBatterySOC ?? 95}
+      {/* 4. Optimization Engine Decision Rationale & Recommendation */}
+      <OptimizationDecision
+        optimizationData={optimizationData}
+        metrics={metrics}
+        dispatchSchedule={dispatchSchedule}
       />
 
-      {/* 9. 24-Hour Generator Schedule & Commitment Table (Section 9) */}
+      {/* 5. 24-Hour Power Balance & Economic Dispatch Schedule Chart */}
+      <EnergyDispatchChart data={dispatchSchedule} />
+
+      {/* 6. Co-Optimized BESS State-of-Charge Profile Chart */}
+      <BatterySOCChart data={dispatchSchedule} />
+
+      {/* 7. Comprehensive Baseline vs Optimized System Performance Comparison */}
+      <OptimizationComparison metrics={metrics} />
+
+      {/* 8. Tabular Hourly Generator Commitment Schedule */}
       <GeneratorScheduleTable dispatchSchedule={dispatchSchedule} />
 
-      {/* 10. Strategy Card & Core Architectural Control Policy */}
+      {/* 9. Operational Dispatch Strategy Reference */}
       <StrategyCard />
 
-      {/* 11. Data & Model Provenance Section (Section 11) */}
+      {/* 10. Formal Scenario Methodology & Environmental Disclosures */}
+      <ScenarioDisclosure
+        metadata={optimizationData.scenarioMetadata}
+        stationName={station?.name}
+      />
+
+      {/* 11. Technical Data Provenance & Methodology Documentation */}
       <DataProvenance />
     </div>
   );
