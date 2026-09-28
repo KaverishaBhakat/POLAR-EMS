@@ -176,7 +176,7 @@ class ReasoningService {
             tool: toolName,
             station: stationCode,
             data: toolResult.data || toolResult,
-            provenance: toolResult.provenance || 'MODELED / SCENARIO',
+            provenance: toolResult.provenance || (toolResult.success === false ? 'UNAVAILABLE' : 'MODELED / SCENARIO'),
             source: toolResult.source || 'POSTGRESQL',
           });
 

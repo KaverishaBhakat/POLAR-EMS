@@ -20,6 +20,11 @@ async function getCurrentRenewable({ stationId }) {
   }
 
   const station = await stationService.getStationById(stationId.trim());
+
+  if (station.code === 'BHARATI') {
+    throw ApiError.notFound('Measured renewable generation telemetry is not available for Bharati Station.', 'RENEWABLE_UNAVAILABLE');
+  }
+
   const renewable = await renewableService.getLatestRenewable(station.id);
 
   return {

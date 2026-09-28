@@ -19,6 +19,11 @@ async function getCurrentBattery({ stationId }) {
   }
 
   const station = await stationService.getStationById(stationId.trim());
+
+  if (station.code === 'BHARATI') {
+    throw ApiError.notFound('Measured battery storage telemetry is not available for Bharati Station.', 'BATTERY_UNAVAILABLE');
+  }
+
   const batteries = await batteryService.getStationBatteries(station.id);
 
   if (!batteries || batteries.length === 0) {

@@ -47,10 +47,6 @@ async function runResilienceScenarioTool({ stationId, scenarioId, horizonHours =
     initialSoc: soc,
   });
 
-  if (simResult.status === 'ERROR' || simResult.status === 'DEGRADED') {
-    throw ApiError.badRequest(simResult.message || 'Simulation execution failed on ML service.', 'SIMULATION_FAILED');
-  }
-
   return {
     success: true,
     tool: 'run_resilience_scenario',

@@ -41,6 +41,31 @@ describe('AI Assistant - Intent Classification & Deterministic Routing', () => {
     expect(intents).toContain(INTENT_TYPES.KNOWLEDGE);
   });
 
+  test('Classifies historical weather query as HISTORICAL_DATA', () => {
+    const intents = toolSelectionService.classifyIntent('Show me the recent weather history for Bharati.');
+    expect(intents).toContain(INTENT_TYPES.HISTORICAL_DATA);
+  });
+
+  test('Classifies past date weather query as HISTORICAL_DATA', () => {
+    const intents = toolSelectionService.classifyIntent('Show me Bharati weather from January 2018.');
+    expect(intents).toContain(INTENT_TYPES.HISTORICAL_DATA);
+  });
+
+  test('Classifies temperature change query as HISTORICAL_DATA', () => {
+    const intents = toolSelectionService.classifyIntent("How has Bharati's temperature changed historically?");
+    expect(intents).toContain(INTENT_TYPES.HISTORICAL_DATA);
+  });
+
+  test('Classifies latest temperature query as LIVE_TELEMETRY', () => {
+    const intents = toolSelectionService.classifyIntent('What is the latest Bharati temperature?');
+    expect(intents).toContain(INTENT_TYPES.LIVE_TELEMETRY);
+  });
+
+  test('Classifies how cold right now query as LIVE_TELEMETRY', () => {
+    const intents = toolSelectionService.classifyIntent('How cold is Bharati right now?');
+    expect(intents).toContain(INTENT_TYPES.LIVE_TELEMETRY);
+  });
+
   test('Classifies mixed question with both telemetry and explanation', () => {
     const intents = toolSelectionService.classifyIntent('Why is the current battery SOC low and what is the system specification?');
     expect(intents.length).toBeGreaterThan(1);
