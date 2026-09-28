@@ -13,71 +13,96 @@ import {
   MapPin,
   Bell,
   Settings,
-  Shield,
-  Radio,
+  ShieldCheck,
   ChevronLeft,
   ChevronRight,
-  User,
-  Compass,
   Zap,
   UploadCloud,
   CloudSun,
   Leaf,
   Cpu,
   BatteryCharging,
-  ShieldCheck,
   BrainCircuit,
+  Compass,
+  Sparkles,
+  LucideIcon,
 } from 'lucide-react';
 
-const NAV_ITEMS = [
-  { name: 'Dashboard', href: '/dashboard', icon: Activity, badge: 'LIVE' },
-  { name: 'AI Assistant', href: '/ai-assistant', icon: BrainCircuit, badge: 'SCADA-AI' },
-  { name: 'Energy', href: '/energy', icon: Zap, badge: 'LOAD' },
-  { name: 'Renewables', href: '/renewable', icon: Leaf, badge: 'CLEAN' },
-  { name: 'Generators', href: '/generators', icon: Cpu, badge: 'GENSET' },
-  { name: 'Battery BESS', href: '/battery', icon: BatteryCharging, badge: 'STORAGE' },
-  { name: 'Weather', href: '/weather', icon: CloudSun, badge: 'AWS' },
-  { name: 'Data Ingestion', href: '/data-upload', icon: UploadCloud, badge: 'INGEST' },
-  { name: 'Forecast', href: '/forecast', icon: TrendingUp, badge: 'AI' },
-  { name: 'Optimization', href: '/optimization', icon: Sliders, badge: 'SAVE 21%' },
-  { name: 'Resilience', href: '/resilience', icon: ShieldCheck, badge: 'STRESS' },
-  { name: 'Simulation', href: '/simulation', icon: PlaySquare, badge: 'TEST' },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'Stations', href: '/stations', icon: MapPin },
-  { name: 'Alerts', href: '/alerts', icon: Bell, showBadgeCount: true },
-  { name: 'Settings', href: '/settings', icon: Settings },
+interface NavGroup {
+  title: string;
+  items: {
+    name: string;
+    href: string;
+    icon: LucideIcon;
+    badge?: string;
+    showBadgeCount?: boolean;
+  }[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    title: 'OPERATIONS',
+    items: [
+      { name: 'Dashboard', href: '/dashboard', icon: Activity, badge: 'LIVE' },
+      { name: 'Stations', href: '/stations', icon: MapPin },
+      { name: 'Weather', href: '/weather', icon: CloudSun },
+      { name: 'Energy', href: '/energy', icon: Zap },
+      { name: 'Renewables', href: '/renewable', icon: Leaf },
+      { name: 'Generators', href: '/generators', icon: Cpu },
+      { name: 'Battery BESS', href: '/battery', icon: BatteryCharging },
+      { name: 'Alerts', href: '/alerts', icon: Bell, showBadgeCount: true },
+    ],
+  },
+  {
+    title: 'INTELLIGENCE',
+    items: [
+      { name: 'AI Assistant', href: '/ai-assistant', icon: BrainCircuit, badge: 'LLM' },
+      { name: 'Forecast', href: '/forecast', icon: TrendingUp },
+      { name: 'Optimization', href: '/optimization', icon: Sliders, badge: 'MILP' },
+      { name: 'Resilience', href: '/resilience', icon: ShieldCheck, badge: 'STRESS' },
+      { name: 'Simulation', href: '/simulation', icon: PlaySquare },
+      { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+    ],
+  },
+  {
+    title: 'DATA',
+    items: [
+      { name: 'Data Ingestion', href: '/data-upload', icon: UploadCloud },
+      { name: 'Settings', href: '/settings', icon: Settings },
+    ],
+  },
 ];
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
-  const { unreadAlertCount, currentUser } = useStation();
+  const { unreadAlertCount, currentUser, activeStationId } = useStation();
   const [collapsed, setCollapsed] = useState(false);
 
   return (
     <aside
-      className={`relative z-40 flex flex-col justify-between bg-[#0A111C] border-r border-[#1B2C42] transition-all duration-300 ${
+      className={`relative z-40 flex flex-col justify-between bg-[#050506] border-r border-white/[0.06] transition-all duration-300 ${
         collapsed ? 'w-18' : 'w-64'
-      } flex-shrink-0 h-screen sticky top-0`}
+      } flex-shrink-0 h-screen sticky top-0 select-none`}
     >
       {/* Top Header & Branding */}
       <div>
-        <div className="flex items-center justify-between px-4 py-4 border-b border-[#1B2C42]/80">
-          <Link href="/dashboard" className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-9 h-9 rounded-md bg-gradient-to-br from-cyan-500/20 to-blue-600/30 border border-cyan-500/50 flex items-center justify-center flex-shrink-0 shadow-[0_0_12px_rgba(6,182,212,0.25)]">
-              <Compass className="w-5 h-5 text-cyan-400 animate-spin-slow" />
+        <div className="flex items-center justify-between px-4 py-4 border-b border-white/[0.06]">
+          <Link href="/dashboard" className="flex items-center gap-2.5 overflow-hidden group">
+            <div className="w-8 h-8 rounded-xl bg-[#5E6AD2]/15 border border-[#5E6AD2]/30 flex items-center justify-center flex-shrink-0 text-[#5E6AD2] group-hover:border-[#5E6AD2]/60 group-hover:bg-[#5E6AD2]/25 transition-all shadow-sm">
+              <Compass className="w-4 h-4" />
             </div>
             {!collapsed && (
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-mono text-sm font-bold tracking-wider text-slate-100">
-                    POLAR<span className="text-cyan-400">-EMS</span>
+                  <span className="text-sm font-semibold tracking-tight text-[#EDEDEF]">
+                    POLAR-EMS
                   </span>
-                  <span className="text-[9px] font-mono px-1 py-0.2 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded">
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-white/[0.06] text-[#8A8F98]">
                     v2.4
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400 tracking-tight font-mono">
-                  INDIAN ANTARCTIC PROGRAMME
+                <p className="text-[10px] text-[#8A8F98] tracking-tight">
+                  Antarctic Microgrid Ops
                 </p>
               </div>
             )}
@@ -85,106 +110,88 @@ export const Sidebar: React.FC = () => {
           <button
             onClick={() => setCollapsed(!collapsed)}
             aria-label="Toggle Sidebar"
-            className="p-1 rounded text-slate-400 hover:text-cyan-400 hover:bg-[#121E2E] transition-colors"
+            className="p-1 rounded-lg text-[#8A8F98] hover:text-[#EDEDEF] hover:bg-white/[0.06] transition-colors"
           >
-            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
           </button>
         </div>
 
-        {/* Operational Status Pill */}
-        <div className="px-3 py-2.5 mx-2 my-2.5 rounded border border-emerald-500/20 bg-emerald-500/5 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+        {/* Navigation Groups */}
+        <nav className="p-2 space-y-4 overflow-y-auto max-h-[calc(100vh-12rem)] scrollbar-thin">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.title} className="space-y-0.5">
+              {!collapsed && (
+                <div className="px-2.5 py-1 text-[10px] font-mono font-medium tracking-wider text-[#8A8F98]/70 uppercase">
+                  {group.title}
+                </div>
+              )}
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
+
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-all duration-150 group ${
+                      isActive
+                        ? 'bg-[#5E6AD2]/15 text-[#EDEDEF] font-medium border border-[#5E6AD2]/30 shadow-[0_0_12px_rgba(94,106,210,0.15)]'
+                        : 'text-[#8A8F98] hover:text-[#EDEDEF] hover:bg-white/[0.04]'
+                    }`}
+                    title={collapsed ? item.name : undefined}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Icon
+                        size={15}
+                        className={`flex-shrink-0 transition-colors ${
+                          isActive ? 'text-[#5E6AD2]' : 'text-[#8A8F98] group-hover:text-[#EDEDEF]'
+                        }`}
+                      />
+                      {!collapsed && <span>{item.name}</span>}
+                    </div>
+
+                    {!collapsed && item.badge && (
+                      <span
+                        className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-medium ${
+                          isActive
+                            ? 'bg-[#5E6AD2]/30 text-[#EDEDEF]'
+                            : 'bg-white/[0.05] text-[#8A8F98]'
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+
+                    {!collapsed && item.showBadgeCount && unreadAlertCount > 0 && (
+                      <span className="text-[10px] px-1.5 py-0.2 bg-rose-500 text-white rounded-full font-bold">
+                        {unreadAlertCount}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+      </div>
+
+      {/* Bottom Node Identity & Status */}
+      <div className="p-3 border-t border-white/[0.06] bg-[#020203]/40">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-xs font-mono font-bold flex-shrink-0">
+            {activeStationId === 'maitri' ? 'M' : 'B'}
+          </div>
           {!collapsed && (
-            <div className="overflow-hidden">
-              <p className="text-[10px] font-mono font-bold tracking-widest text-emerald-400 uppercase">
-                SYSTEM OPERATIONAL
+            <div className="overflow-hidden text-left text-xs leading-tight">
+              <p className="font-medium text-[#EDEDEF] truncate">
+                {activeStationId === 'maitri' ? 'Maitri Node' : 'Bharati Node'}
               </p>
-              <p className="text-[9px] text-slate-400 font-mono truncate">
-                MICROGRID STABLE (50.0 Hz)
+              <p className="text-[10px] text-emerald-400/80 font-mono truncate mt-0.5">
+                SCADA Active
               </p>
             </div>
           )}
         </div>
-
-        {/* Navigation Items */}
-        <nav className="px-2 py-1 space-y-1">
-          {NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`group flex items-center justify-between px-3 py-2.5 rounded-md font-mono text-xs transition-all duration-200 ${
-                  isActive
-                    ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.15)] font-semibold'
-                    : 'text-slate-300 hover:text-slate-100 hover:bg-[#121F30] border border-transparent'
-                }`}
-                title={collapsed ? item.name : undefined}
-              >
-                <div className="flex items-center gap-3">
-                  <Icon
-                    className={`w-4 h-4 flex-shrink-0 transition-colors ${
-                      isActive ? 'text-cyan-400' : 'text-slate-400 group-hover:text-cyan-300'
-                    }`}
-                  />
-                  {!collapsed && <span>{item.name}</span>}
-                </div>
-
-                {!collapsed && item.showBadgeCount && unreadAlertCount > 0 && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse">
-                    {unreadAlertCount}
-                  </span>
-                )}
-
-                {!collapsed && item.badge && !item.showBadgeCount && (
-                  <span
-                    className={`text-[9px] px-1.5 py-0.2 rounded font-mono ${
-                      isActive
-                        ? 'bg-cyan-400/20 text-cyan-200'
-                        : 'bg-[#152336] text-slate-400 group-hover:text-slate-200'
-                    }`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Bottom User / Station Controller Profile */}
-      <div className="p-3 border-t border-[#1B2C42]/80 bg-[#080E17]">
-        {!collapsed ? (
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded bg-[#16273B] border border-cyan-500/30 flex items-center justify-center text-cyan-300 font-mono text-xs font-bold flex-shrink-0">
-              {currentUser?.initials || <User size={14} />}
-            </div>
-            <div className="overflow-hidden flex-1">
-              <p className="text-xs font-semibold text-slate-200 truncate font-mono" title={currentUser?.name}>
-                {currentUser?.name || 'Station Officer'}
-              </p>
-              <p className="text-[10px] text-slate-400 truncate" title={currentUser?.role}>
-                {currentUser?.role || 'Station SCADA Operator'}
-              </p>
-            </div>
-            <Link
-              href="/settings"
-              className="text-slate-400 hover:text-cyan-400 p-1"
-              title="Settings"
-            >
-              <Settings size={14} />
-            </Link>
-          </div>
-        ) : (
-          <div className="flex justify-center">
-            <div className="w-8 h-8 rounded bg-[#16273B] border border-cyan-500/30 flex items-center justify-center text-cyan-300 font-mono text-xs font-bold" title={currentUser?.name}>
-              {currentUser?.initials || 'SO'}
-            </div>
-          </div>
-        )}
       </div>
     </aside>
   );

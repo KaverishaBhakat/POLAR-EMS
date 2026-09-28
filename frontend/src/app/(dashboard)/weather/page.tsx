@@ -5,6 +5,7 @@ import { useStation } from '@/lib/context/StationContext';
 import { apiClient } from '@/lib/api/client';
 import { WeatherData } from '@/lib/types';
 import { LoadingSkeleton } from '@/components/common/Toast';
+import { PageHeader, GlassCard, Button } from '@/components/ui';
 import {
   CloudSun,
   Thermometer,
@@ -94,7 +95,7 @@ export default function WeatherPage() {
     fetchWeatherData();
   }, [fetchWeatherData]);
 
-  // Date-aware X-axis tick formatter for multi-decade historical timeline (e.g. "Jan 1985", "Dec 2016")
+  // Date-aware X-axis tick formatter for multi-decade historical timeline
   const formatTimeLabel = (ts?: string | Date) => {
     if (!ts) return '';
     const d = new Date(ts);
@@ -122,15 +123,15 @@ export default function WeatherPage() {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <LoadingSkeleton className="h-20" />
+      <div className="space-y-6">
+        <LoadingSkeleton className="h-20 rounded-2xl" />
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <LoadingSkeleton key={i} className="h-28" />
+            <LoadingSkeleton key={i} className="h-28 rounded-2xl" />
           ))}
         </div>
-        <LoadingSkeleton className="h-96" />
-        <LoadingSkeleton className="h-64" />
+        <LoadingSkeleton className="h-96 rounded-2xl" />
+        <LoadingSkeleton className="h-64 rounded-2xl" />
       </div>
     );
   }
@@ -138,36 +139,35 @@ export default function WeatherPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#1B2C42]/50">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold font-mono text-white tracking-wide uppercase flex items-center gap-2.5">
-              <CloudSun className="w-5 h-5 text-cyan-400" />
-              Polar Meteorology & Weather Telemetry
-            </h1>
-            <p className="text-xs text-slate-400 font-mono mt-0.5">
-              Automated Weather Station (AWS) | {station?.name || activeStationId.toUpperCase()}
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          title="Meteorology & Weather"
+          description={`Automated Weather Station (AWS) | ${station?.name || activeStationId.toUpperCase()}`}
+          breadcrumbs={[
+            { label: 'Operations', href: '/dashboard' },
+            { label: 'Weather' },
+          ]}
+          badge={{ label: 'ERROR', variant: 'danger' }}
+        />
 
-        <div className="rounded-lg border border-rose-500/40 bg-[#160B12] p-8 font-mono text-center space-y-4 shadow-[0_0_20px_rgba(244,63,94,0.1)]">
+        <GlassCard className="p-8 text-center space-y-4 border-rose-500/30 bg-rose-950/20">
           <AlertTriangle className="w-10 h-10 text-rose-400 mx-auto animate-pulse" />
           <div className="space-y-1">
-            <h3 className="text-sm sm:text-base font-bold text-rose-300 uppercase tracking-wider">
+            <h3 className="text-base font-semibold text-rose-300">
               PostgreSQL Weather Telemetry Service Unavailable
             </h3>
-            <p className="text-xs text-rose-200/80 max-w-lg mx-auto">{error}</p>
+            <p className="text-xs text-rose-200/70 max-w-lg mx-auto">{error}</p>
           </div>
           <div>
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={RefreshCw}
               onClick={fetchWeatherData}
-              className="px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-xs rounded uppercase font-bold transition-all inline-flex items-center gap-2"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Retry Weather Backend Connection</span>
-            </button>
+              Retry Weather Backend Connection
+            </Button>
           </div>
-        </div>
+        </GlassCard>
       </div>
     );
   }
@@ -175,28 +175,24 @@ export default function WeatherPage() {
   const hasData = currentWeather !== null || history.length > 0;
 
   return (
-    <div className="space-y-6 font-mono">
+    <div className="space-y-6">
       {/* Title & Station Context Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#1B2C42]/50">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide uppercase flex items-center gap-2.5">
-            <CloudSun className="w-5 h-5 text-cyan-400" />
-            Polar Meteorology & Weather Telemetry
-          </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Historical automated weather station sensors & real-time telemetry |{' '}
-            <span className="text-cyan-300 font-semibold">{station?.name || activeStationId.toUpperCase()}</span>
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded bg-[#0A1828] border border-cyan-500/40 text-cyan-300">
-            <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
-            <span>
-              {hasData ? `${totalRecords} HISTORICAL OBSERVATIONS` : 'NO TELEMETRY RECORDED'}
-            </span>
-          </span>
-          <button
+      <PageHeader
+        title="Meteorology & Atmospheric Telemetry"
+        description={`Historical IMD sensor observations & real-time automated weather stream | ${station?.name || activeStationId.toUpperCase()}`}
+        breadcrumbs={[
+          { label: 'Operations', href: '/dashboard' },
+          { label: 'Weather' },
+        ]}
+        badge={{
+          label: hasData ? `${totalRecords} HISTORICAL OBSERVATIONS` : 'NO TELEMETRY',
+          variant: hasData ? 'default' : 'neutral',
+        }}
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={RefreshCw}
             onClick={() => {
               fetchWeatherData();
               addToast({
@@ -205,51 +201,50 @@ export default function WeatherPage() {
                 message: `Loaded historical meteorological sensors for ${station?.name || activeStationId}.`,
               });
             }}
-            title="Refresh Weather Telemetry"
-            className="p-1.5 rounded bg-[#101D2E] border border-[#1B2C42] hover:border-cyan-500/50 text-slate-300 hover:text-cyan-300 transition-all"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
+            Refresh
+          </Button>
+        }
+      />
 
       {!hasData ? (
         /* Empty Database State */
-        <div className="rounded-lg border border-[#1B2C42] bg-[#0E1724]/90 p-8 text-center space-y-4">
-          <Database className="w-10 h-10 text-slate-500 mx-auto" />
+        <GlassCard className="p-10 text-center space-y-4">
+          <Database className="w-10 h-10 text-foreground-muted mx-auto" />
           <div className="space-y-1">
-            <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-foreground">
               No Weather Telemetry in PostgreSQL for {station?.name || activeStationId.toUpperCase()}
             </h3>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
+            <p className="text-xs text-foreground-muted max-w-md mx-auto">
               The database currently contains zero meteorological observations for this station node in the `weather_data` table.
             </p>
           </div>
           <div className="flex items-center justify-center gap-3">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={RefreshCw}
               onClick={fetchWeatherData}
-              className="px-3.5 py-1.5 bg-[#122032] hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-xs rounded uppercase font-bold transition-all inline-flex items-center gap-2"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Refresh Sensor Stream</span>
-            </button>
+              Refresh Sensor Stream
+            </Button>
           </div>
-        </div>
+        </GlassCard>
       ) : (
         <>
-          {/* 1. Live Weather Current Observation Cards (2026 Telemetry Snapshot) */}
+          {/* 1. Live Weather Current Observation Cards */}
           {currentWeather && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+                  <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
                     Latest AWS Surface Observation
                   </span>
                   <ProvenanceBadge type="REAL_MEASURED" size="xs" />
                 </div>
                 {currentWeather.timestamp && (
-                  <div className="text-[10px] text-slate-400 flex items-center gap-1.5">
-                    <Clock size={12} className="text-slate-500" />
+                  <div className="text-[11px] text-foreground-muted flex items-center gap-1.5 font-mono">
+                    <Clock size={12} className="text-foreground-muted" />
                     <span>Observed: {formatDateLabel(currentWeather.timestamp)}</span>
                   </div>
                 )}
@@ -257,148 +252,148 @@ export default function WeatherPage() {
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 {/* 1. Temperature */}
-                <div className="p-3 rounded bg-[#0E1724]/90 border border-cyan-500/30">
-                  <div className="flex items-center justify-between text-slate-400 text-[10px] mb-1">
+                <GlassCard hover className="p-3.5 border-accent/30 bg-accent/5">
+                  <div className="flex items-center justify-between text-foreground-muted text-[10px] mb-1 font-mono uppercase tracking-wider">
                     <span>TEMPERATURE</span>
-                    <Thermometer size={14} className="text-cyan-400" />
+                    <Thermometer size={14} className="text-accent" />
                   </div>
-                  <div className="text-xl font-bold text-cyan-300">
+                  <div className="text-xl font-bold text-foreground font-mono">
                     {currentWeather.temperature != null ? `${currentWeather.temperature}°C` : 'N/A'}
                   </div>
-                  <div className="text-[9px] text-slate-400 mt-0.5">
+                  <div className="text-[10px] text-foreground-muted mt-1">
                     Chill: {currentWeather.apparentTemperature != null ? `${currentWeather.apparentTemperature}°C` : 'N/A'}{' '}
-                    <span className="text-[8px] text-cyan-400/80">(Derived)</span>
+                    <span className="text-[9px] text-accent-bright font-semibold">(Derived)</span>
                   </div>
-                </div>
+                </GlassCard>
 
                 {/* 2. Wind Speed */}
-                <div className="p-3 rounded bg-[#0E1724]/90 border border-blue-500/30">
-                  <div className="flex items-center justify-between text-slate-400 text-[10px] mb-1">
+                <GlassCard hover className="p-3.5 border-blue-500/20 bg-blue-500/[0.03]">
+                  <div className="flex items-center justify-between text-foreground-muted text-[10px] mb-1 font-mono uppercase tracking-wider">
                     <span>WIND SPEED</span>
                     <Wind size={14} className="text-blue-400" />
                   </div>
-                  <div className="text-xl font-bold text-blue-300">
+                  <div className="text-xl font-bold text-blue-300 font-mono">
                     {currentWeather.windSpeed != null ? `${currentWeather.windSpeed} m/s` : 'N/A'}
                   </div>
-                  <div className="text-[9px] text-slate-400 mt-0.5">
+                  <div className="text-[10px] text-foreground-muted mt-1">
                     Gust: {currentWeather.windGust != null ? `${currentWeather.windGust} m/s` : 'N/A'}{' '}
-                    <span className="text-[8px] text-blue-400/80">(Derived)</span>
+                    <span className="text-[9px] text-blue-400 font-semibold">(Derived)</span>
                   </div>
-                </div>
+                </GlassCard>
 
                 {/* 3. Wind Direction */}
-                <div className="p-3 rounded bg-[#0E1724]/90 border border-[#1B2C42]">
-                  <div className="flex items-center justify-between text-slate-400 text-[10px] mb-1">
+                <GlassCard hover className="p-3.5">
+                  <div className="flex items-center justify-between text-foreground-muted text-[10px] mb-1 font-mono uppercase tracking-wider">
                     <span>DIRECTION</span>
-                    <Compass size={14} className="text-slate-400" />
+                    <Compass size={14} className="text-foreground-muted" />
                   </div>
-                  <div className="text-base font-bold text-slate-200">
+                  <div className="text-base font-bold text-foreground font-mono">
                     {currentWeather.windDirection || 'N/A'}
                   </div>
-                  <div className="text-[9px] text-slate-400 mt-0.5">
+                  <div className="text-[10px] text-foreground-muted mt-1">
                     {currentWeather.windSpeed && currentWeather.windSpeed > 15 ? 'Katabatic Flow' : 'Steady Vector'}
                   </div>
-                </div>
+                </GlassCard>
 
                 {/* 4. Atmospheric Pressure */}
-                <div className="p-3 rounded bg-[#0E1724]/90 border border-[#1B2C42]">
-                  <div className="flex items-center justify-between text-slate-400 text-[10px] mb-1">
+                <GlassCard hover className="p-3.5 border-purple-500/20 bg-purple-500/[0.03]">
+                  <div className="flex items-center justify-between text-foreground-muted text-[10px] mb-1 font-mono uppercase tracking-wider">
                     <span>PRESSURE</span>
                     <Gauge size={14} className="text-purple-400" />
                   </div>
-                  <div className="text-xl font-bold text-purple-300">
+                  <div className="text-xl font-bold text-purple-300 font-mono">
                     {currentWeather.pressure != null ? `${currentWeather.pressure}` : 'N/A'}
                   </div>
-                  <div className="text-[9px] text-slate-400 mt-0.5">hPa (Surface)</div>
-                </div>
+                  <div className="text-[10px] text-foreground-muted mt-1">hPa (Surface)</div>
+                </GlassCard>
 
                 {/* 5. Solar Radiation */}
-                <div className="p-3 rounded bg-[#0E1724]/90 border border-amber-500/30">
-                  <div className="flex items-center justify-between text-slate-400 text-[10px] mb-1">
+                <GlassCard hover className="p-3.5 border-amber-500/20 bg-amber-500/[0.03]">
+                  <div className="flex items-center justify-between text-foreground-muted text-[10px] mb-1 font-mono uppercase tracking-wider">
                     <span>SOLAR GHI</span>
                     <Sun size={14} className="text-amber-400" />
                   </div>
-                  <div className="text-xl font-bold text-amber-300">
+                  <div className="text-xl font-bold text-amber-300 font-mono">
                     {currentWeather.solarRadiation != null ? `${currentWeather.solarRadiation}` : 'N/A'}
                   </div>
-                  <div className="text-[9px] text-slate-400 mt-0.5">W/m² Irradiance</div>
-                </div>
+                  <div className="text-[10px] text-foreground-muted mt-1">W/m² Irradiance</div>
+                </GlassCard>
 
                 {/* 6. Relative Humidity */}
-                <div className="p-3 rounded bg-[#0E1724]/90 border border-[#1B2C42]">
-                  <div className="flex items-center justify-between text-slate-400 text-[10px] mb-1">
+                <GlassCard hover className="p-3.5">
+                  <div className="flex items-center justify-between text-foreground-muted text-[10px] mb-1 font-mono uppercase tracking-wider">
                     <span>HUMIDITY</span>
-                    <Droplets size={14} className="text-cyan-400" />
+                    <Droplets size={14} className="text-accent-bright" />
                   </div>
-                  <div className="text-xl font-bold text-slate-200">
+                  <div className="text-xl font-bold text-foreground font-mono">
                     {currentWeather.humidity != null ? `${currentWeather.humidity}%` : 'N/A'}
                   </div>
-                  <div className="text-[9px] text-slate-400 mt-0.5">
+                  <div className="text-[10px] text-foreground-muted mt-1">
                     {currentWeather.humidity && currentWeather.humidity > 80 ? 'High Moisture' : 'Dry Polar Air'}
                   </div>
-                </div>
+                </GlassCard>
               </div>
             </div>
           )}
 
           {/* 2. Meteorological Sensor Trends Chart (Historical Dataset 1985–2016) */}
           {history.length > 0 && (
-            <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[#1B2C42]/60">
+            <GlassCard className="p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-white/6">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
-                      <CloudSun className="w-4 h-4 text-cyan-400" />
+                    <h3 className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-2">
+                      <CloudSun className="w-4 h-4 text-accent" />
                       Historical Weather Observations ({history.length} Data Points: 1985–2016)
                     </h3>
                     <ProvenanceBadge type="REAL_MEASURED" size="xs" />
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
+                  <p className="text-xs text-foreground-muted mt-0.5">
                     Chronological IMD meteorological sensor telemetry retrieved from PostgreSQL `weather_data`
                   </p>
                 </div>
 
                 {/* Metric Tab Selectors */}
-                <div className="flex items-center gap-1.5 p-1 bg-[#0A121E] rounded border border-[#1B2C42] text-xs">
+                <div className="flex items-center gap-1 p-1 bg-white/[0.04] rounded-lg border border-white/6 text-xs">
                   <button
                     onClick={() => setActiveTab('temperature')}
-                    className={`px-2.5 py-1 rounded text-[10px] uppercase font-bold transition-all ${
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
                       activeTab === 'temperature'
-                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                        : 'text-slate-400 hover:text-slate-200'
+                        ? 'bg-accent text-white shadow-sm'
+                        : 'text-foreground-muted hover:text-foreground'
                     }`}
                   >
-                    Temperature (°C)
+                    Temperature
                   </button>
                   <button
                     onClick={() => setActiveTab('wind')}
-                    className={`px-2.5 py-1 rounded text-[10px] uppercase font-bold transition-all ${
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
                       activeTab === 'wind'
-                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                        : 'text-slate-400 hover:text-slate-200'
+                        ? 'bg-accent text-white shadow-sm'
+                        : 'text-foreground-muted hover:text-foreground'
                     }`}
                   >
-                    Wind (m/s)
+                    Wind
                   </button>
                   <button
                     onClick={() => setActiveTab('solar')}
-                    className={`px-2.5 py-1 rounded text-[10px] uppercase font-bold transition-all ${
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
                       activeTab === 'solar'
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                        : 'text-slate-400 hover:text-slate-200'
+                        ? 'bg-accent text-white shadow-sm'
+                        : 'text-foreground-muted hover:text-foreground'
                     }`}
                   >
-                    Solar (W/m²)
+                    Solar
                   </button>
                   <button
                     onClick={() => setActiveTab('pressure')}
-                    className={`px-2.5 py-1 rounded text-[10px] uppercase font-bold transition-all ${
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
                       activeTab === 'pressure'
-                        ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                        : 'text-slate-400 hover:text-slate-200'
+                        ? 'bg-accent text-white shadow-sm'
+                        : 'text-foreground-muted hover:text-foreground'
                     }`}
                   >
-                    Pressure (hPa)
+                    Pressure
                   </button>
                 </div>
               </div>
@@ -413,33 +408,34 @@ export default function WeatherPage() {
               {/* Chart Visual */}
               <div className="h-72 w-full min-h-[280px]">
                 {!isMounted ? (
-                  <div className="w-full h-full bg-[#0A121E]/60 rounded-lg animate-pulse" />
+                  <div className="w-full h-full bg-white/[0.02] rounded-xl animate-pulse" />
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     {activeTab === 'temperature' ? (
                       <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <defs>
                           <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
-                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                            <stop offset="5%" stopColor="#5E6AD2" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#5E6AD2" stopOpacity={0.0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                         <XAxis
                           dataKey="timestamp"
                           tickFormatter={formatTimeLabel}
-                          stroke="#64748b"
+                          stroke="#8A8F98"
                           fontSize={10}
                           minTickGap={40}
                         />
-                        <YAxis stroke="#64748b" fontSize={10} unit="°C" />
+                        <YAxis stroke="#8A8F98" fontSize={10} unit="°C" />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: '#0A121E',
-                            borderColor: '#1B2C42',
-                            borderRadius: '6px',
+                            backgroundColor: '#0a0a0c',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderRadius: '12px',
                             fontFamily: 'monospace',
                             fontSize: '11px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                           }}
                           labelFormatter={(v) => formatDateLabel(v)}
                         />
@@ -447,11 +443,11 @@ export default function WeatherPage() {
                           type="monotone"
                           dataKey="temperature"
                           name="Ambient Temp (°C)"
-                          stroke="#06b6d4"
+                          stroke="#5E6AD2"
                           strokeWidth={2}
                           fill="url(#tempGradient)"
-                          dot={{ r: 2, fill: '#06b6d4' }}
-                          activeDot={{ r: 5, fill: '#22d3ee' }}
+                          dot={{ r: 2, fill: '#5E6AD2' }}
+                          activeDot={{ r: 5, fill: '#6872D9' }}
                         />
                         <Line
                           type="monotone"
@@ -472,22 +468,23 @@ export default function WeatherPage() {
                             <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                         <XAxis
                           dataKey="timestamp"
                           tickFormatter={formatTimeLabel}
-                          stroke="#64748b"
+                          stroke="#8A8F98"
                           fontSize={10}
                           minTickGap={40}
                         />
-                        <YAxis stroke="#64748b" fontSize={10} unit="m/s" />
+                        <YAxis stroke="#8A8F98" fontSize={10} unit="m/s" />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: '#0A121E',
-                            borderColor: '#1B2C42',
-                            borderRadius: '6px',
+                            backgroundColor: '#0a0a0c',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderRadius: '12px',
                             fontFamily: 'monospace',
                             fontSize: '11px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                           }}
                           labelFormatter={(v) => formatDateLabel(v)}
                         />
@@ -511,22 +508,23 @@ export default function WeatherPage() {
                               <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                           <XAxis
                             dataKey="timestamp"
                             tickFormatter={formatTimeLabel}
-                            stroke="#64748b"
+                            stroke="#8A8F98"
                             fontSize={10}
                             minTickGap={40}
                           />
-                          <YAxis stroke="#64748b" fontSize={10} unit="W/m²" />
+                          <YAxis stroke="#8A8F98" fontSize={10} unit="W/m²" />
                           <Tooltip
                             contentStyle={{
-                              backgroundColor: '#0A121E',
-                              borderColor: '#1B2C42',
-                              borderRadius: '6px',
+                              backgroundColor: '#0a0a0c',
+                              borderColor: 'rgba(255,255,255,0.1)',
+                              borderRadius: '12px',
                               fontFamily: 'monospace',
                               fontSize: '11px',
+                              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                             }}
                             labelFormatter={(v) => formatDateLabel(v)}
                           />
@@ -542,36 +540,37 @@ export default function WeatherPage() {
                           />
                         </AreaChart>
                       ) : (
-                        <div className="h-full w-full flex flex-col items-center justify-center bg-[#0A121E]/60 rounded-lg border border-[#1B2C42]/50 text-center p-6 space-y-2.5">
+                        <div className="h-full w-full flex flex-col items-center justify-center bg-white/[0.02] rounded-xl border border-white/5 text-center p-6 space-y-2.5">
                           <div className="p-3 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400">
                             <Sun className="w-6 h-6" />
                           </div>
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-200 uppercase tracking-wider">
+                          <h4 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wider">
                             Solar radiation data unavailable for historical Maitri observations
                           </h4>
-                          <p className="text-[11px] text-slate-400 max-w-md">
+                          <p className="text-xs text-foreground-muted max-w-md">
                             The historical IMD Maitri dataset (1985–2016) does not contain solar radiation sensor instrumentation. Values are preserved as NULL in the database without synthetic estimation.
                           </p>
                         </div>
                       )
                     ) : (
                       <LineChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                         <XAxis
                           dataKey="timestamp"
                           tickFormatter={formatTimeLabel}
-                          stroke="#64748b"
+                          stroke="#8A8F98"
                           fontSize={10}
                           minTickGap={40}
                         />
-                        <YAxis stroke="#64748b" fontSize={10} unit="hPa" domain={['auto', 'auto']} />
+                        <YAxis stroke="#8A8F98" fontSize={10} unit="hPa" domain={['auto', 'auto']} />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: '#0A121E',
-                            borderColor: '#1B2C42',
-                            borderRadius: '6px',
+                            backgroundColor: '#0a0a0c',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderRadius: '12px',
                             fontFamily: 'monospace',
                             fontSize: '11px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                           }}
                           labelFormatter={(v) => formatDateLabel(v)}
                         />
@@ -589,29 +588,29 @@ export default function WeatherPage() {
                   </ResponsiveContainer>
                 )}
               </div>
-            </div>
+            </GlassCard>
           )}
 
           {/* 3. Tabular Log of Historical Weather Records from PostgreSQL */}
           {history.length > 0 && (
-            <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5">
-              <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#1B2C42]/50">
+            <GlassCard className="p-5">
+              <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/6">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase">
+                  <h3 className="text-sm font-semibold tracking-tight text-foreground">
                     PostgreSQL Weather Observations Log
                   </h3>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 font-mono tracking-wider">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/10 border border-accent/20 text-accent-bright font-mono">
                     TABLE: weather_data
                   </span>
                 </div>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-xs text-foreground-muted font-mono">
                   Displaying {history.length} historical observations (1985–2016)
                 </span>
               </div>
 
               <div className="overflow-x-auto max-h-96 overflow-y-auto">
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-[#0A121E] text-slate-400 uppercase text-[10px] border-b border-[#1B2C42] sticky top-0 z-10">
+                <table className="w-full text-left text-xs text-foreground-muted">
+                  <thead className="bg-white/[0.03] text-foreground-muted uppercase text-[10px] border-b border-white/6 font-mono sticky top-0 z-10 backdrop-blur-md">
                     <tr>
                       <th className="py-2.5 px-3">Timestamp</th>
                       <th className="py-2.5 px-3">Temp (°C)</th>
@@ -623,31 +622,31 @@ export default function WeatherPage() {
                       <th className="py-2.5 px-3 text-right">Record ID</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#1B2C42]/40 font-mono text-[11px]">
+                  <tbody className="divide-y divide-white/4 font-mono text-xs">
                     {[...history].reverse().map((record) => (
-                      <tr key={record.id || String(record.timestamp)} className="hover:bg-[#122032]/50 transition-colors">
-                        <td className="py-2 px-3 text-cyan-300 font-bold whitespace-nowrap">
+                      <tr key={record.id || String(record.timestamp)} className="hover:bg-white/[0.03] transition-colors">
+                        <td className="py-2 px-3 text-accent-bright font-semibold whitespace-nowrap">
                           {formatDateLabel(record.timestamp || record.createdAt)}
                         </td>
-                        <td className="py-2 px-3 text-slate-200">
-                          {record.temperature != null ? `${record.temperature}°C` : <span className="text-slate-500 italic">N/A</span>}
+                        <td className="py-2 px-3 text-foreground font-semibold">
+                          {record.temperature != null ? `${record.temperature}°C` : <span className="text-foreground-muted italic">N/A</span>}
                         </td>
                         <td className="py-2 px-3 text-blue-300">
-                          {record.windSpeed != null ? `${record.windSpeed} m/s` : <span className="text-slate-500 italic">N/A</span>}
+                          {record.windSpeed != null ? `${record.windSpeed} m/s` : <span className="text-foreground-muted italic">N/A</span>}
                         </td>
-                        <td className="py-2 px-3 text-slate-400">
-                          {record.windDirection || <span className="text-slate-500 italic">N/A</span>}
+                        <td className="py-2 px-3 text-foreground-muted">
+                          {record.windDirection || <span className="text-foreground-muted italic">N/A</span>}
                         </td>
                         <td className="py-2 px-3 text-purple-300">
-                          {record.pressure != null ? `${record.pressure} hPa` : <span className="text-slate-500 italic">N/A</span>}
+                          {record.pressure != null ? `${record.pressure} hPa` : <span className="text-foreground-muted italic">N/A</span>}
                         </td>
                         <td className="py-2 px-3 text-amber-300">
-                          {record.solarRadiation != null ? record.solarRadiation : <span className="text-slate-500 italic">N/A</span>}
+                          {record.solarRadiation != null ? record.solarRadiation : <span className="text-foreground-muted italic">N/A</span>}
                         </td>
-                        <td className="py-2 px-3 text-slate-300">
-                          {record.humidity != null ? `${record.humidity}%` : <span className="text-slate-500 italic">N/A</span>}
+                        <td className="py-2 px-3 text-foreground">
+                          {record.humidity != null ? `${record.humidity}%` : <span className="text-foreground-muted italic">N/A</span>}
                         </td>
-                        <td className="py-2 px-3 text-right text-[9px] text-slate-500 font-mono truncate max-w-[120px]">
+                        <td className="py-2 px-3 text-right text-[10px] text-foreground-muted font-mono truncate max-w-[120px]">
                           {record.id ? record.id.substring(0, 8) + '...' : 'PG-NODE'}
                         </td>
                       </tr>
@@ -655,7 +654,7 @@ export default function WeatherPage() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </GlassCard>
           )}
         </>
       )}

@@ -5,7 +5,7 @@ import { useStation } from '@/lib/context/StationContext';
 import { apiClient } from '@/lib/api/client';
 import { AlertRecord } from '@/lib/types';
 import { AlertCard } from '@/components/alerts/AlertCard';
-import { LoadingSkeleton, EmptyState } from '@/components/common/Toast';
+import { LoadingSkeleton } from '@/components/common/Toast';
 import {
   Bell,
   Filter,
@@ -19,6 +19,7 @@ import {
   AlertOctagon,
   ShieldCheck,
 } from 'lucide-react';
+import { PageHeader, GlassCard, Button } from '@/components/ui';
 
 export default function AlertsPage() {
   const { activeStationId, station, refreshAlertCount, addToast } = useStation();
@@ -121,29 +122,22 @@ export default function AlertsPage() {
       : stationFilter.toUpperCase();
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Title & Subtitle */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0A111C] p-4 sm:p-6 rounded-lg border border-[#1B2C42] relative overflow-hidden">
-        <div className="space-y-1 z-10">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30 uppercase">
-              SCADA ALERTS
-            </span>
-            <span className="text-xs text-slate-400 font-mono">
-              Target: <strong className="text-slate-200">{currentStationDisplay}</strong>
-            </span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold font-mono text-white tracking-wide uppercase flex items-center gap-2.5">
-            <Bell className="w-5 h-5 text-rose-400" />
-            Intelligent Alert & Incident Center
-          </h1>
-          <p className="text-xs text-slate-400 font-mono">
-            Real-time SCADA anomaly detection, battery reserve warnings & critical load safety alerts.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3 z-10 font-mono">
-          <button
+    <div className="space-y-6">
+      {/* Page Header */}
+      <PageHeader
+        title="Intelligent Alert & Incident Center"
+        subtitle="Real-time SCADA anomaly detection, battery reserve warnings & critical load safety alerts."
+        icon={<Bell className="w-5 h-5 text-rose-400" />}
+        badge={{
+          label: criticalCount > 0 ? `${criticalCount} CRITICAL` : "SCADA ALERTS",
+          variant: criticalCount > 0 ? "error" : "default"
+        }}
+        breadcrumbs={[
+          { label: "Operations", href: "/alerts" },
+          { label: "Alert Center" }
+        ]}
+        actions={
+          <Button
             onClick={() => {
               fetchAlerts();
               refreshAlertCount();
@@ -154,62 +148,64 @@ export default function AlertsPage() {
               });
             }}
             disabled={loading}
-            className="flex items-center gap-2 px-3 py-2 bg-[#121E2E] hover:bg-[#1A2C42] border border-[#1B2C42] text-slate-300 hover:text-cyan-300 rounded text-xs transition-colors disabled:opacity-50"
+            variant="ghost"
+            size="sm"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-cyan-400' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin text-accent-bright' : ''}`} />
             Refresh
-          </button>
-        </div>
-      </div>
+          </Button>
+        }
+      />
 
       {/* Real Counter Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 font-mono text-xs">
-        <div className="bg-[#0B1524] border border-[#1B2C42] rounded-lg p-3 space-y-1">
+        <GlassCard className="p-3 space-y-1">
           <span className="text-[10px] text-slate-400 uppercase">TOTAL LOGGED</span>
           <div className="text-xl font-bold text-slate-100">{totalAlertsCount}</div>
-        </div>
-        <div className="bg-[#0B1524] border border-rose-500/30 rounded-lg p-3 space-y-1">
+        </GlassCard>
+        <GlassCard className="p-3 space-y-1 border-rose-500/30">
           <span className="text-[10px] text-rose-400 uppercase font-bold">ACTIVE CRITICAL</span>
           <div className={`text-xl font-bold text-rose-400 ${criticalCount > 0 ? 'animate-pulse' : ''}`}>
             {criticalCount}
           </div>
-        </div>
-        <div className="bg-[#0B1524] border border-amber-500/30 rounded-lg p-3 space-y-1">
+        </GlassCard>
+        <GlassCard className="p-3 space-y-1 border-amber-500/30">
           <span className="text-[10px] text-amber-400 uppercase font-bold">ACTIVE WARNINGS</span>
           <div className="text-xl font-bold text-amber-300">{warningCount}</div>
-        </div>
-        <div className="bg-[#0B1524] border border-cyan-500/30 rounded-lg p-3 space-y-1">
+        </GlassCard>
+        <GlassCard className="p-3 space-y-1 border-cyan-500/30">
           <span className="text-[10px] text-cyan-400 uppercase">ACTIVE INFO</span>
           <div className="text-xl font-bold text-cyan-300">{infoCount}</div>
-        </div>
-        <div className="bg-[#0B1524] border border-emerald-500/30 rounded-lg p-3 space-y-1">
+        </GlassCard>
+        <GlassCard className="p-3 space-y-1 border-emerald-500/30">
           <span className="text-[10px] text-emerald-400 uppercase">ACKNOWLEDGED</span>
           <div className="text-xl font-bold text-emerald-300">{acknowledgedCount}</div>
-        </div>
-        <div className="bg-[#0B1524] border border-slate-700/50 rounded-lg p-3 space-y-1">
+        </GlassCard>
+        <GlassCard className="p-3 space-y-1">
           <span className="text-[10px] text-slate-400 uppercase">RESOLVED</span>
           <div className="text-xl font-bold text-slate-300">{resolvedCount}</div>
-        </div>
+        </GlassCard>
       </div>
 
       {/* Error Banner */}
       {error && (
-        <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-lg flex items-center justify-between gap-3 text-rose-300 font-mono text-xs">
+        <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-xl flex items-center justify-between gap-3 text-rose-300 font-mono text-xs">
           <div className="flex items-center gap-2.5">
             <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
             <span>{error}</span>
           </div>
-          <button
+          <Button
             onClick={fetchAlerts}
-            className="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 rounded text-[11px] transition-colors"
+            variant="ghost"
+            size="sm"
           >
             Retry Connection
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Filters Bar */}
-      <div className="p-4 rounded-lg bg-[#0E1724]/90 border border-[#1B2C42] space-y-3 font-mono text-xs">
+      <GlassCard className="p-4 space-y-3 font-mono text-xs">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Station Selection Filter */}
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -225,10 +221,10 @@ export default function AlertsPage() {
               <button
                 key={st.id}
                 onClick={() => setStationFilter(st.id)}
-                className={`px-2.5 py-1 rounded transition-colors ${
+                className={`px-2.5 py-1 rounded-lg transition-all ${
                   stationFilter === st.id
-                    ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40 shadow-[0_0_8px_rgba(6,182,212,0.15)]'
-                    : 'text-slate-400 hover:text-slate-200 bg-[#0B1524] border border-[#1B2C42]'
+                    ? 'bg-accent/20 text-accent-bright font-semibold border border-accent/40 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 bg-white/[0.02] border border-white/6'
                 }`}
               >
                 {st.label}
@@ -245,10 +241,10 @@ export default function AlertsPage() {
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
-                className={`px-2.5 py-1 rounded transition-colors ${
+                className={`px-2.5 py-1 rounded-lg transition-all ${
                   statusFilter === st
-                    ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40'
-                    : 'text-slate-400 hover:text-slate-200 bg-[#0B1524] border border-[#1B2C42]'
+                    ? 'bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/40'
+                    : 'text-slate-400 hover:text-slate-200 bg-white/[0.02] border border-white/6'
                 }`}
               >
                 {st}
@@ -258,7 +254,7 @@ export default function AlertsPage() {
         </div>
 
         {/* Severity Filter */}
-        <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-[#1B2C42]/50">
+        <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-white/6">
           <span className="text-slate-400 mr-1 flex items-center gap-1">
             <Filter size={13} /> Severity:
           </span>
@@ -266,17 +262,17 @@ export default function AlertsPage() {
             <button
               key={s}
               onClick={() => setSeverityFilter(s)}
-              className={`px-2.5 py-1 rounded transition-colors ${
+              className={`px-2.5 py-1 rounded-lg transition-all ${
                 severityFilter === s
-                  ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40'
-                  : 'text-slate-400 hover:text-slate-200 bg-[#0B1524] border border-[#1B2C42]'
+                  ? 'bg-accent/20 text-accent-bright font-semibold border border-accent/40'
+                  : 'text-slate-400 hover:text-slate-200 bg-white/[0.02] border border-white/6'
               }`}
             >
               {s}
             </button>
           ))}
         </div>
-      </div>
+      </GlassCard>
 
       {/* Alerts List */}
       {loading ? (
@@ -296,18 +292,18 @@ export default function AlertsPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-[#0B1524] border border-[#1B2C42] rounded-lg p-12 text-center font-mono space-y-4">
-          <div className="w-16 h-16 rounded-full bg-[#121E2E] border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+        <GlassCard className="p-12 text-center font-mono space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 shadow-sm">
             <CheckCircle2 className="w-8 h-8" />
           </div>
           <div className="space-y-1">
             <h3 className="text-base font-bold text-slate-200">No Alerts Recorded</h3>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
+            <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
               No alert records currently exist in PostgreSQL for station{' '}
-              <span className="text-cyan-300 font-semibold">{currentStationDisplay}</span> with the selected filter criteria. All telemetry parameters are operating within safe bounds.
+              <span className="text-accent-bright font-semibold">{currentStationDisplay}</span> with the selected filter criteria. All telemetry parameters are operating within safe bounds.
             </p>
           </div>
-        </div>
+        </GlassCard>
       )}
     </div>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Trash2, CornerDownLeft, Loader2, Sparkles } from 'lucide-react';
+import { Send, Trash2, CornerDownLeft, Loader2 } from 'lucide-react';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -23,7 +23,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize textarea based on content
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -34,10 +33,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter') {
       if (e.shiftKey) {
-        // Allow newline
         return;
       }
-      // Submit on Enter or Ctrl/Cmd+Enter
       e.preventDefault();
       handleSubmit();
     }
@@ -60,7 +57,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const isNearLimit = charCount > MAX_CHARS * 0.85;
 
   return (
-    <div className="bg-[#08101C] border border-[#1B2C42] rounded-lg p-3 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+    <div className="rounded-2xl bg-[#0A0A0C]/90 backdrop-blur-2xl border border-white/[0.08] p-3.5 shadow-2xl shadow-black/50">
       <div className="relative">
         <textarea
           ref={textareaRef}
@@ -69,8 +66,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onKeyDown={handleKeyDown}
           disabled={isLoading}
           rows={2}
-          placeholder={`Ask POLAR-EMS about ${stationName} telemetry, weather, battery, forecasting, optimization, or resilience...`}
-          className="w-full bg-[#050B14] border border-[#1B2C42] focus:border-cyan-500/60 rounded-md p-3 text-xs sm:text-sm font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed leading-relaxed"
+          placeholder={`Ask POLAR-EMS about ${stationName} telemetry, weather, battery BESS, forecasting, or optimization...`}
+          className="w-full bg-white/[0.03] border border-white/[0.06] focus:border-[#5E6AD2]/60 focus:bg-white/[0.05] rounded-xl p-3 text-xs sm:text-sm text-[#EDEDEF] placeholder-[#8A8F98]/70 focus:outline-none focus:ring-1 focus:ring-[#5E6AD2]/40 resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed leading-relaxed"
           maxLength={MAX_CHARS + 50}
         />
       </div>
@@ -83,7 +80,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               type="button"
               onClick={onClearConversation}
               disabled={isLoading}
-              className="px-2.5 py-1.5 rounded bg-[#0A1422] hover:bg-rose-950/40 border border-[#1B2C42] hover:border-rose-500/40 text-slate-400 hover:text-rose-300 font-mono text-[11px] transition-all flex items-center gap-1.5 disabled:opacity-40"
+              className="px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-rose-500/10 border border-white/[0.06] hover:border-rose-500/30 text-[#8A8F98] hover:text-rose-300 text-[11px] font-mono transition-all flex items-center gap-1.5 disabled:opacity-40"
               title="Clear current session conversation"
             >
               <Trash2 size={12} />
@@ -91,7 +88,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             </button>
           )}
 
-          <div className="hidden sm:flex items-center gap-1 text-[10px] font-mono text-slate-500">
+          <div className="hidden sm:flex items-center gap-1 text-[10px] font-mono text-[#8A8F98]/70">
             <CornerDownLeft size={10} />
             <span>Enter to send, Shift+Enter for newline</span>
           </div>
@@ -105,7 +102,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 ? 'text-rose-400 font-bold'
                 : isNearLimit
                 ? 'text-amber-400'
-                : 'text-slate-500'
+                : 'text-[#8A8F98]'
             }`}
           >
             {charCount} / {MAX_CHARS}
@@ -116,21 +113,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             type="button"
             onClick={handleSubmit}
             disabled={!input.trim() || isLoading || isOverLimit}
-            className={`px-4 py-2 rounded font-mono font-bold text-xs uppercase tracking-wider transition-all duration-200 flex items-center gap-2 shadow-[0_0_12px_rgba(6,182,212,0.25)] ${
+            className={`px-4 py-2 rounded-lg font-medium text-xs tracking-wide transition-all duration-200 flex items-center gap-2 shadow-sm ${
               !input.trim() || isLoading || isOverLimit
-                ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed shadow-none'
-                : 'bg-cyan-500 hover:bg-cyan-400 text-[#070D16] border border-cyan-400 active:scale-[0.98]'
+                ? 'bg-white/[0.05] text-[#8A8F98] border border-white/[0.06] cursor-not-allowed'
+                : 'bg-[#5E6AD2] hover:bg-[#6872D9] text-[#EDEDEF] border border-[#717CE8]/40 shadow-[0_2px_12px_rgba(94,106,210,0.35)] active:scale-[0.98]'
             }`}
           >
             {isLoading ? (
               <>
-                <Loader2 size={14} className="animate-spin" />
+                <Loader2 size={13} className="animate-spin" />
                 <span>Analyzing...</span>
               </>
             ) : (
               <>
                 <span>Send Query</span>
-                <Send size={13} />
+                <Send size={12} />
               </>
             )}
           </button>

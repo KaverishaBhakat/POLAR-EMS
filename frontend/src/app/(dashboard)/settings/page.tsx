@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStation, getInitials, UserProfile } from '@/lib/context/StationContext';
 import { Settings as SettingsIcon, Save, RefreshCw, Shield, Bell, Cpu, Globe, Sliders, User, Lock, Mail, BadgeCheck } from 'lucide-react';
+import { PageHeader, GlassCard, Button } from '@/components/ui';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -88,45 +89,45 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl font-mono">
-      {/* Title & Subtitle */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#1B2C42]/50">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide uppercase flex items-center gap-2.5">
-            <SettingsIcon className="w-5 h-5 text-cyan-400" />
-            Station SCADA & System Configuration
-          </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Microgrid reserve buffers, AI optimizer thresholds, and operator credentials
-          </p>
-        </div>
-
-        <button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="flex items-center gap-2 px-5 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs uppercase transition-all shadow-[0_0_12px_rgba(6,182,212,0.3)] self-start sm:self-auto cursor-pointer"
-        >
-          {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
-          <span>{isSaving ? 'COMMITTING...' : 'SAVE & GO TO DASHBOARD'}</span>
-        </button>
-      </div>
+    <div className="space-y-6 max-w-5xl">
+      {/* Page Header */}
+      <PageHeader
+        title="Station SCADA & System Configuration"
+        subtitle="Microgrid reserve buffers, AI optimizer thresholds, and operator credentials"
+        icon={<SettingsIcon className="w-5 h-5 text-accent-bright" />}
+        breadcrumbs={[
+          { label: "Settings", href: "/settings" },
+          { label: "System Config" }
+        ]}
+        actions={
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+            variant="primary"
+            size="sm"
+          >
+            {isSaving ? <RefreshCw size={14} className="animate-spin mr-1.5" /> : <Save size={14} className="mr-1.5" />}
+            <span>{isSaving ? 'COMMITTING...' : 'SAVE & GO TO DASHBOARD'}</span>
+          </Button>
+        }
+      />
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* 0. Station Operator Profile & Security Credentials */}
-        <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-cyan-500/30 p-5 space-y-4 shadow-[0_0_20px_rgba(6,182,212,0.08)]">
-          <div className="flex items-center justify-between pb-2 border-b border-[#1B2C42]/60">
-            <h3 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <User className="w-4 h-4 text-cyan-400" />
+        <GlassCard className="p-5 space-y-4 border-accent/30">
+          <div className="flex items-center justify-between pb-2.5 border-b border-white/6">
+            <h3 className="text-xs sm:text-sm font-semibold text-white tracking-wide flex items-center gap-2">
+              <User className="w-4 h-4 text-accent-bright" />
               Station Operator Profile & Security Credentials
             </h3>
-            <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+            <span className="text-[10px] px-2.5 py-0.5 rounded-full font-mono bg-accent/10 text-accent-bright border border-accent/20">
               Clearance: Level 4 SCADA
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
             <div>
-              <label className="text-slate-300 block mb-1 font-bold uppercase">
+              <label className="text-slate-300 block mb-1 font-medium uppercase">
                 Operator Full Name / Username
               </label>
               <div className="relative">
@@ -136,14 +137,14 @@ export default function SettingsPage() {
                   onChange={(e) => setUserName(e.target.value)}
                   required
                   placeholder="e.g. Kaverisha Bhakat"
-                  className="w-full bg-[#0A121E] border border-[#1B2C42] rounded px-3 py-2 pl-9 text-white focus:outline-none focus:border-cyan-400"
+                  className="w-full bg-white/[0.02] border border-white/6 rounded-lg px-3 py-2 pl-9 text-white focus:outline-none focus:border-accent"
                 />
                 <User className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
               </div>
             </div>
 
             <div>
-              <label className="text-slate-300 block mb-1 font-bold uppercase">
+              <label className="text-slate-300 block mb-1 font-medium uppercase">
                 Station Call-Sign / Operator Email
               </label>
               <div className="relative">
@@ -153,14 +154,14 @@ export default function SettingsPage() {
                   onChange={(e) => setUserEmail(e.target.value)}
                   required
                   placeholder="name@ncpor.res.in"
-                  className="w-full bg-[#0A121E] border border-[#1B2C42] rounded px-3 py-2 pl-9 text-white focus:outline-none focus:border-cyan-400"
+                  className="w-full bg-white/[0.02] border border-white/6 rounded-lg px-3 py-2 pl-9 text-white focus:outline-none focus:border-accent"
                 />
                 <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
               </div>
             </div>
 
             <div>
-              <label className="text-slate-300 block mb-1 font-bold uppercase">
+              <label className="text-slate-300 block mb-1 font-medium uppercase">
                 Operational Duty & Designation
               </label>
               <div className="relative">
@@ -169,29 +170,29 @@ export default function SettingsPage() {
                   value={userRole}
                   onChange={(e) => setUserRole(e.target.value)}
                   placeholder="e.g. Microgrid SCADA Operator (Bharati)"
-                  className="w-full bg-[#0A121E] border border-[#1B2C42] rounded px-3 py-2 pl-9 text-white focus:outline-none focus:border-cyan-400"
+                  className="w-full bg-white/[0.02] border border-white/6 rounded-lg px-3 py-2 pl-9 text-white focus:outline-none focus:border-accent"
                 />
                 <BadgeCheck className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
               </div>
             </div>
 
             <div>
-              <label className="text-slate-300 block mb-1 font-bold uppercase">
+              <label className="text-slate-300 block mb-1 font-medium uppercase">
                 Assigned Station
               </label>
               <select
                 value={userStation}
                 onChange={(e) => setUserStation(e.target.value as any)}
-                className="w-full bg-[#0A121E] border border-[#1B2C42] rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
+                className="w-full bg-white/[0.02] border border-white/6 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-accent"
               >
-                <option value="maitri">Maitri Research Station (70°S)</option>
-                <option value="bharati">Bharati Research Station (69°S)</option>
-                <option value="ncpor_hq">NCPOR Operations HQ (Goa)</option>
+                <option value="maitri" className="bg-[#0a0a0c] text-slate-200">Maitri Research Station (70°S)</option>
+                <option value="bharati" className="bg-[#0a0a0c] text-slate-200">Bharati Research Station (69°S)</option>
+                <option value="ncpor_hq" className="bg-[#0a0a0c] text-slate-200">NCPOR Operations HQ (Goa)</option>
               </select>
             </div>
 
             <div>
-              <label className="text-slate-300 block mb-1 font-bold uppercase">
+              <label className="text-slate-300 block mb-1 font-medium uppercase">
                 Update Security Passcode / Password
               </label>
               <div className="relative">
@@ -200,14 +201,14 @@ export default function SettingsPage() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Enter new security passcode"
-                  className="w-full bg-[#0A121E] border border-[#1B2C42] rounded px-3 py-2 pl-9 text-white focus:outline-none focus:border-cyan-400"
+                  className="w-full bg-white/[0.02] border border-white/6 rounded-lg px-3 py-2 pl-9 text-white focus:outline-none focus:border-accent"
                 />
                 <Lock className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
               </div>
             </div>
 
             <div>
-              <label className="text-slate-300 block mb-1 font-bold uppercase">
+              <label className="text-slate-300 block mb-1 font-medium uppercase">
                 Confirm New Passcode
               </label>
               <div className="relative">
@@ -216,31 +217,31 @@ export default function SettingsPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter security passcode"
-                  className="w-full bg-[#0A121E] border border-[#1B2C42] rounded px-3 py-2 pl-9 text-white focus:outline-none focus:border-cyan-400"
+                  className="w-full bg-white/[0.02] border border-white/6 rounded-lg px-3 py-2 pl-9 text-white focus:outline-none focus:border-accent"
                 />
                 <Lock className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
               </div>
             </div>
           </div>
-        </div>
+        </GlassCard>
 
         {/* 1. Station Microgrid & Safety Configuration */}
-        <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5 space-y-4">
-          <h3 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-[#1B2C42]/60">
+        <GlassCard className="p-5 space-y-4">
+          <h3 className="text-xs sm:text-sm font-semibold text-white tracking-wide flex items-center gap-2 pb-2.5 border-b border-white/6">
             <Shield className="w-4 h-4 text-emerald-400" />
             Station Operational & Reserve Constraints
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
             <div>
               <label className="text-slate-300 block mb-1">Primary Monitored Station</label>
               <select
                 value={activeStationId}
                 onChange={(e) => setActiveStationId(e.target.value as any)}
-                className="w-full bg-[#0A121E] border border-[#1B2C42] rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
+                className="w-full bg-white/[0.02] border border-white/6 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-accent"
               >
-                <option value="maitri">Maitri Research Station (70°S)</option>
-                <option value="bharati">Bharati Research Station (69°S)</option>
+                <option value="maitri" className="bg-[#0a0a0c] text-slate-200">Maitri Research Station (70°S)</option>
+                <option value="bharati" className="bg-[#0a0a0c] text-slate-200">Bharati Research Station (69°S)</option>
               </select>
             </div>
 
@@ -260,7 +261,7 @@ export default function SettingsPage() {
 
             <div>
               <label className="text-slate-300 block mb-1">
-                Battery Minimum SOC Lock: <span className="text-cyan-300 font-bold">{batteryMinSoc}%</span>
+                Battery Minimum SOC Lock: <span className="text-accent-bright font-bold">{batteryMinSoc}%</span>
               </label>
               <input
                 type="range"
@@ -268,13 +269,13 @@ export default function SettingsPage() {
                 max="50"
                 value={batteryMinSoc}
                 onChange={(e) => setBatteryMinSoc(parseInt(e.target.value))}
-                className="w-full h-1.5 bg-[#080D14] rounded accent-cyan-400 cursor-pointer"
+                className="w-full h-1.5 bg-[#080D14] rounded accent-accent cursor-pointer"
               />
             </div>
 
             <div>
               <label className="text-slate-300 block mb-1">
-                Battery Maximum Charge Limit: <span className="text-cyan-300 font-bold">{batteryMaxSoc}%</span>
+                Battery Maximum Charge Limit: <span className="text-accent-bright font-bold">{batteryMaxSoc}%</span>
               </label>
               <input
                 type="range"
@@ -282,30 +283,30 @@ export default function SettingsPage() {
                 max="100"
                 value={batteryMaxSoc}
                 onChange={(e) => setBatteryMaxSoc(parseInt(e.target.value))}
-                className="w-full h-1.5 bg-[#080D14] rounded accent-cyan-400 cursor-pointer"
+                className="w-full h-1.5 bg-[#080D14] rounded accent-accent cursor-pointer"
               />
             </div>
           </div>
-        </div>
+        </GlassCard>
 
         {/* 2. AI Forecast & Optimizer Model Configuration */}
-        <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5 space-y-4">
-          <h3 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-[#1B2C42]/60">
-            <Cpu className="w-4 h-4 text-cyan-400" />
+        <GlassCard className="p-5 space-y-4">
+          <h3 className="text-xs sm:text-sm font-semibold text-white tracking-wide flex items-center gap-2 pb-2.5 border-b border-white/6">
+            <Cpu className="w-4 h-4 text-accent-bright" />
             AI Forecast Model & Solver Parameters
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono">
             <div>
               <label className="text-slate-300 block mb-1">Lookahead Forecast Horizon</label>
               <select
                 value={forecastHorizon}
                 onChange={(e) => setForecastHorizon(e.target.value)}
-                className="w-full bg-[#0A121E] border border-[#1B2C42] rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
+                className="w-full bg-white/[0.02] border border-white/6 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-accent"
               >
-                <option value="12h">12 Hours (High Precision)</option>
-                <option value="24h">24 Hours (Standard Operational)</option>
-                <option value="48h">48 Hours (Polar Expedition Planning)</option>
+                <option value="12h" className="bg-[#0a0a0c] text-slate-200">12 Hours (High Precision)</option>
+                <option value="24h" className="bg-[#0a0a0c] text-slate-200">24 Hours (Standard Operational)</option>
+                <option value="48h" className="bg-[#0a0a0c] text-slate-200">48 Hours (Polar Expedition Planning)</option>
               </select>
             </div>
 
@@ -314,17 +315,17 @@ export default function SettingsPage() {
               <select
                 value={modelType}
                 onChange={(e) => setModelType(e.target.value)}
-                className="w-full bg-[#0A121E] border border-[#1B2C42] rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
+                className="w-full bg-white/[0.02] border border-white/6 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-accent"
               >
-                <option value="Transformer-LSTM Polar Ensemble v4.2">Transformer-LSTM Polar Ensemble v4.2</option>
-                <option value="XGBoost-Physics Hybrid v3.1">XGBoost-Physics Hybrid v3.1</option>
-                <option value="Physics-Informed Neural Network (PINN)">Physics-Informed Neural Network (PINN)</option>
+                <option value="Transformer-LSTM Polar Ensemble v4.2" className="bg-[#0a0a0c] text-slate-200">Transformer-LSTM Polar Ensemble v4.2</option>
+                <option value="XGBoost-Physics Hybrid v3.1" className="bg-[#0a0a0c] text-slate-200">XGBoost-Physics Hybrid v3.1</option>
+                <option value="Physics-Informed Neural Network (PINN)" className="bg-[#0a0a0c] text-slate-200">Physics-Informed Neural Network (PINN)</option>
               </select>
             </div>
 
             <div>
               <label className="text-slate-300 block mb-1">
-                Confidence Threshold Gate: <span className="text-cyan-300 font-bold">{confidenceThreshold}%</span>
+                Confidence Threshold Gate: <span className="text-accent-bright font-bold">{confidenceThreshold}%</span>
               </label>
               <input
                 type="range"
@@ -332,21 +333,21 @@ export default function SettingsPage() {
                 max="98"
                 value={confidenceThreshold}
                 onChange={(e) => setConfidenceThreshold(parseInt(e.target.value))}
-                className="w-full h-1.5 bg-[#080D14] rounded accent-cyan-400 cursor-pointer"
+                className="w-full h-1.5 bg-[#080D14] rounded accent-accent cursor-pointer"
               />
             </div>
           </div>
-        </div>
+        </GlassCard>
 
         {/* 3. Notification & Alert Subscriptions */}
-        <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5 space-y-4">
-          <h3 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-[#1B2C42]/60">
+        <GlassCard className="p-5 space-y-4">
+          <h3 className="text-xs sm:text-sm font-semibold text-white tracking-wide flex items-center gap-2 pb-2.5 border-b border-white/6">
             <Bell className="w-4 h-4 text-amber-400" />
             SCADA Alert & Telemetry Subscriptions
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-            <label className="flex items-center gap-2.5 p-3 rounded bg-[#0A121E] border border-[#1B2C42] cursor-pointer">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
+            <label className="flex items-center gap-2.5 p-3 rounded-xl bg-white/[0.02] border border-white/6 hover:border-rose-500/30 transition-colors cursor-pointer">
               <input
                 type="checkbox"
                 checked={notifyCritical}
@@ -356,7 +357,7 @@ export default function SettingsPage() {
               <span className="text-slate-200">Critical Life-Support Alarms</span>
             </label>
 
-            <label className="flex items-center gap-2.5 p-3 rounded bg-[#0A121E] border border-[#1B2C42] cursor-pointer">
+            <label className="flex items-center gap-2.5 p-3 rounded-xl bg-white/[0.02] border border-white/6 hover:border-amber-500/30 transition-colors cursor-pointer">
               <input
                 type="checkbox"
                 checked={notifyFuel}
@@ -366,7 +367,7 @@ export default function SettingsPage() {
               <span className="text-slate-200">Fuel SFC & Reserve Alerts</span>
             </label>
 
-            <label className="flex items-center gap-2.5 p-3 rounded bg-[#0A121E] border border-[#1B2C42] cursor-pointer">
+            <label className="flex items-center gap-2.5 p-3 rounded-xl bg-white/[0.02] border border-white/6 hover:border-cyan-500/30 transition-colors cursor-pointer">
               <input
                 type="checkbox"
                 checked={notifyWeather}
@@ -376,7 +377,7 @@ export default function SettingsPage() {
               <span className="text-slate-200">Katabatic Storm Warnings</span>
             </label>
 
-            <label className="flex items-center gap-2.5 p-3 rounded bg-[#0A121E] border border-[#1B2C42] cursor-pointer">
+            <label className="flex items-center gap-2.5 p-3 rounded-xl bg-white/[0.02] border border-white/6 hover:border-emerald-500/30 transition-colors cursor-pointer">
               <input
                 type="checkbox"
                 checked={notifyBattery}
@@ -386,23 +387,23 @@ export default function SettingsPage() {
               <span className="text-slate-200">BESS SOC Threshold Alerts</span>
             </label>
           </div>
-        </div>
+        </GlassCard>
 
         {/* 4. Backend Integration (FastAPI Endpoint) */}
-        <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5 space-y-4">
-          <h3 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-[#1B2C42]/60">
+        <GlassCard className="p-5 space-y-4">
+          <h3 className="text-xs sm:text-sm font-semibold text-white tracking-wide flex items-center gap-2 pb-2.5 border-b border-white/6">
             <Globe className="w-4 h-4 text-blue-400" />
             Backend API & Telemetry Polling Interface
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
             <div>
               <label className="text-slate-300 block mb-1">FastAPI Backend Endpoint URL</label>
               <input
                 type="text"
                 value={backendUrl}
                 onChange={(e) => setBackendUrl(e.target.value)}
-                className="w-full bg-[#0A121E] border border-[#1B2C42] rounded px-3 py-2 text-cyan-300 focus:outline-none focus:border-cyan-400 font-mono"
+                className="w-full bg-white/[0.02] border border-white/6 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-accent font-mono"
               />
               <p className="text-[10px] text-slate-500 mt-1">
                 Connected to local FastAPI microservice / simulated mock data provider.
@@ -414,26 +415,27 @@ export default function SettingsPage() {
               <select
                 value={refreshInterval}
                 onChange={(e) => setRefreshInterval(e.target.value)}
-                className="w-full bg-[#0A121E] border border-[#1B2C42] rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
+                className="w-full bg-white/[0.02] border border-white/6 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-accent font-mono"
               >
-                <option value="1s">1 Second (Real-Time SCADA)</option>
-                <option value="5s">5 Seconds (Standard Operations)</option>
-                <option value="30s">30 Seconds (Bandwidth Conservative)</option>
+                <option value="1s" className="bg-[#0a0a0c] text-slate-200">1 Second (Real-Time SCADA)</option>
+                <option value="5s" className="bg-[#0a0a0c] text-slate-200">5 Seconds (Standard Operations)</option>
+                <option value="30s" className="bg-[#0a0a0c] text-slate-200">30 Seconds (Bandwidth Conservative)</option>
               </select>
             </div>
           </div>
-        </div>
+        </GlassCard>
 
-        {/* Bottom Save & Return to Dashboard CTA */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#1B2C42]/50">
-          <button
+        {/* Bottom Save CTA */}
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/6">
+          <Button
             type="submit"
             disabled={isSaving}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs uppercase transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] cursor-pointer"
+            variant="primary"
+            size="md"
           >
-            {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+            {isSaving ? <RefreshCw size={14} className="animate-spin mr-1.5" /> : <Save size={14} className="mr-1.5" />}
             <span>{isSaving ? 'COMMITTING & REDIRECTING...' : 'SAVE & GO TO DASHBOARD'}</span>
-          </button>
+          </Button>
         </div>
       </form>
     </div>

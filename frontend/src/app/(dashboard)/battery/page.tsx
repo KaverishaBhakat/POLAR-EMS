@@ -6,6 +6,7 @@ import { apiClient } from '@/lib/api/client';
 import { BatteryRecord, BatteryReadingRecord } from '@/lib/types';
 import { LoadingSkeleton } from '@/components/common/Toast';
 import { StatusBadge } from '@/components/common/StatusBadge';
+import { PageHeader, GlassCard, Button } from '@/components/ui';
 import {
   BatteryCharging,
   Zap,
@@ -143,40 +144,83 @@ export default function BatteryPage() {
 
   // Determine dynamic SOC color
   const getSocColor = (soc: number) => {
-    if (soc < 30) return { text: 'text-rose-400', bg: 'bg-rose-500', border: 'border-rose-500/30', glow: 'shadow-[0_0_15px_rgba(244,63,94,0.3)]' };
-    if (soc < 50) return { text: 'text-amber-400', bg: 'bg-amber-500', border: 'border-amber-500/30', glow: 'shadow-[0_0_15px_rgba(245,158,11,0.3)]' };
-    if (soc < 80) return { text: 'text-cyan-400', bg: 'bg-cyan-500', border: 'border-cyan-500/30', glow: 'shadow-[0_0_15px_rgba(6,182,212,0.3)]' };
-    return { text: 'text-emerald-400', bg: 'bg-emerald-500', border: 'border-emerald-500/30', glow: 'shadow-[0_0_15px_rgba(16,185,129,0.3)]' };
+    if (soc < 30) return { text: 'text-rose-400', bg: 'bg-rose-500', border: 'border-rose-500/30' };
+    if (soc < 50) return { text: 'text-amber-400', bg: 'bg-amber-500', border: 'border-amber-500/30' };
+    if (soc < 80) return { text: 'text-accent-bright', bg: 'bg-accent', border: 'border-accent/30' };
+    return { text: 'text-emerald-400', bg: 'bg-emerald-500', border: 'border-emerald-500/30' };
   };
 
   const socColor = getSocColor(effectiveSOC);
 
-  return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0A111C] p-4 sm:p-6 rounded-lg border border-[#1B2C42] relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-full bg-gradient-to-l from-cyan-500/10 via-transparent to-transparent pointer-events-none" />
-
-        <div className="space-y-1 z-10">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 uppercase">
-              BESS STORAGE
-            </span>
-            <span className="text-xs text-slate-400 font-mono">
-              Station: <strong className="text-slate-200">{station?.name || activeStationId.toUpperCase()}</strong>
-            </span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold font-mono text-slate-100 tracking-tight flex items-center gap-2.5">
-            <BatteryCharging className="w-6 h-6 text-cyan-400" />
-            Battery Energy Storage System (BESS)
-          </h1>
-          <p className="text-xs text-slate-400 font-mono">
-            Lithium iron phosphate (LiFePO4) storage container telemetry, State of Charge (SOC), and dispatch constraints.
-          </p>
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <LoadingSkeleton className="h-20 rounded-2xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <LoadingSkeleton key={i} className="h-28 rounded-2xl" />
+          ))}
         </div>
+        <LoadingSkeleton className="h-96 rounded-2xl" />
+      </div>
+    );
+  }
 
-        <div className="flex items-center gap-3 z-10">
-          <button
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Battery Storage (BESS)"
+          description={`BESS Telemetry | ${station?.name || activeStationId.toUpperCase()}`}
+          breadcrumbs={[
+            { label: 'Operations', href: '/dashboard' },
+            { label: 'Battery' },
+          ]}
+          badge={{ label: 'ERROR', variant: 'danger' }}
+        />
+
+        <GlassCard className="p-8 text-center space-y-4 border-rose-500/30 bg-rose-950/20">
+          <AlertTriangle className="w-10 h-10 text-rose-400 mx-auto animate-pulse" />
+          <div className="space-y-1">
+            <h3 className="text-base font-semibold text-rose-300">
+              PostgreSQL Battery Telemetry Service Unavailable
+            </h3>
+            <p className="text-xs text-rose-200/70 max-w-lg mx-auto">{error}</p>
+          </div>
+          <div>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={RefreshCw}
+              onClick={fetchBatteryData}
+            >
+              Retry Battery Connection
+            </Button>
+          </div>
+        </GlassCard>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Top Header */}
+      <PageHeader
+        title="Battery Energy Storage System (BESS)"
+        description={`Lithium iron phosphate (LiFePO4) storage container telemetry, State of Charge (SOC), and dispatch envelopes | ${station?.name || activeStationId.toUpperCase()}`}
+        breadcrumbs={[
+          { label: 'Operations', href: '/dashboard' },
+          { label: 'Battery' },
+        ]}
+        badge={{
+          label: `${batteries.length} BESS CONTAINERS`,
+          variant: batteries.length > 0 ? 'default' : 'neutral',
+        }}
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={RefreshCw}
             onClick={() => {
               fetchBatteryData();
               addToast({
@@ -185,207 +229,182 @@ export default function BatteryPage() {
                 type: 'INFO',
               });
             }}
-            disabled={loading}
-            className="flex items-center gap-2 px-3 py-2 bg-[#121E2E] hover:bg-[#1A2C42] border border-[#1B2C42] text-slate-300 hover:text-cyan-300 rounded font-mono text-xs transition-colors disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-cyan-400' : ''}`} />
-            Refresh Telemetry
-          </button>
-        </div>
-      </div>
-
-      {/* Error Banner */}
-      {error && (
-        <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-lg flex items-center justify-between gap-3 text-rose-300 font-mono text-xs">
-          <div className="flex items-center gap-2.5">
-            <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-          <button
-            onClick={fetchBatteryData}
-            className="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 rounded text-[11px] transition-colors"
-          >
-            Retry Connection
-          </button>
-        </div>
-      )}
-
-      {/* Loading Skeleton */}
-      {loading && <LoadingSkeleton className="h-48 w-full" />}
+            Refresh
+          </Button>
+        }
+      />
 
       {/* Empty State */}
-      {!loading && !error && batteries.length === 0 && (
-        <div className="bg-[#0B1524] border border-[#1B2C42] rounded-lg p-12 text-center font-mono space-y-4">
-          <div className="w-16 h-16 rounded-full bg-[#121E2E] border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
-            <Database className="w-8 h-8" />
-          </div>
+      {batteries.length === 0 ? (
+        <GlassCard className="p-10 text-center space-y-4">
+          <Database className="w-10 h-10 text-foreground-muted mx-auto" />
           <div className="space-y-1">
-            <h3 className="text-base font-bold text-slate-200">No BESS Containers Configured</h3>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
+            <h3 className="text-sm font-semibold text-foreground">No BESS Containers Configured</h3>
+            <p className="text-xs text-foreground-muted max-w-md mx-auto">
               No battery storage records were found in PostgreSQL for station{' '}
-              <span className="text-cyan-300 font-semibold">{activeStationId.toUpperCase()}</span>.
+              <span className="text-accent font-semibold">{activeStationId.toUpperCase()}</span>.
             </p>
           </div>
-        </div>
-      )}
-
-      {/* Fleet Summary Top KPI Grid */}
-      {!loading && batteries.length > 0 && (
+        </GlassCard>
+      ) : (
         <>
+          {/* Fleet Summary Top KPI Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* KPI 1: Fleet Capacity */}
-            <div className="bg-[#0B1524] border border-[#1B2C42] rounded-lg p-4 space-y-2 relative overflow-hidden">
-              <div className="flex items-center justify-between text-slate-400 font-mono text-xs">
+            <GlassCard hover className="p-4 space-y-2">
+              <div className="flex items-center justify-between text-foreground-muted text-xs font-mono uppercase tracking-wider">
                 <span className="flex items-center gap-1.5">
-                  <Database className="w-3.5 h-3.5 text-cyan-400" />
+                  <Database className="w-3.5 h-3.5 text-accent" />
                   TOTAL BESS CAPACITY
                 </span>
-                <span className="text-[10px] text-cyan-400/80 uppercase">DB RECORD</span>
+                <span className="text-[10px] text-accent-bright">DB RECORD</span>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold font-mono text-slate-100">{totalCapacityKWh}</span>
-                <span className="text-xs font-mono text-slate-400">kWh</span>
+                <span className="text-2xl font-bold font-mono text-foreground">{totalCapacityKWh}</span>
+                <span className="text-xs font-mono text-foreground-muted">kWh</span>
               </div>
-              <div className="text-[11px] font-mono text-slate-400 flex items-center justify-between pt-1 border-t border-[#1B2C42]/50">
+              <div className="text-[11px] font-mono text-foreground-muted flex items-center justify-between pt-1 border-t border-white/6">
                 <span>Total Stored:</span>
-                <span className="text-cyan-300 font-bold">{totalStoredKWh} kWh</span>
+                <span className="text-accent-bright font-semibold">{totalStoredKWh} kWh</span>
               </div>
-            </div>
+            </GlassCard>
 
             {/* KPI 2: Average SOC */}
-            <div className="bg-[#0B1524] border border-[#1B2C42] rounded-lg p-4 space-y-2 relative overflow-hidden">
-              <div className="flex items-center justify-between text-slate-400 font-mono text-xs">
+            <GlassCard hover className="p-4 space-y-2">
+              <div className="flex items-center justify-between text-foreground-muted text-xs font-mono uppercase tracking-wider">
                 <span className="flex items-center gap-1.5">
                   <Gauge className="w-3.5 h-3.5 text-emerald-400" />
                   FLEET AVERAGE SOC
                 </span>
-                <span className="text-[10px] text-emerald-400 uppercase">TELEMETRY</span>
+                <span className="text-[10px] text-emerald-400">TELEMETRY</span>
               </div>
               <div className="flex items-baseline gap-2">
                 <span className={`text-2xl font-bold font-mono ${socColor.text}`}>{avgSOC}%</span>
               </div>
-              <div className="w-full bg-[#121E2E] rounded-full h-1.5 overflow-hidden">
+              <div className="w-full bg-white/[0.04] rounded-full h-1.5 overflow-hidden">
                 <div
-                  className={`h-full ${socColor.bg} transition-all duration-500`}
+                  className={`h-full ${socColor.bg} transition-all duration-500 rounded-full`}
                   style={{ width: `${Math.min(100, Math.max(0, avgSOC))}%` }}
                 />
               </div>
-            </div>
+            </GlassCard>
 
             {/* KPI 3: Power Flow */}
-            <div className="bg-[#0B1524] border border-[#1B2C42] rounded-lg p-4 space-y-2 relative overflow-hidden">
-              <div className="flex items-center justify-between text-slate-400 font-mono text-xs">
+            <GlassCard hover className="p-4 space-y-2">
+              <div className="flex items-center justify-between text-foreground-muted text-xs font-mono uppercase tracking-wider">
                 <span className="flex items-center gap-1.5">
                   <Activity className="w-3.5 h-3.5 text-amber-400" />
                   LIVE POWER FLOW
                 </span>
-                <span className="text-[10px] text-amber-400 uppercase">INVERTER</span>
+                <span className="text-[10px] text-amber-400">INVERTER</span>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold font-mono text-slate-100">
+                <span className="text-2xl font-bold font-mono text-foreground">
                   {Math.abs(netFlowKW)}
                 </span>
-                <span className="text-xs font-mono text-slate-400">kW</span>
+                <span className="text-xs font-mono text-foreground-muted">kW</span>
                 <span
-                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold ${
+                  className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold ${
                     netFlowKW > 0
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                      ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
                       : netFlowKW < 0
-                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                      : 'bg-slate-700/50 text-slate-300 border border-slate-600/40'
+                      ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                      : 'bg-white/5 text-foreground-muted border border-white/10'
                   }`}
                 >
                   {netFlowKW > 0 ? 'CHARGING' : netFlowKW < 0 ? 'DISCHARGING' : 'IDLE'}
                 </span>
               </div>
-              <div className="text-[11px] font-mono text-slate-400 flex items-center justify-between pt-1 border-t border-[#1B2C42]/50">
+              <div className="text-[11px] font-mono text-foreground-muted flex items-center justify-between pt-1 border-t border-white/6">
                 <span>Charge / Discharge:</span>
-                <span className="text-slate-200">
+                <span className="text-foreground">
                   +{chargeKW} / -{dischargeKW} kW
                 </span>
               </div>
-            </div>
+            </GlassCard>
 
             {/* KPI 4: Active BESS Units */}
-            <div className="bg-[#0B1524] border border-[#1B2C42] rounded-lg p-4 space-y-2 relative overflow-hidden">
-              <div className="flex items-center justify-between text-slate-400 font-mono text-xs">
+            <GlassCard hover className="p-4 space-y-2">
+              <div className="flex items-center justify-between text-foreground-muted text-xs font-mono uppercase tracking-wider">
                 <span className="flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-accent" />
                   BESS CONTAINERS
                 </span>
-                <span className="text-[10px] text-slate-400 uppercase">ONLINE</span>
+                <span className="text-[10px] text-foreground-muted">ONLINE</span>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold font-mono text-cyan-400">{activeBESSCount}</span>
-                <span className="text-xs font-mono text-slate-400">/ {batteries.length} Units</span>
+                <span className="text-2xl font-bold font-mono text-accent-bright">{activeBESSCount}</span>
+                <span className="text-xs font-mono text-foreground-muted">/ {batteries.length} Units</span>
               </div>
-              <div className="text-[11px] font-mono text-slate-400 flex items-center justify-between pt-1 border-t border-[#1B2C42]/50">
+              <div className="text-[11px] font-mono text-foreground-muted flex items-center justify-between pt-1 border-t border-white/6">
                 <span>Chemistry:</span>
-                <span className="text-slate-200 font-semibold">LiFePO4 (Sub-Zero Spec)</span>
+                <span className="text-foreground font-semibold">LiFePO4 (Sub-Zero Spec)</span>
               </div>
-            </div>
+            </GlassCard>
           </div>
 
           {/* Main Grid: BESS Containers List + Detailed Telemetry / Controls */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left: BESS Containers Selector */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold font-mono text-slate-200 flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-cyan-400" />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-xs font-semibold text-foreground-muted uppercase tracking-wider flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-accent" />
                   BESS CONTAINERS ({batteries.length})
                 </h3>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {batteries.map((bat) => {
                   const isSelected = bat.id === selectedBatteryId;
                   const bSOC = bat.readings?.[0]?.soc ?? bat.currentSOC ?? 0;
                   const bColor = getSocColor(bSOC);
 
                   return (
-                    <div
+                    <GlassCard
                       key={bat.id}
+                      hover
                       onClick={() => setSelectedBatteryId(bat.id)}
-                      className={`cursor-pointer p-4 rounded-lg border transition-all duration-200 font-mono text-xs ${
+                      className={`cursor-pointer p-4 transition-all duration-200 ${
                         isSelected
-                          ? 'bg-[#121F30] border-cyan-500/50 shadow-[0_0_12px_rgba(6,182,212,0.15)]'
-                          : 'bg-[#0B1524] border-[#1B2C42] hover:bg-[#0F1B2B] hover:border-slate-600'
+                          ? 'border-accent/50 bg-accent/[0.06]'
+                          : ''
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-slate-100">{bat.name}</span>
+                        <span className="font-semibold text-foreground text-xs">{bat.name}</span>
                         <StatusBadge
                           status={bat.status === 'ONLINE' || bat.status === 'CHARGING' || bat.status === 'DISCHARGING' ? 'RUNNING' : bat.status}
                           size="sm"
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 my-2 text-[11px] text-slate-400">
+                      <div className="grid grid-cols-2 gap-2 my-2 text-[11px] text-foreground-muted font-mono">
                         <div>
-                          <span>Rated Cap:</span>{' '}
-                          <strong className="text-slate-200">{bat.capacity} kWh</strong>
+                          <span>Rated:</span>{' '}
+                          <strong className="text-foreground">{bat.capacity} kWh</strong>
                         </div>
                         <div>
-                          <span>Inverter Max:</span>{' '}
-                          <strong className="text-slate-200">{bat.maxChargePower} kW</strong>
+                          <span>Max Inverter:</span>{' '}
+                          <strong className="text-foreground">{bat.maxChargePower} kW</strong>
                         </div>
                       </div>
 
                       {/* Mini SOC Bar */}
-                      <div className="space-y-1 mt-2 pt-2 border-t border-[#1B2C42]/50">
+                      <div className="space-y-1 mt-2 pt-2 border-t border-white/6 font-mono">
                         <div className="flex items-center justify-between text-[10px]">
-                          <span className="text-slate-400">State of Charge (SOC)</span>
+                          <span className="text-foreground-muted">State of Charge (SOC)</span>
                           <span className={`font-bold ${bColor.text}`}>{bSOC}%</span>
                         </div>
-                        <div className="w-full bg-[#16273B] rounded-full h-1.5 overflow-hidden">
+                        <div className="w-full bg-white/[0.04] rounded-full h-1.5 overflow-hidden">
                           <div
-                            className={`h-full ${bColor.bg} transition-all duration-500`}
+                            className={`h-full ${bColor.bg} transition-all duration-500 rounded-full`}
                             style={{ width: `${Math.min(100, Math.max(0, bSOC))}%` }}
                           />
                         </div>
                       </div>
-                    </div>
+                    </GlassCard>
                   );
                 })}
               </div>
@@ -395,15 +414,15 @@ export default function BatteryPage() {
             {selectedBattery && (
               <div className="lg:col-span-2 space-y-6">
                 {/* Visualizer Card */}
-                <div className="bg-[#0B1524] border border-[#1B2C42] rounded-lg p-5 font-mono space-y-5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#1B2C42] gap-2">
+                <GlassCard className="p-5 space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-white/6 gap-2">
                     <div>
-                      <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                        <BatteryCharging className="w-5 h-5 text-cyan-400" />
+                      <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <BatteryCharging className="w-5 h-5 text-accent" />
                         {selectedBattery.name}
                       </h2>
-                      <p className="text-[11px] text-slate-400">
-                        ID: <span className="text-slate-300">{selectedBattery.id}</span>
+                      <p className="text-xs text-foreground-muted font-mono mt-0.5">
+                        ID: <span className="text-foreground">{selectedBattery.id}</span>
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -419,39 +438,39 @@ export default function BatteryPage() {
                   </div>
 
                   {/* Primary SOC Gauge & Big Metrics */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-[#070D16] p-4 rounded-lg border border-[#1B2C42]/70">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white/[0.02] p-4 rounded-xl border border-white/5 font-mono">
                     {/* SOC Big Gauge */}
-                    <div className="text-center md:border-r border-[#1B2C42]/60 pr-0 md:pr-4 space-y-2 flex flex-col justify-center items-center">
-                      <span className="text-[11px] text-slate-400 uppercase tracking-wider">STATE OF CHARGE (SOC)</span>
-                      <div className={`text-4xl sm:text-5xl font-extrabold ${socColor.text} ${socColor.glow}`}>
+                    <div className="text-center md:border-r border-white/6 pr-0 md:pr-4 space-y-2 flex flex-col justify-center items-center">
+                      <span className="text-[10px] text-foreground-muted uppercase tracking-wider">STATE OF CHARGE (SOC)</span>
+                      <div className={`text-4xl sm:text-5xl font-extrabold ${socColor.text}`}>
                         {effectiveSOC}%
                       </div>
-                      <div className="text-[10px] text-slate-400">
+                      <div className="text-[10px] text-foreground-muted">
                         {Math.round(((effectiveSOC / 100) * selectedBattery.capacity) * 10) / 10} / {selectedBattery.capacity} kWh
                       </div>
-                      <div className="w-full max-w-[180px] bg-[#121E2E] rounded-full h-2.5 overflow-hidden border border-[#1B2C42]">
+                      <div className="w-full max-w-[180px] bg-white/[0.04] rounded-full h-2 overflow-hidden border border-white/5">
                         <div
-                          className={`h-full ${socColor.bg} transition-all duration-500`}
+                          className={`h-full ${socColor.bg} transition-all duration-500 rounded-full`}
                           style={{ width: `${Math.min(100, Math.max(0, effectiveSOC))}%` }}
                         />
                       </div>
                     </div>
 
                     {/* Stored Energy & Inverter Throughput */}
-                    <div className="space-y-3 flex flex-col justify-center px-0 md:px-2 md:border-r border-[#1B2C42]/60">
+                    <div className="space-y-3 flex flex-col justify-center px-0 md:px-2 md:border-r border-white/6">
                       <div>
-                        <span className="text-[10px] text-slate-400 block uppercase">USABLE ENERGY ENVELOPE</span>
-                        <div className="text-lg font-bold text-slate-100 flex items-baseline gap-1">
-                          {usableCapacityKWh} <span className="text-xs text-slate-400 font-normal">kWh</span>
+                        <span className="text-[10px] text-foreground-muted block uppercase">USABLE ENERGY ENVELOPE</span>
+                        <div className="text-base font-bold text-foreground flex items-baseline gap-1">
+                          {usableCapacityKWh} <span className="text-xs text-foreground-muted font-normal">kWh</span>
                         </div>
-                        <span className="text-[10px] text-cyan-400/80">
+                        <span className="text-[10px] text-accent-bright">
                           {selectedBattery.minimumSOC}% min &rarr; {selectedBattery.maximumSOC}% max
                         </span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-400 block uppercase">MAX DISCHARGE LIMIT</span>
-                        <div className="text-lg font-bold text-slate-100 flex items-baseline gap-1">
-                          {selectedBattery.maxDischargePower} <span className="text-xs text-slate-400 font-normal">kW</span>
+                        <span className="text-[10px] text-foreground-muted block uppercase">MAX DISCHARGE LIMIT</span>
+                        <div className="text-base font-bold text-foreground flex items-baseline gap-1">
+                          {selectedBattery.maxDischargePower} <span className="text-xs text-foreground-muted font-normal">kW</span>
                         </div>
                       </div>
                     </div>
@@ -459,28 +478,28 @@ export default function BatteryPage() {
                     {/* Inverter Flow State */}
                     <div className="space-y-3 flex flex-col justify-center">
                       <div>
-                        <span className="text-[10px] text-slate-400 block uppercase">MAX CHARGE LIMIT</span>
-                        <div className="text-lg font-bold text-slate-100 flex items-baseline gap-1">
-                          {selectedBattery.maxChargePower} <span className="text-xs text-slate-400 font-normal">kW</span>
+                        <span className="text-[10px] text-foreground-muted block uppercase">MAX CHARGE LIMIT</span>
+                        <div className="text-base font-bold text-foreground flex items-baseline gap-1">
+                          {selectedBattery.maxChargePower} <span className="text-xs text-foreground-muted font-normal">kW</span>
                         </div>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-400 block uppercase">OPERATIONAL STATE</span>
+                        <span className="text-[10px] text-foreground-muted block uppercase">OPERATIONAL STATE</span>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           {netFlowKW > 0 ? (
                             <>
                               <ArrowUpRight className="w-4 h-4 text-emerald-400" />
-                              <span className="text-xs font-bold text-emerald-300">Charging (+{chargeKW} kW)</span>
+                              <span className="text-xs font-semibold text-emerald-300">Charging (+{chargeKW} kW)</span>
                             </>
                           ) : netFlowKW < 0 ? (
                             <>
                               <ArrowDownRight className="w-4 h-4 text-amber-400" />
-                              <span className="text-xs font-bold text-amber-300">Discharging (-{dischargeKW} kW)</span>
+                              <span className="text-xs font-semibold text-amber-300">Discharging (-{dischargeKW} kW)</span>
                             </>
                           ) : (
                             <>
-                              <Clock className="w-4 h-4 text-slate-400" />
-                              <span className="text-xs font-bold text-slate-300">Standby / Float (0 kW)</span>
+                              <Clock className="w-4 h-4 text-foreground-muted" />
+                              <span className="text-xs font-semibold text-foreground-muted">Standby / Float (0 kW)</span>
                             </>
                           )}
                         </div>
@@ -488,55 +507,55 @@ export default function BatteryPage() {
                     </div>
                   </div>
 
-                  {/* Operational & Mathematical Dispatch Constraints (Clean DB Fields for Optimization) */}
-                  <div className="bg-[#0A111C] p-4 rounded-lg border border-[#1B2C42] space-y-3">
+                  {/* Operational & Mathematical Dispatch Constraints */}
+                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                        <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+                      <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                        <Sliders className="w-3.5 h-3.5 text-accent" />
                         SCADA DISPATCH CONSTRAINTS & BATTERY LIMITS
                       </span>
-                      <span className="text-[10px] text-slate-400">PostgreSQL Schema Properties</span>
+                      <span className="text-[10px] text-foreground-muted font-mono">PostgreSQL Schema Properties</span>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                      <div className="p-2.5 rounded bg-[#121E2E]/60 border border-[#1B2C42]">
-                        <span className="text-[10px] text-slate-400 block">Minimum SOC Limit</span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+                      <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+                        <span className="text-[10px] text-foreground-muted block">Minimum SOC Limit</span>
                         <span className="text-sm font-bold text-rose-400">{selectedBattery.minimumSOC}%</span>
-                        <span className="text-[9px] text-slate-400 block mt-0.5">Deep Discharge Lock</span>
+                        <span className="text-[9px] text-foreground-muted block mt-0.5">Deep Discharge Lock</span>
                       </div>
-                      <div className="p-2.5 rounded bg-[#121E2E]/60 border border-[#1B2C42]">
-                        <span className="text-[10px] text-slate-400 block">Maximum SOC Limit</span>
+                      <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+                        <span className="text-[10px] text-foreground-muted block">Maximum SOC Limit</span>
                         <span className="text-sm font-bold text-emerald-400">{selectedBattery.maximumSOC}%</span>
-                        <span className="text-[9px] text-slate-400 block mt-0.5">Overcharge Cutoff</span>
+                        <span className="text-[9px] text-foreground-muted block mt-0.5">Overcharge Cutoff</span>
                       </div>
-                      <div className="p-2.5 rounded bg-[#121E2E]/60 border border-[#1B2C42]">
-                        <span className="text-[10px] text-slate-400 block">Max Charge Inverter</span>
-                        <span className="text-sm font-bold text-cyan-300">{selectedBattery.maxChargePower} kW</span>
-                        <span className="text-[9px] text-slate-400 block mt-0.5">C-Rate Safe Envelope</span>
+                      <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+                        <span className="text-[10px] text-foreground-muted block">Max Charge Inverter</span>
+                        <span className="text-sm font-bold text-accent-bright">{selectedBattery.maxChargePower} kW</span>
+                        <span className="text-[9px] text-foreground-muted block mt-0.5">C-Rate Safe Envelope</span>
                       </div>
-                      <div className="p-2.5 rounded bg-[#121E2E]/60 border border-[#1B2C42]">
-                        <span className="text-[10px] text-slate-400 block">Max Discharge Inverter</span>
+                      <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+                        <span className="text-[10px] text-foreground-muted block">Max Discharge Inverter</span>
                         <span className="text-sm font-bold text-amber-300">{selectedBattery.maxDischargePower} kW</span>
-                        <span className="text-[9px] text-slate-400 block mt-0.5">Peak Dispatch Limit</span>
+                        <span className="text-[9px] text-foreground-muted block mt-0.5">Peak Dispatch Limit</span>
                       </div>
                     </div>
                   </div>
-                </div>
+                </GlassCard>
 
                 {/* BESS State of Charge & Power Flow Chart */}
                 {readings.length > 0 && (
-                  <div className="bg-[#0B1524] border border-[#1B2C42] rounded-lg p-5 font-mono space-y-4">
-                    <div className="flex items-center justify-between pb-2.5 border-b border-[#1B2C42]">
+                  <GlassCard className="p-5 space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-white/6">
                       <div>
-                        <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4 text-cyan-400" />
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4 text-accent" />
                           BESS SOC Trajectory &amp; Power Flow
                         </h3>
-                        <p className="text-[11px] text-slate-400 mt-0.5">
+                        <p className="text-xs text-foreground-muted mt-0.5">
                           Chronological telemetry readings for {selectedBattery.name} from PostgreSQL
                         </p>
                       </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/10 text-accent-bright border border-accent/20 font-mono">
                         {readings.length} READINGS
                       </span>
                     </div>
@@ -549,7 +568,7 @@ export default function BatteryPage() {
 
                     <div className="h-64 w-full min-h-[260px]">
                       {!isMounted ? (
-                        <div className="w-full h-full bg-[#0A121E]/60 rounded animate-pulse" />
+                        <div className="w-full h-full bg-white/[0.02] rounded-xl animate-pulse" />
                       ) : (
                         <ResponsiveContainer width="100%" height="100%">
                           <AreaChart
@@ -564,20 +583,21 @@ export default function BatteryPage() {
                           >
                             <defs>
                               <linearGradient id="bessSocGrad" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
-                                <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                                <stop offset="5%" stopColor="#5E6AD2" stopOpacity={0.4} />
+                                <stop offset="95%" stopColor="#5E6AD2" stopOpacity={0.0} />
                               </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
-                            <XAxis dataKey="time" stroke="#64748b" fontSize={10} />
-                            <YAxis domain={[0, 100]} stroke="#64748b" fontSize={10} unit="%" />
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                            <XAxis dataKey="time" stroke="#8A8F98" fontSize={10} />
+                            <YAxis domain={[0, 100]} stroke="#8A8F98" fontSize={10} unit="%" />
                             <Tooltip
                               contentStyle={{
-                                backgroundColor: '#0A121E',
-                                borderColor: '#1B2C42',
-                                borderRadius: '6px',
+                                backgroundColor: '#0a0a0c',
+                                borderColor: 'rgba(255,255,255,0.1)',
+                                borderRadius: '12px',
                                 fontFamily: 'monospace',
                                 fontSize: '11px',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                               }}
                             />
                             <ReferenceLine
@@ -596,33 +616,33 @@ export default function BatteryPage() {
                               type="monotone"
                               dataKey="soc"
                               name="Battery SOC (%)"
-                              stroke="#06b6d4"
+                              stroke="#5E6AD2"
                               strokeWidth={2}
                               fill="url(#bessSocGrad)"
-                              dot={{ r: 3, fill: '#06b6d4' }}
-                              activeDot={{ r: 5, fill: '#22d3ee' }}
+                              dot={{ r: 3, fill: '#5E6AD2' }}
+                              activeDot={{ r: 5, fill: '#6872D9' }}
                             />
                           </AreaChart>
                         </ResponsiveContainer>
                       )}
                     </div>
-                  </div>
+                  </GlassCard>
                 )}
 
                 {/* Telemetry Reading History Table */}
-                <div className="bg-[#0B1524] border border-[#1B2C42] rounded-lg p-5 font-mono space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-cyan-400" />
+                <GlassCard className="p-5 space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/6">
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-accent" />
                       TELEMETRY READINGS LOG ({readings.length})
                     </h3>
-                    <span className="text-[10px] text-slate-400">PostgreSQL: battery_readings</span>
+                    <span className="text-xs text-foreground-muted font-mono">PostgreSQL: battery_readings</span>
                   </div>
 
                   {readingsLoading && <LoadingSkeleton className="h-28 w-full" />}
 
                   {!readingsLoading && readings.length === 0 && (
-                    <div className="py-8 text-center border border-dashed border-[#1B2C42] rounded-lg text-slate-400 text-xs">
+                    <div className="py-8 text-center border border-dashed border-white/10 rounded-xl text-foreground-muted text-xs">
                       No historical telemetry readings found for this BESS container in PostgreSQL.
                     </div>
                   )}
@@ -631,7 +651,7 @@ export default function BatteryPage() {
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
-                          <tr className="border-b border-[#1B2C42] text-[11px] text-slate-400 bg-[#070D16]">
+                          <tr className="border-b border-white/6 text-[10px] text-foreground-muted uppercase font-mono bg-white/[0.02]">
                             <th className="p-2.5 font-semibold">Timestamp (UTC)</th>
                             <th className="p-2.5 font-semibold">State of Charge (SOC)</th>
                             <th className="p-2.5 font-semibold">Charge Power</th>
@@ -639,13 +659,13 @@ export default function BatteryPage() {
                             <th className="p-2.5 font-semibold">Net Flow</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#1B2C42]/50">
+                        <tbody className="divide-y divide-white/4 font-mono text-xs">
                           {readings.map((r) => {
                             const net = (r.chargePower || 0) - (r.dischargePower || 0);
                             const rColor = getSocColor(r.soc);
                             return (
-                              <tr key={r.id} className="hover:bg-[#121E2E]/40 transition-colors">
-                                <td className="p-2.5 text-slate-300 font-mono">
+                              <tr key={r.id} className="hover:bg-white/[0.03] transition-colors">
+                                <td className="p-2.5 text-foreground-muted font-mono">
                                   {new Date(r.timestamp).toLocaleString('en-US', {
                                     month: 'short',
                                     day: 'numeric',
@@ -656,19 +676,19 @@ export default function BatteryPage() {
                                   })}
                                 </td>
                                 <td className="p-2.5 font-bold">
-                                  <span className={`px-1.5 py-0.5 rounded ${rColor.border} bg-[#0A111C] ${rColor.text}`}>
+                                  <span className={`px-2 py-0.5 rounded-full border ${rColor.border} bg-white/5 ${rColor.text}`}>
                                     {r.soc}%
                                   </span>
                                 </td>
-                                <td className="p-2.5 text-slate-200">{r.chargePower || 0} kW</td>
-                                <td className="p-2.5 text-slate-200">{r.dischargePower || 0} kW</td>
+                                <td className="p-2.5 text-foreground">{r.chargePower || 0} kW</td>
+                                <td className="p-2.5 text-foreground">{r.dischargePower || 0} kW</td>
                                 <td className="p-2.5 font-semibold">
                                   {net > 0 ? (
                                     <span className="text-emerald-400">+{net} kW (Charge)</span>
                                   ) : net < 0 ? (
                                     <span className="text-amber-400">{net} kW (Discharge)</span>
                                   ) : (
-                                    <span className="text-slate-400">0 kW (Idle)</span>
+                                    <span className="text-foreground-muted">0 kW (Idle)</span>
                                   )}
                                 </td>
                               </tr>
@@ -678,7 +698,7 @@ export default function BatteryPage() {
                       </table>
                     </div>
                   )}
-                </div>
+                </GlassCard>
               </div>
             )}
           </div>

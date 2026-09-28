@@ -30,107 +30,107 @@ const STATUS_CONFIG: Record<
 > = {
   OPERATIONAL: {
     bg: 'bg-emerald-500/10',
-    text: 'text-emerald-400',
-    border: 'border-emerald-500/30',
+    text: 'text-emerald-300',
+    border: 'border-emerald-500/20',
     dot: 'bg-emerald-400',
-    glow: 'shadow-[0_0_8px_rgba(16,185,129,0.35)]',
+    glow: 'shadow-[0_0_8px_rgba(16,185,129,0.3)]',
   },
   ONLINE: {
     bg: 'bg-emerald-500/10',
-    text: 'text-emerald-400',
-    border: 'border-emerald-500/30',
+    text: 'text-emerald-300',
+    border: 'border-emerald-500/20',
     dot: 'bg-emerald-400',
-    glow: 'shadow-[0_0_8px_rgba(16,185,129,0.35)]',
+    glow: 'shadow-[0_0_8px_rgba(16,185,129,0.3)]',
   },
   RUNNING: {
     bg: 'bg-emerald-500/10',
-    text: 'text-emerald-400',
-    border: 'border-emerald-500/30',
+    text: 'text-emerald-300',
+    border: 'border-emerald-500/20',
     dot: 'bg-emerald-400',
-    glow: 'shadow-[0_0_8px_rgba(16,185,129,0.35)]',
-  },
-  PROTECTED: {
-    bg: 'bg-cyan-500/10',
-    text: 'text-cyan-400',
-    border: 'border-cyan-500/30',
-    dot: 'bg-cyan-400',
-    glow: 'shadow-[0_0_8px_rgba(6,182,212,0.35)]',
+    glow: 'shadow-[0_0_8px_rgba(16,185,129,0.3)]',
   },
   CHARGING: {
-    bg: 'bg-cyan-500/10',
-    text: 'text-cyan-400',
-    border: 'border-cyan-500/30',
-    dot: 'bg-cyan-400',
-    glow: 'shadow-[0_0_8px_rgba(6,182,212,0.35)]',
+    bg: 'bg-indigo-500/10',
+    text: 'text-indigo-300',
+    border: 'border-indigo-500/20',
+    dot: 'bg-indigo-400',
+    glow: 'shadow-[0_0_8px_rgba(94,106,210,0.3)]',
   },
   DISCHARGING: {
-    bg: 'bg-blue-500/10',
-    text: 'text-blue-400',
-    border: 'border-blue-500/30',
-    dot: 'bg-blue-400',
-    glow: 'shadow-[0_0_8px_rgba(59,130,246,0.35)]',
+    bg: 'bg-amber-500/10',
+    text: 'text-amber-300',
+    border: 'border-amber-500/20',
+    dot: 'bg-amber-400',
+    glow: 'shadow-[0_0_8px_rgba(245,158,11,0.3)]',
+  },
+  STANDBY: {
+    bg: 'bg-slate-500/10',
+    text: 'text-slate-300',
+    border: 'border-slate-500/20',
+    dot: 'bg-slate-400',
+    glow: '',
   },
   IDLE: {
     bg: 'bg-slate-500/10',
-    text: 'text-slate-400',
-    border: 'border-slate-500/30',
+    text: 'text-slate-300',
+    border: 'border-slate-500/20',
     dot: 'bg-slate-400',
     glow: '',
   },
   OPTIMIZED: {
-    bg: 'bg-blue-500/10',
-    text: 'text-blue-400',
-    border: 'border-blue-500/30',
-    dot: 'bg-blue-400',
-    glow: '',
+    bg: 'bg-indigo-500/10',
+    text: 'text-indigo-300',
+    border: 'border-indigo-500/20',
+    dot: 'bg-indigo-400',
+    glow: 'shadow-[0_0_8px_rgba(94,106,210,0.3)]',
   },
-  STANDBY: {
-    bg: 'bg-amber-500/10',
-    text: 'text-amber-400',
-    border: 'border-amber-500/30',
-    dot: 'bg-amber-400',
+  PROTECTED: {
+    bg: 'bg-emerald-500/10',
+    text: 'text-emerald-300',
+    border: 'border-emerald-500/20',
+    dot: 'bg-emerald-400',
+    glow: 'shadow-[0_0_8px_rgba(16,185,129,0.3)]',
+  },
+  SHED: {
+    bg: 'bg-rose-500/10',
+    text: 'text-rose-300',
+    border: 'border-rose-500/20',
+    dot: 'bg-rose-400',
     glow: '',
   },
   WARNING: {
     bg: 'bg-amber-500/10',
-    text: 'text-amber-400',
-    border: 'border-amber-500/30',
+    text: 'text-amber-300',
+    border: 'border-amber-500/20',
     dot: 'bg-amber-400',
-    glow: 'shadow-[0_0_8px_rgba(245,158,11,0.35)]',
+    glow: 'shadow-[0_0_8px_rgba(245,158,11,0.3)]',
   },
   CRITICAL: {
     bg: 'bg-rose-500/10',
-    text: 'text-rose-400',
-    border: 'border-rose-500/30',
+    text: 'text-rose-300',
+    border: 'border-rose-500/20',
     dot: 'bg-rose-400',
-    glow: 'shadow-[0_0_8px_rgba(239,68,68,0.35)]',
+    glow: 'shadow-[0_0_8px_rgba(239,68,68,0.3)]',
+  },
+  INFO: {
+    bg: 'bg-sky-500/10',
+    text: 'text-sky-300',
+    border: 'border-sky-500/20',
+    dot: 'bg-sky-400',
+    glow: '',
+  },
+  MAINTENANCE: {
+    bg: 'bg-amber-500/10',
+    text: 'text-amber-300',
+    border: 'border-amber-500/20',
+    dot: 'bg-amber-400',
+    glow: '',
   },
   OFFLINE: {
     bg: 'bg-slate-500/10',
     text: 'text-slate-400',
-    border: 'border-slate-500/30',
+    border: 'border-slate-500/20',
     dot: 'bg-slate-500',
-    glow: '',
-  },
-  MAINTENANCE: {
-    bg: 'bg-purple-500/10',
-    text: 'text-purple-400',
-    border: 'border-purple-500/30',
-    dot: 'bg-purple-400',
-    glow: '',
-  },
-  SHED: {
-    bg: 'bg-orange-500/10',
-    text: 'text-orange-400',
-    border: 'border-orange-500/30',
-    dot: 'bg-orange-400',
-    glow: '',
-  },
-  INFO: {
-    bg: 'bg-sky-500/10',
-    text: 'text-sky-400',
-    border: 'border-sky-500/30',
-    dot: 'bg-sky-400',
     glow: '',
   },
 };
@@ -142,35 +142,25 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   showDot = true,
   className = '',
 }) => {
-  const normalized = status.toUpperCase();
-  const config = STATUS_CONFIG[normalized] || STATUS_CONFIG.INFO;
+  const normKey = status.toUpperCase();
+  const config = STATUS_CONFIG[normKey] || STATUS_CONFIG.INFO;
 
   const sizeClasses = {
-    sm: 'text-[10px] px-2 py-0.5 tracking-wider gap-1.5',
-    md: 'text-xs px-2.5 py-1 tracking-wider gap-2',
-    lg: 'text-sm px-3 py-1.5 tracking-wider gap-2.5',
-  }[size];
-
-  const dotSize = {
-    sm: 'w-1.5 h-1.5',
-    md: 'w-2 h-2',
-    lg: 'w-2.5 h-2.5',
+    sm: 'text-[10px] px-2.5 py-0.5 gap-1.5',
+    md: 'text-xs px-3 py-1 gap-2',
+    lg: 'text-sm px-3.5 py-1.5 gap-2.5',
   }[size];
 
   return (
     <span
-      className={`inline-flex items-center font-mono font-medium uppercase rounded border ${config.bg} ${config.text} ${config.border} ${config.glow} ${sizeClasses} ${className}`}
+      className={`inline-flex items-center font-mono font-medium uppercase rounded-full border tracking-wide select-none ${config.bg} ${config.text} ${config.border} ${sizeClasses} ${className}`}
     >
       {showDot && (
         <span
-          className={`rounded-full ${config.dot} ${
-            normalized === 'OPERATIONAL' || normalized === 'RUNNING' || normalized === 'CRITICAL'
-              ? 'animate-pulse'
-              : ''
-          } ${dotSize}`}
+          className={`w-1.5 h-1.5 rounded-full ${config.dot} ${config.glow} flex-shrink-0 animate-pulse`}
         />
       )}
-      {label || status}
+      <span>{label || status}</span>
     </span>
   );
 };

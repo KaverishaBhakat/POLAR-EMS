@@ -16,6 +16,7 @@ import { OptimizationDecision } from '@/components/optimization/OptimizationDeci
 import { DataProvenance } from '@/components/optimization/DataProvenance';
 import { LoadingSkeleton } from '@/components/common/Toast';
 import { Sliders, Sparkles, AlertTriangle, RefreshCw, Layers, ShieldCheck } from 'lucide-react';
+import { PageHeader, GlassCard, Button } from '@/components/ui';
 
 export default function OptimizationPage() {
   const { activeStationId, station } = useStation();
@@ -73,71 +74,65 @@ export default function OptimizationPage() {
   // Error / Unavailable State without crash
   if (error && (!metrics || dispatchSchedule.length === 0)) {
     return (
-      <div className="space-y-6 font-mono">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#1B2C42]/50">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide uppercase flex items-center gap-2.5">
-              <Sliders className="w-5 h-5 text-emerald-400" />
-              Microgrid Dispatch Optimization
-            </h1>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Station: <span className="text-white font-bold">{station?.name || activeStationId}</span>
-            </p>
-          </div>
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          title="Microgrid Dispatch Optimization"
+          subtitle={`Station: ${station?.name || activeStationId}`}
+          icon={<Sliders className="w-5 h-5 text-emerald-400" />}
+          breadcrumbs={[
+            { label: "Intelligence", href: "/optimization" },
+            { label: "OR-Tools MILP" }
+          ]}
+        />
 
-        <div className="p-8 rounded-lg bg-[#0E1724]/90 border border-amber-500/40 text-center space-y-4 max-w-2xl mx-auto my-12">
-          <div className="w-14 h-14 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400 mx-auto">
+        <GlassCard className="p-8 text-center space-y-4 max-w-2xl mx-auto my-12 border-amber-500/30">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto">
             <AlertTriangle size={28} />
           </div>
           <div className="space-y-2">
-            <h2 className="text-base sm:text-lg font-bold text-white uppercase">
+            <h2 className="text-base sm:text-lg font-bold text-white uppercase font-mono">
               Optimization Model Unavailable
             </h2>
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-slate-300 leading-relaxed font-mono">
               {error}
             </p>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-slate-400 font-mono">
               The OR-Tools MILP optimization pipeline currently features the December historical climatology solar model for <strong className="text-amber-300">Maitri Station</strong>.
             </p>
           </div>
 
           <div className="pt-2 flex justify-center gap-3">
-            <button
+            <Button
               onClick={loadOptimizationData}
-              className="flex items-center gap-2 px-4 py-2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 text-xs font-bold transition-all"
+              variant="secondary"
+              size="sm"
             >
-              <RefreshCw size={14} />
+              <RefreshCw size={14} className="mr-1.5" />
               Retry Connection
-            </button>
+            </Button>
           </div>
-        </div>
+        </GlassCard>
       </div>
     );
   }
 
   // Active / Ready State
   return (
-    <div className="space-y-6 font-mono">
+    <div className="space-y-6">
       {/* 1. Header & Scenario Badge */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#1B2C42]/50">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide uppercase flex items-center gap-2.5">
-            <Sliders className="w-5 h-5 text-emerald-400" />
-            Microgrid Dispatch Optimization
-          </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Google OR-Tools MILP 24-hour lookahead economic dispatch & storage co-optimization | {station?.name || activeStationId}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded bg-[#0A1828] border border-emerald-500/40 text-emerald-300">
-            <Sparkles className="w-3 h-3 text-emerald-400" />
-            <span>SOLVER: OR-Tools MILP (SCIP)</span>
-          </span>
-        </div>
-      </div>
+      <PageHeader
+        title="Microgrid Dispatch Optimization"
+        subtitle={`Google OR-Tools MILP 24-hour lookahead economic dispatch & storage co-optimization | ${station?.name || activeStationId}`}
+        icon={<Sliders className="w-5 h-5 text-emerald-400" />}
+        badge={{
+          label: "SOLVER: OR-Tools MILP (SCIP)",
+          variant: "success"
+        }}
+        breadcrumbs={[
+          { label: "Intelligence", href: "/optimization" },
+          { label: "OR-Tools MILP" }
+        ]}
+      />
 
       {/* 2. Interactive Solver Execution Runner */}
       {metrics && (

@@ -7,6 +7,7 @@ import { AntarcticaMap } from '@/components/stations/AntarcticaMap';
 import { StationCard } from '@/components/stations/StationCard';
 import { LoadingSkeleton } from '@/components/common/Toast';
 import { MapPin, AlertTriangle, RefreshCw, Database, Radio } from 'lucide-react';
+import { PageHeader, GlassCard, Button } from '@/components/ui';
 
 export default function StationsPage() {
   const [stations, setStations] = useState<Station[]>([]);
@@ -71,19 +72,17 @@ export default function StationsPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#1B2C42]/50">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold font-mono text-white tracking-wide uppercase flex items-center gap-2.5">
-              <MapPin className="w-5 h-5 text-cyan-400" />
-              Antarctic Research Stations Fleet
-            </h1>
-            <p className="text-xs text-slate-400 font-mono mt-0.5">
-              Indian Antarctic Programme (NCPOR / MoES) operational station nodes
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          title="Antarctic Research Stations Fleet"
+          subtitle="Indian Antarctic Programme (NCPOR / MoES) operational station nodes"
+          icon={<MapPin className="w-5 h-5 text-accent-bright" />}
+          breadcrumbs={[
+            { label: "Operations", href: "/stations" },
+            { label: "Stations Fleet" }
+          ]}
+        />
 
-        <div className="rounded-lg border border-rose-500/40 bg-[#160B12] p-8 font-mono text-center space-y-4 shadow-[0_0_20px_rgba(244,63,94,0.1)]">
+        <GlassCard className="border-rose-500/30 p-8 font-mono text-center space-y-4 max-w-xl mx-auto">
           <AlertTriangle className="w-10 h-10 text-rose-400 mx-auto animate-pulse" />
           <div className="space-y-1">
             <h3 className="text-sm sm:text-base font-bold text-rose-300 uppercase tracking-wider">
@@ -92,15 +91,16 @@ export default function StationsPage() {
             <p className="text-xs text-rose-200/80 max-w-lg mx-auto">{error}</p>
           </div>
           <div>
-            <button
+            <Button
               onClick={fetchStationsData}
-              className="px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-xs rounded uppercase font-bold transition-all inline-flex items-center gap-2"
+              variant="secondary"
+              size="sm"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
               <span>Retry Backend Connection</span>
-            </button>
+            </Button>
           </div>
-        </div>
+        </GlassCard>
       </div>
     );
   }
@@ -108,19 +108,17 @@ export default function StationsPage() {
   if (stations.length === 0) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#1B2C42]/50">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold font-mono text-white tracking-wide uppercase flex items-center gap-2.5">
-              <MapPin className="w-5 h-5 text-cyan-400" />
-              Antarctic Research Stations Fleet
-            </h1>
-            <p className="text-xs text-slate-400 font-mono mt-0.5">
-              Indian Antarctic Programme (NCPOR / MoES) operational station nodes
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          title="Antarctic Research Stations Fleet"
+          subtitle="Indian Antarctic Programme (NCPOR / MoES) operational station nodes"
+          icon={<MapPin className="w-5 h-5 text-accent-bright" />}
+          breadcrumbs={[
+            { label: "Operations", href: "/stations" },
+            { label: "Stations Fleet" }
+          ]}
+        />
 
-        <div className="rounded-lg border border-[#1B2C42] bg-[#0E1724]/90 p-8 font-mono text-center space-y-3">
+        <GlassCard className="p-8 font-mono text-center space-y-3 max-w-xl mx-auto">
           <Database className="w-10 h-10 text-slate-500 mx-auto" />
           <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
             Zero Operational Station Nodes in PostgreSQL
@@ -128,46 +126,46 @@ export default function StationsPage() {
           <p className="text-xs text-slate-400 max-w-md mx-auto">
             The database currently has no records in the `stations` table. Seed the database or register Maitri/Bharati in PostgreSQL.
           </p>
-          <button
+          <Button
             onClick={fetchStationsData}
-            className="px-3.5 py-1.5 bg-[#122032] hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-xs rounded uppercase font-bold transition-all inline-flex items-center gap-2"
+            variant="secondary"
+            size="sm"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
             <span>Refresh Fleet</span>
-          </button>
-        </div>
+          </Button>
+        </GlassCard>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Title & Subtitle */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#1B2C42]/50">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold font-mono text-white tracking-wide uppercase flex items-center gap-2.5">
-            <MapPin className="w-5 h-5 text-cyan-400" />
-            Antarctic Research Stations Fleet
-          </h1>
-          <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Indian Antarctic Programme (NCPOR / MoES) operational station nodes
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded bg-[#0A1828] border border-cyan-500/40 text-cyan-300">
-            <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
-            <span>{stations.length} POSTGRESQL NODES CONNECTED</span>
-          </span>
-          <button
+      {/* Page Header */}
+      <PageHeader
+        title="Antarctic Research Stations Fleet"
+        subtitle="Indian Antarctic Programme (NCPOR / MoES) operational station nodes"
+        icon={<MapPin className="w-5 h-5 text-accent-bright" />}
+        badge={{
+          label: `${stations.length} NODES ONLINE`,
+          variant: "success"
+        }}
+        breadcrumbs={[
+          { label: "Operations", href: "/stations" },
+          { label: "Stations Fleet" }
+        ]}
+        actions={
+          <Button
             onClick={fetchStationsData}
+            variant="ghost"
+            size="sm"
             title="Refresh Stations Telemetry"
-            className="p-1.5 rounded bg-[#101D2E] border border-[#1B2C42] hover:border-cyan-500/50 text-slate-300 hover:text-cyan-300 transition-all"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+            <span>Refresh</span>
+          </Button>
+        }
+      />
 
       {/* 1. Antarctica Polar Spatial Radar Map */}
       <AntarcticaMap stations={stations} summaries={summaries} />

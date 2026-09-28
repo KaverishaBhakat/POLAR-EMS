@@ -25,6 +25,7 @@ import {
   Layers,
   Sparkles,
 } from 'lucide-react';
+import { PageHeader, GlassCard, Button } from '@/components/ui';
 
 export default function DataUploadPage() {
   const router = useRouter();
@@ -350,94 +351,85 @@ export default function DataUploadPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl font-mono">
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-[#1B2C42]/60">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-              SCADA Ingestion Hub
-            </span>
-            <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-              PostgreSQL Connected
-            </span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide uppercase flex items-center gap-2.5">
-            <UploadCloud className="w-6 h-6 text-cyan-400" />
-            Polar Microgrid Data Ingestion & SCADA Gateway
-          </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Manually inject real telemetry readings or batch-upload CSV/JSON datasets to update frontend dashboards and the Neon database.
-          </p>
-        </div>
-
-        {/* Station Selector & DB Status Badge */}
-        <div className="flex items-center gap-3 self-start sm:self-auto">
-          <div className="flex flex-col items-end">
-            <label className="text-[10px] text-slate-400 uppercase font-bold">Target Station</label>
+    <div className="space-y-6 max-w-6xl">
+      {/* Page Header */}
+      <PageHeader
+        title="Polar Microgrid Data Ingestion & SCADA Gateway"
+        subtitle="Manually inject real telemetry readings or batch-upload CSV/JSON datasets to update frontend dashboards and the Neon database."
+        icon={<UploadCloud className="w-6 h-6 text-accent-bright" />}
+        badge={{
+          label: "POSTGRESQL CONNECTED",
+          variant: "success"
+        }}
+        breadcrumbs={[
+          { label: "Data", href: "/data-upload" },
+          { label: "Ingestion Hub" }
+        ]}
+        actions={
+          <div className="flex items-center gap-2">
             <select
               value={activeStationId}
               onChange={(e) => setActiveStationId(e.target.value as any)}
-              className="bg-[#0A121E] border border-cyan-500/40 text-cyan-300 rounded px-2.5 py-1 text-xs font-bold focus:outline-none focus:border-cyan-400"
+              className="bg-white/[0.04] border border-white/10 text-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-mono font-medium focus:outline-none focus:border-accent"
             >
-              <option value="maitri">Maitri Station (70°S)</option>
-              <option value="bharati">Bharati Station (69°S)</option>
+              <option value="maitri" className="bg-[#0a0a0c] text-slate-200">Maitri (70°S)</option>
+              <option value="bharati" className="bg-[#0a0a0c] text-slate-200">Bharati (69°S)</option>
             </select>
+            <Button
+              onClick={loadDatabaseStatus}
+              disabled={loadingStatus}
+              variant="ghost"
+              size="sm"
+              title="Refresh Database Status"
+            >
+              <RefreshCw size={14} className={loadingStatus ? 'animate-spin' : ''} />
+            </Button>
           </div>
-
-          <button
-            onClick={loadDatabaseStatus}
-            disabled={loadingStatus}
-            title="Refresh Database Status"
-            className="p-2 rounded bg-[#0E1724] border border-[#1B2C42] text-slate-400 hover:text-cyan-400 cursor-pointer"
-          >
-            <RefreshCw size={14} className={loadingStatus ? 'animate-spin' : ''} />
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Database Telemetry Live Counter Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-[#0A121E] border border-[#1B2C42] rounded-lg p-3 flex items-center justify-between">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
+        <GlassCard className="p-3.5 flex items-center justify-between">
           <div>
             <p className="text-[10px] text-slate-400 uppercase">Weather Records</p>
-            <p className="text-lg font-bold text-cyan-400">{dbStatus?.counts?.weather ?? 0}</p>
+            <p className="text-xl font-bold text-cyan-400">{dbStatus?.counts?.weather ?? 0}</p>
           </div>
-          <Sun className="w-5 h-5 text-cyan-500/50" />
-        </div>
+          <Sun className="w-5 h-5 text-cyan-500/40" />
+        </GlassCard>
 
-        <div className="bg-[#0A121E] border border-[#1B2C42] rounded-lg p-3 flex items-center justify-between">
+        <GlassCard className="p-3.5 flex items-center justify-between">
           <div>
             <p className="text-[10px] text-slate-400 uppercase">Energy Load Records</p>
-            <p className="text-lg font-bold text-amber-400">{dbStatus?.counts?.energy ?? 0}</p>
+            <p className="text-xl font-bold text-amber-400">{dbStatus?.counts?.energy ?? 0}</p>
           </div>
-          <Zap className="w-5 h-5 text-amber-500/50" />
-        </div>
+          <Zap className="w-5 h-5 text-amber-500/40" />
+        </GlassCard>
 
-        <div className="bg-[#0A121E] border border-[#1B2C42] rounded-lg p-3 flex items-center justify-between">
+        <GlassCard className="p-3.5 flex items-center justify-between">
           <div>
             <p className="text-[10px] text-slate-400 uppercase">Renewable Records</p>
-            <p className="text-lg font-bold text-emerald-400">{dbStatus?.counts?.renewable ?? 0}</p>
+            <p className="text-xl font-bold text-emerald-400">{dbStatus?.counts?.renewable ?? 0}</p>
           </div>
-          <Wind className="w-5 h-5 text-emerald-500/50" />
-        </div>
+          <Wind className="w-5 h-5 text-emerald-500/40" />
+        </GlassCard>
 
-        <div className="bg-[#0A121E] border border-[#1B2C42] rounded-lg p-3 flex items-center justify-between">
+        <GlassCard className="p-3.5 flex items-center justify-between">
           <div>
             <p className="text-[10px] text-slate-400 uppercase">Total Database Records</p>
-            <p className="text-lg font-bold text-white">{dbStatus?.counts?.totalTelemetryRecords ?? 0}</p>
+            <p className="text-xl font-bold text-white">{dbStatus?.counts?.totalTelemetryRecords ?? 0}</p>
           </div>
-          <Database className="w-5 h-5 text-blue-500/50" />
-        </div>
+          <Database className="w-5 h-5 text-accent-bright/50" />
+        </GlassCard>
       </div>
 
       {/* Mode Navigation Tabs */}
-      <div className="flex border-b border-[#1B2C42] gap-2">
+      <div className="flex border-b border-white/6 gap-2 font-mono">
         <button
           onClick={() => setActiveTab('manual')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase transition-all cursor-pointer border-b-2 ${
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold uppercase transition-all cursor-pointer border-b-2 ${
             activeTab === 'manual'
-              ? 'border-cyan-400 text-cyan-300 bg-cyan-950/20'
+              ? 'border-accent text-accent-bright bg-accent/10 rounded-t-lg'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -447,9 +439,9 @@ export default function DataUploadPage() {
 
         <button
           onClick={() => setActiveTab('batch')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase transition-all cursor-pointer border-b-2 ${
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold uppercase transition-all cursor-pointer border-b-2 ${
             activeTab === 'batch'
-              ? 'border-cyan-400 text-cyan-300 bg-cyan-950/20'
+              ? 'border-accent text-accent-bright bg-accent/10 rounded-t-lg'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -459,9 +451,9 @@ export default function DataUploadPage() {
 
         <button
           onClick={() => setActiveTab('manage')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase transition-all cursor-pointer border-b-2 ${
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold uppercase transition-all cursor-pointer border-b-2 ${
             activeTab === 'manage'
-              ? 'border-rose-400 text-rose-300 bg-rose-950/20'
+              ? 'border-rose-400 text-rose-300 bg-rose-950/20 rounded-t-lg'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >

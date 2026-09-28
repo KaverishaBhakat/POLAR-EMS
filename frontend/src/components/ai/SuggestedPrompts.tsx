@@ -99,9 +99,9 @@ export const SuggestedPrompts: React.FC<SuggestedPromptsProps> = ({
           <button
             key={i}
             onClick={() => onSelectPrompt(prompt)}
-            className="text-left text-xs font-mono px-3 py-1.5 rounded bg-[#0A1626] hover:bg-[#12243C] border border-cyan-500/20 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-300 transition-all duration-150 flex items-center gap-1.5"
+            className="text-left text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-[#5E6AD2]/40 text-[#8A8F98] hover:text-[#EDEDEF] transition-all flex items-center gap-2 group"
           >
-            <Sparkles size={12} className="text-cyan-400 flex-shrink-0" />
+            <Sparkles size={12} className="text-[#5E6AD2] flex-shrink-0" />
             <span className="truncate">{prompt}</span>
           </button>
         ))}
@@ -112,22 +112,22 @@ export const SuggestedPrompts: React.FC<SuggestedPromptsProps> = ({
   const currentCategory = CATEGORIES.find((c) => c.id === activeTab) || CATEGORIES[0];
 
   return (
-    <div className="bg-[#08101C] rounded-lg border border-[#1B2C42] overflow-hidden">
+    <div className="rounded-2xl bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] overflow-hidden shadow-linear-card">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[#1B2C42] flex items-center justify-between bg-[#060D17]">
-        <div className="flex items-center gap-2">
-          <HelpCircle size={15} className="text-cyan-400" />
-          <span className="text-xs font-mono font-bold tracking-wider uppercase text-slate-200">
-            Suggested Operator Queries
+      <div className="px-5 py-3.5 border-b border-white/[0.06] flex items-center justify-between bg-white/[0.02]">
+        <div className="flex items-center gap-2.5">
+          <HelpCircle size={14} className="text-[#5E6AD2]" />
+          <span className="text-xs font-medium tracking-tight text-[#EDEDEF]">
+            Suggested Operator Inquiries
           </span>
         </div>
-        <span className="text-[10px] font-mono text-slate-400">
-          Click any prompt to ask
+        <span className="text-[10px] text-[#8A8F98] font-mono">
+          Click any prompt to execute
         </span>
       </div>
 
       {/* Tabs */}
-      <div className="flex overflow-x-auto border-b border-[#1B2C42]/60 bg-[#060D17]/50 scrollbar-thin">
+      <div className="flex overflow-x-auto border-b border-white/[0.06] bg-black/20 scrollbar-thin px-2 py-1.5 gap-1">
         {CATEGORIES.map((cat) => {
           const Icon = cat.icon;
           const isActive = activeTab === cat.id;
@@ -135,13 +135,13 @@ export const SuggestedPrompts: React.FC<SuggestedPromptsProps> = ({
             <button
               key={cat.id}
               onClick={() => setActiveTab(cat.id)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-mono whitespace-nowrap transition-colors border-b-2 -mb-px ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
                 isActive
-                  ? 'border-cyan-400 text-cyan-300 bg-cyan-500/10'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-[#0E1A2B]'
+                  ? 'bg-[#5E6AD2]/20 text-[#EDEDEF] border border-[#5E6AD2]/40 shadow-sm'
+                  : 'text-[#8A8F98] hover:text-[#EDEDEF] hover:bg-white/[0.04]'
               }`}
             >
-              <Icon size={13} className={isActive ? 'text-cyan-400' : 'text-slate-400'} />
+              <Icon size={13} className={isActive ? 'text-[#5E6AD2]' : 'text-[#8A8F98]'} />
               <span>{cat.label}</span>
             </button>
           );
@@ -149,17 +149,17 @@ export const SuggestedPrompts: React.FC<SuggestedPromptsProps> = ({
       </div>
 
       {/* Prompts list */}
-      <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {currentCategory.prompts.map((prompt, i) => (
           <button
             key={i}
             onClick={() => onSelectPrompt(prompt)}
-            className="text-left p-2.5 rounded bg-[#0B1728] hover:bg-[#12233B] border border-[#1B2C42] hover:border-cyan-500/40 text-xs font-mono text-slate-300 hover:text-cyan-200 transition-all duration-150 flex items-center justify-between group"
+            className="text-left p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.05] hover:border-[#5E6AD2]/40 text-xs text-[#EDEDEF] transition-all flex items-center justify-between group"
           >
-            <span className="pr-2">{prompt}</span>
+            <span className="pr-3 leading-relaxed text-[#EDEDEF]/90">{prompt}</span>
             <ChevronRight
               size={14}
-              className="text-slate-500 group-hover:text-cyan-400 transition-transform group-hover:translate-x-0.5 flex-shrink-0"
+              className="text-[#8A8F98] group-hover:text-[#5E6AD2] transition-transform group-hover:translate-x-0.5 flex-shrink-0"
             />
           </button>
         ))}

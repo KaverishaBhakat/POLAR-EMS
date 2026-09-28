@@ -5,6 +5,7 @@ import { useStation } from '@/lib/context/StationContext';
 import { apiClient } from '@/lib/api/client';
 import { RenewableRecord, EnergyLoadRecord } from '@/lib/types';
 import { LoadingSkeleton } from '@/components/common/Toast';
+import { PageHeader, GlassCard, Button } from '@/components/ui';
 import {
   Sun,
   Wind,
@@ -105,52 +106,51 @@ export default function RenewablePage() {
 
   if (loading) {
     return (
-      <div className="space-y-4 font-mono">
-        <LoadingSkeleton className="h-20" />
+      <div className="space-y-6">
+        <LoadingSkeleton className="h-20 rounded-2xl" />
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <LoadingSkeleton key={i} className="h-28" />
+            <LoadingSkeleton key={i} className="h-28 rounded-2xl" />
           ))}
         </div>
-        <LoadingSkeleton className="h-96" />
-        <LoadingSkeleton className="h-64" />
+        <LoadingSkeleton className="h-96 rounded-2xl" />
+        <LoadingSkeleton className="h-64 rounded-2xl" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="space-y-6 font-mono">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#1B2C42]/50">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide uppercase flex items-center gap-2.5">
-              <Leaf className="w-5 h-5 text-emerald-400" />
-              Polar Renewable Energy Generation
-            </h1>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Solar PV & Wind Turbine Telemetry | {station?.name || activeStationId.toUpperCase()}
-            </p>
-          </div>
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          title="Renewable Energy"
+          description={`Solar PV & Wind Turbine Telemetry | ${station?.name || activeStationId.toUpperCase()}`}
+          breadcrumbs={[
+            { label: 'Operations', href: '/dashboard' },
+            { label: 'Renewables' },
+          ]}
+          badge={{ label: 'ERROR', variant: 'danger' }}
+        />
 
-        <div className="rounded-lg border border-rose-500/40 bg-[#160B12] p-8 text-center space-y-4 shadow-[0_0_20px_rgba(244,63,94,0.1)]">
+        <GlassCard className="p-8 text-center space-y-4 border-rose-500/30 bg-rose-950/20">
           <AlertTriangle className="w-10 h-10 text-rose-400 mx-auto animate-pulse" />
           <div className="space-y-1">
-            <h3 className="text-sm sm:text-base font-bold text-rose-300 uppercase tracking-wider">
+            <h3 className="text-base font-semibold text-rose-300">
               PostgreSQL Renewable Telemetry Service Unavailable
             </h3>
-            <p className="text-xs text-rose-200/80 max-w-lg mx-auto">{error}</p>
+            <p className="text-xs text-rose-200/70 max-w-lg mx-auto">{error}</p>
           </div>
           <div>
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={RefreshCw}
               onClick={fetchRenewableData}
-              className="px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-xs rounded uppercase font-bold transition-all inline-flex items-center gap-2"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Retry Renewable Backend Connection</span>
-            </button>
+              Retry Renewable Backend Connection
+            </Button>
           </div>
-        </div>
+        </GlassCard>
       </div>
     );
   }
@@ -169,28 +169,24 @@ export default function RenewablePage() {
     : null;
 
   return (
-    <div className="space-y-6 font-mono">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#1B2C42]/50">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide uppercase flex items-center gap-2.5">
-            <Leaf className="w-5 h-5 text-emerald-400" />
-            Polar Renewable Energy Generation
-          </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Real-time clean power harvesting, solar/wind telemetry & penetration metrics |{' '}
-            <span className="text-cyan-300 font-semibold">{station?.name || activeStationId.toUpperCase()}</span>
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded bg-[#0A1828] border border-cyan-500/40 text-cyan-300">
-            <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
-            <span>
-              {hasData ? `${totalRecords} POSTGRESQL READINGS` : 'NO TELEMETRY RECORDED'}
-            </span>
-          </span>
-          <button
+      <PageHeader
+        title="Renewable Energy Generation"
+        description={`Real-time clean power harvesting, solar/wind telemetry & penetration metrics | ${station?.name || activeStationId.toUpperCase()}`}
+        breadcrumbs={[
+          { label: 'Operations', href: '/dashboard' },
+          { label: 'Renewables' },
+        ]}
+        badge={{
+          label: hasData ? `${totalRecords} MEASURED READINGS` : 'NO TELEMETRY',
+          variant: hasData ? 'success' : 'neutral',
+        }}
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={RefreshCw}
             onClick={() => {
               fetchRenewableData();
               addToast({
@@ -199,51 +195,50 @@ export default function RenewablePage() {
                 message: `Loaded latest renewable telemetry for ${station?.name || activeStationId}.`,
               });
             }}
-            title="Refresh Renewable Telemetry"
-            className="p-1.5 rounded bg-[#101D2E] border border-[#1B2C42] hover:border-cyan-500/50 text-slate-300 hover:text-cyan-300 transition-all"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
+            Refresh
+          </Button>
+        }
+      />
 
       {!hasData ? (
         /* Empty State */
-        <div className="rounded-lg border border-[#1B2C42] bg-[#0E1724]/90 p-8 text-center space-y-4">
-          <Database className="w-10 h-10 text-slate-500 mx-auto" />
+        <GlassCard className="p-10 text-center space-y-4">
+          <Database className="w-10 h-10 text-foreground-muted mx-auto" />
           <div className="space-y-1">
-            <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-foreground">
               No Renewable Generation Telemetry in PostgreSQL for {station?.name || activeStationId.toUpperCase()}
             </h3>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
+            <p className="text-xs text-foreground-muted max-w-md mx-auto">
               The database currently contains zero solar or wind generation observations for this station node in the `renewable_generation` table.
             </p>
           </div>
           <div className="flex items-center justify-center gap-3">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={RefreshCw}
               onClick={fetchRenewableData}
-              className="px-3.5 py-1.5 bg-[#122032] hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-xs rounded uppercase font-bold transition-all inline-flex items-center gap-2"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Refresh Sensor Stream</span>
-            </button>
+              Refresh Sensor Stream
+            </Button>
           </div>
-        </div>
+        </GlassCard>
       ) : (
         <>
           {/* 1. Live Renewable KPI Generation Cards */}
           {currentRenewable && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+                  <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
                     Current Renewable Generation Feed
                   </span>
                   <ProvenanceBadge type="REAL_MEASURED" size="xs" />
                 </div>
                 {currentRenewable.timestamp && (
-                  <div className="text-[10px] text-slate-400 flex items-center gap-1.5">
-                    <Clock size={12} className="text-slate-500" />
+                  <div className="text-[11px] text-foreground-muted flex items-center gap-1.5 font-mono">
+                    <Clock size={12} className="text-foreground-muted" />
                     <span>Observed: {formatDateLabel(currentRenewable.timestamp)}</span>
                   </div>
                 )}
@@ -251,74 +246,74 @@ export default function RenewablePage() {
 
               <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 text-xs">
                 {/* 1. Total Renewable */}
-                <div className="p-3 rounded bg-[#0E1724]/90 border border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.1)]">
-                  <div className="flex items-center justify-between text-slate-400 text-[10px] mb-1">
+                <GlassCard hover className="p-3.5 border-emerald-500/30 bg-emerald-500/5">
+                  <div className="flex items-center justify-between text-foreground-muted text-[10px] mb-1 font-mono uppercase tracking-wider">
                     <span>TOTAL RENEWABLE</span>
                     <Leaf size={14} className="text-emerald-400" />
                   </div>
-                  <div className="text-xl font-bold text-emerald-300">
-                    {currentRenewable.totalRenewable} <span className="text-xs font-normal text-slate-400">kW</span>
+                  <div className="text-xl font-bold text-emerald-300 font-mono">
+                    {currentRenewable.totalRenewable} <span className="text-xs font-normal text-foreground-muted">kW</span>
                   </div>
-                  <div className="text-[9px] text-slate-400 mt-0.5">
-                    Solar + Wind <span className="text-[8px] text-emerald-400/80">(Measured)</span>
+                  <div className="text-[10px] text-foreground-muted mt-1">
+                    Solar + Wind <span className="text-[9px] text-emerald-400 font-semibold">(Measured)</span>
                   </div>
-                </div>
+                </GlassCard>
 
                 {/* 2. Solar PV Output */}
-                <div className="p-3 rounded bg-[#0E1724]/90 border border-amber-500/30 shadow-[0_0_8px_rgba(245,158,11,0.08)]">
-                  <div className="flex items-center justify-between text-slate-400 text-[10px] mb-1">
+                <GlassCard hover className="p-3.5 border-amber-500/20 bg-amber-500/[0.03]">
+                  <div className="flex items-center justify-between text-foreground-muted text-[10px] mb-1 font-mono uppercase tracking-wider">
                     <span>SOLAR PV ARRAY</span>
                     <Sun size={14} className="text-amber-400" />
                   </div>
-                  <div className="text-xl font-bold text-amber-300">
-                    {currentRenewable.solarPower} <span className="text-xs font-normal text-slate-400">kW</span>
+                  <div className="text-xl font-bold text-amber-300 font-mono">
+                    {currentRenewable.solarPower} <span className="text-xs font-normal text-foreground-muted">kW</span>
                   </div>
-                  <div className="text-[9px] text-slate-400 mt-0.5">
-                    {solarPct}% Mix <span className="text-[8px] text-amber-400/80">(Measured)</span>
+                  <div className="text-[10px] text-foreground-muted mt-1">
+                    {solarPct}% Mix <span className="text-[9px] text-amber-400 font-semibold">(Measured)</span>
                   </div>
-                </div>
+                </GlassCard>
 
                 {/* 3. Wind Turbine Output */}
-                <div className="p-3 rounded bg-[#0E1724]/90 border border-cyan-500/30 shadow-[0_0_8px_rgba(6,182,212,0.08)]">
-                  <div className="flex items-center justify-between text-slate-400 text-[10px] mb-1">
+                <GlassCard hover className="p-3.5 border-blue-500/20 bg-blue-500/[0.03]">
+                  <div className="flex items-center justify-between text-foreground-muted text-[10px] mb-1 font-mono uppercase tracking-wider">
                     <span>WIND TURBINES</span>
-                    <Wind size={14} className="text-cyan-400" />
+                    <Wind size={14} className="text-blue-400" />
                   </div>
-                  <div className="text-xl font-bold text-cyan-300">
-                    {currentRenewable.windPower} <span className="text-xs font-normal text-slate-400">kW</span>
+                  <div className="text-xl font-bold text-blue-300 font-mono">
+                    {currentRenewable.windPower} <span className="text-xs font-normal text-foreground-muted">kW</span>
                   </div>
-                  <div className="text-[9px] text-slate-400 mt-0.5">
-                    {windPct}% Mix <span className="text-[8px] text-cyan-400/80">(Measured)</span>
+                  <div className="text-[10px] text-foreground-muted mt-1">
+                    {windPct}% Mix <span className="text-[9px] text-blue-400 font-semibold">(Measured)</span>
                   </div>
-                </div>
+                </GlassCard>
 
                 {/* 4. Renewable Penetration */}
-                <div className="p-3 rounded bg-[#0E1724]/90 border border-[#1B2C42]">
-                  <div className="flex items-center justify-between text-slate-400 text-[10px] mb-1">
+                <GlassCard hover className="p-3.5 border-accent/30 bg-accent/5">
+                  <div className="flex items-center justify-between text-foreground-muted text-[10px] mb-1 font-mono uppercase tracking-wider">
                     <span>PENETRATION</span>
-                    <Percent size={14} className="text-teal-400" />
+                    <Percent size={14} className="text-accent-bright" />
                   </div>
-                  <div className="text-xl font-bold text-teal-300">
+                  <div className="text-xl font-bold text-accent-bright font-mono">
                     {penetrationPercent != null ? `${penetrationPercent}%` : 'N/A'}
                   </div>
-                  <div className="text-[9px] text-slate-400 mt-0.5">
+                  <div className="text-[10px] text-foreground-muted mt-1">
                     {canComputePenetration
                       ? `vs ${currentEnergy?.totalLoad} kW Load`
                       : 'Load telemetry required'}{' '}
-                    <span className="text-[8px] text-teal-400/80">({canComputePenetration ? 'Derived' : 'Unavailable'})</span>
+                    <span className="text-[9px] text-accent-bright font-semibold">({canComputePenetration ? 'Derived' : 'Unavailable'})</span>
                   </div>
-                </div>
+                </GlassCard>
 
                 {/* 5. Clean Energy Status */}
-                <div className="p-3 rounded bg-[#0E1724]/90 border border-[#1B2C42] col-span-2 sm:col-span-4 lg:col-span-1">
-                  <div className="flex items-center justify-between text-slate-400 text-[10px] mb-1">
+                <GlassCard hover className="p-3.5 col-span-2 sm:col-span-4 lg:col-span-1">
+                  <div className="flex items-center justify-between text-foreground-muted text-[10px] mb-1 font-mono uppercase tracking-wider">
                     <span>MICROGRID STATUS</span>
-                    <Zap size={14} className="text-cyan-400" />
+                    <Zap size={14} className="text-accent" />
                   </div>
-                  <div className="text-base font-bold text-slate-200">
+                  <div className="text-sm font-semibold text-foreground">
                     {currentRenewable.totalRenewable > 0 ? 'ACTIVE HARVEST' : 'STANDBY'}
                   </div>
-                  <div className="text-[9px] text-slate-400 mt-0.5">
+                  <div className="text-[10px] text-foreground-muted mt-1">
                     {currentRenewable.solarPower > 0 && currentRenewable.windPower > 0
                       ? 'Hybrid Solar+Wind'
                       : currentRenewable.solarPower > 0
@@ -327,85 +322,85 @@ export default function RenewablePage() {
                       ? 'Wind Primary'
                       : 'Inverter Standby'}
                   </div>
-                </div>
+                </GlassCard>
               </div>
 
               {/* Source Mix Proportion Bar */}
-              <div className="p-3 rounded bg-[#0E1724]/90 border border-[#1B2C42]">
-                <div className="flex items-center justify-between text-[11px] text-slate-400 mb-2">
-                  <span className="flex items-center gap-1.5 font-bold uppercase text-slate-200">
-                    <Layers size={13} className="text-emerald-400" />
+              <GlassCard className="p-4">
+                <div className="flex items-center justify-between text-xs text-foreground-muted mb-2.5">
+                  <span className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <Layers size={14} className="text-emerald-400" />
                     Renewable Generation Mix Share
                   </span>
-                  <span>100% Clean Yield ({currentRenewable.totalRenewable} kW)</span>
+                  <span className="font-mono text-[11px]">100% Clean Yield ({currentRenewable.totalRenewable} kW)</span>
                 </div>
-                <div className="h-3 w-full bg-[#0A121E] rounded-full overflow-hidden flex border border-[#1B2C42]/80">
+                <div className="h-2.5 w-full bg-white/[0.04] rounded-full overflow-hidden flex border border-white/5">
                   <div style={{ width: `${solarPct}%` }} className="bg-amber-400 transition-all" title={`Solar PV: ${currentRenewable.solarPower} kW (${solarPct}%)`} />
-                  <div style={{ width: `${windPct}%` }} className="bg-cyan-400 transition-all" title={`Wind: ${currentRenewable.windPower} kW (${windPct}%)`} />
+                  <div style={{ width: `${windPct}%` }} className="bg-accent-bright transition-all" title={`Wind: ${currentRenewable.windPower} kW (${windPct}%)`} />
                 </div>
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mt-2 text-[10px] text-slate-400">
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Solar PV Array: {currentRenewable.solarPower} kW ({solarPct}%)</span>
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-cyan-400" /> Wind Turbines: {currentRenewable.windPower} kW ({windPct}%)</span>
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 mt-3 text-[11px] text-foreground-muted font-mono">
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" /> Solar PV Array: {currentRenewable.solarPower} kW ({solarPct}%)</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-accent-bright" /> Wind Turbines: {currentRenewable.windPower} kW ({windPct}%)</span>
                 </div>
-              </div>
+              </GlassCard>
             </div>
           )}
 
           {/* 2. Historical Renewable Generation Chart */}
           {history.length > 0 && (
-            <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[#1B2C42]/60">
+            <GlassCard className="p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-white/6">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
+                    <h3 className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-2">
                       <Activity className="w-4 h-4 text-emerald-400" />
                       Historical Renewable Yield ({history.length} Data Points)
                     </h3>
                     <ProvenanceBadge type="REAL_MEASURED" size="xs" />
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
+                  <p className="text-xs text-foreground-muted mt-0.5">
                     Chronological clean generation readings retrieved from PostgreSQL `renewable_generation`
                   </p>
                 </div>
 
                 {/* Metric Tab Selectors */}
-                <div className="flex items-center gap-1.5 p-1 bg-[#0A121E] rounded border border-[#1B2C42] text-xs">
+                <div className="flex items-center gap-1 p-1 bg-white/[0.04] rounded-lg border border-white/6 text-xs">
                   <button
                     onClick={() => setActiveTab('total')}
-                    className={`px-2.5 py-1 rounded text-[10px] uppercase font-bold transition-all ${
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
                       activeTab === 'total'
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                        : 'text-slate-400 hover:text-slate-200'
+                        ? 'bg-accent text-white shadow-sm'
+                        : 'text-foreground-muted hover:text-foreground'
                     }`}
                   >
-                    Total Renewable (kW)
+                    Total Renewable
                   </button>
                   <button
                     onClick={() => setActiveTab('sources')}
-                    className={`px-2.5 py-1 rounded text-[10px] uppercase font-bold transition-all ${
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
                       activeTab === 'sources'
-                        ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40'
-                        : 'text-slate-400 hover:text-slate-200'
+                        ? 'bg-accent text-white shadow-sm'
+                        : 'text-foreground-muted hover:text-foreground'
                     }`}
                   >
-                    Solar vs Wind (Stacked)
+                    Solar vs Wind
                   </button>
                   <button
                     onClick={() => setActiveTab('solar')}
-                    className={`px-2.5 py-1 rounded text-[10px] uppercase font-bold transition-all ${
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
                       activeTab === 'solar'
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                        : 'text-slate-400 hover:text-slate-200'
+                        ? 'bg-accent text-white shadow-sm'
+                        : 'text-foreground-muted hover:text-foreground'
                     }`}
                   >
                     Solar PV
                   </button>
                   <button
                     onClick={() => setActiveTab('wind')}
-                    className={`px-2.5 py-1 rounded text-[10px] uppercase font-bold transition-all ${
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
                       activeTab === 'wind'
-                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                        : 'text-slate-400 hover:text-slate-200'
+                        ? 'bg-accent text-white shadow-sm'
+                        : 'text-foreground-muted hover:text-foreground'
                     }`}
                   >
                     Wind Turbine
@@ -423,7 +418,7 @@ export default function RenewablePage() {
               {/* Chart Visual */}
               <div className="h-72 w-full min-h-[280px]">
                 {!isMounted ? (
-                  <div className="w-full h-full bg-[#0A121E]/60 rounded-lg animate-pulse" />
+                  <div className="w-full h-full bg-white/[0.02] rounded-xl animate-pulse" />
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     {activeTab === 'total' ? (
@@ -434,21 +429,22 @@ export default function RenewablePage() {
                             <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                         <XAxis
                           dataKey="timestamp"
                           tickFormatter={formatTimeLabel}
-                          stroke="#64748b"
+                          stroke="#8A8F98"
                           fontSize={10}
                         />
-                        <YAxis stroke="#64748b" fontSize={10} unit=" kW" />
+                        <YAxis stroke="#8A8F98" fontSize={10} unit=" kW" />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: '#0A121E',
-                            borderColor: '#1B2C42',
-                            borderRadius: '6px',
+                            backgroundColor: '#0a0a0c',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderRadius: '12px',
                             fontFamily: 'monospace',
                             fontSize: '11px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                           }}
                           labelFormatter={(v) => formatDateLabel(v)}
                         />
@@ -471,29 +467,30 @@ export default function RenewablePage() {
                             <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
                           </linearGradient>
                           <linearGradient id="windArea" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
-                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                            <stop offset="5%" stopColor="#5E6AD2" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#5E6AD2" stopOpacity={0.0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                         <XAxis
                           dataKey="timestamp"
                           tickFormatter={formatTimeLabel}
-                          stroke="#64748b"
+                          stroke="#8A8F98"
                           fontSize={10}
                         />
-                        <YAxis stroke="#64748b" fontSize={10} unit=" kW" />
+                        <YAxis stroke="#8A8F98" fontSize={10} unit=" kW" />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: '#0A121E',
-                            borderColor: '#1B2C42',
-                            borderRadius: '6px',
+                            backgroundColor: '#0a0a0c',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderRadius: '12px',
                             fontFamily: 'monospace',
                             fontSize: '11px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                           }}
                           labelFormatter={(v) => formatDateLabel(v)}
                         />
-                        <Legend wrapperStyle={{ fontSize: '10px' }} />
+                        <Legend wrapperStyle={{ fontSize: '11px' }} />
                         <Area
                           type="monotone"
                           dataKey="solarPower"
@@ -508,11 +505,11 @@ export default function RenewablePage() {
                           type="monotone"
                           dataKey="windPower"
                           name="Wind Turbines (kW)"
-                          stroke="#06b6d4"
+                          stroke="#5E6AD2"
                           strokeWidth={2}
                           stackId="1"
                           fill="url(#windArea)"
-                          dot={{ r: 3, fill: '#06b6d4' }}
+                          dot={{ r: 3, fill: '#5E6AD2' }}
                         />
                       </AreaChart>
                     ) : activeTab === 'solar' ? (
@@ -523,21 +520,22 @@ export default function RenewablePage() {
                             <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                         <XAxis
                           dataKey="timestamp"
                           tickFormatter={formatTimeLabel}
-                          stroke="#64748b"
+                          stroke="#8A8F98"
                           fontSize={10}
                         />
-                        <YAxis stroke="#64748b" fontSize={10} unit=" kW" />
+                        <YAxis stroke="#8A8F98" fontSize={10} unit=" kW" />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: '#0A121E',
-                            borderColor: '#1B2C42',
-                            borderRadius: '6px',
+                            backgroundColor: '#0a0a0c',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderRadius: '12px',
                             fontFamily: 'monospace',
                             fontSize: '11px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                           }}
                           labelFormatter={(v) => formatDateLabel(v)}
                         />
@@ -556,25 +554,26 @@ export default function RenewablePage() {
                       <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <defs>
                           <linearGradient id="windOnly" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
-                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                            <stop offset="5%" stopColor="#5E6AD2" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#5E6AD2" stopOpacity={0.0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2C42" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                         <XAxis
                           dataKey="timestamp"
                           tickFormatter={formatTimeLabel}
-                          stroke="#64748b"
+                          stroke="#8A8F98"
                           fontSize={10}
                         />
-                        <YAxis stroke="#64748b" fontSize={10} unit=" kW" />
+                        <YAxis stroke="#8A8F98" fontSize={10} unit=" kW" />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: '#0A121E',
-                            borderColor: '#1B2C42',
-                            borderRadius: '6px',
+                            backgroundColor: '#0a0a0c',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderRadius: '12px',
                             fontFamily: 'monospace',
                             fontSize: '11px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                           }}
                           labelFormatter={(v) => formatDateLabel(v)}
                         />
@@ -582,40 +581,40 @@ export default function RenewablePage() {
                           type="monotone"
                           dataKey="windPower"
                           name="Wind Turbines (kW)"
-                          stroke="#06b6d4"
+                          stroke="#5E6AD2"
                           strokeWidth={2}
                           fill="url(#windOnly)"
-                          dot={{ r: 3, fill: '#06b6d4' }}
-                          activeDot={{ r: 5, fill: '#22d3ee' }}
+                          dot={{ r: 3, fill: '#5E6AD2' }}
+                          activeDot={{ r: 5, fill: '#6872D9' }}
                         />
                       </AreaChart>
                     )}
                   </ResponsiveContainer>
                 )}
               </div>
-            </div>
+            </GlassCard>
           )}
 
           {/* 3. Tabular Log of Renewable Generation Records from PostgreSQL */}
           {history.length > 0 && (
-            <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5">
-              <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#1B2C42]/50">
+            <GlassCard className="p-5">
+              <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/6">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase">
+                  <h3 className="text-sm font-semibold tracking-tight text-foreground">
                     PostgreSQL Renewable Generation Observations Log
                   </h3>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 font-mono tracking-wider">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono">
                     TABLE: renewable_generation
                   </span>
                 </div>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-xs text-foreground-muted font-mono">
                   Displaying latest {history.length} records
                 </span>
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-[#0A121E] text-slate-400 uppercase text-[10px] border-b border-[#1B2C42]">
+                <table className="w-full text-left text-xs text-foreground-muted">
+                  <thead className="bg-white/[0.03] text-foreground-muted uppercase text-[10px] border-b border-white/6 font-mono">
                     <tr>
                       <th className="py-2.5 px-3">Timestamp</th>
                       <th className="py-2.5 px-3">Total Renewable (kW)</th>
@@ -625,21 +624,21 @@ export default function RenewablePage() {
                       <th className="py-2.5 px-3 text-right">Record ID</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#1B2C42]/40 font-mono text-[11px]">
+                  <tbody className="divide-y divide-white/4 font-mono text-xs">
                     {[...history].reverse().map((record) => {
                       const tot = record.totalRenewable || (record.solarPower + record.windPower) || 1;
                       const sPct = Math.round((record.solarPower / tot) * 100);
                       const wPct = Math.round((record.windPower / tot) * 100);
                       return (
-                        <tr key={record.id || String(record.timestamp)} className="hover:bg-[#122032]/50 transition-colors">
-                          <td className="py-2 px-3 text-cyan-300 font-bold whitespace-nowrap">
+                        <tr key={record.id || String(record.timestamp)} className="hover:bg-white/[0.03] transition-colors">
+                          <td className="py-2 px-3 text-accent-bright font-semibold whitespace-nowrap">
                             {formatDateLabel(record.timestamp || record.createdAt)}
                           </td>
-                          <td className="py-2 px-3 text-emerald-300 font-bold">{record.totalRenewable} kW</td>
+                          <td className="py-2 px-3 text-emerald-400 font-semibold">{record.totalRenewable} kW</td>
                           <td className="py-2 px-3 text-amber-300">{record.solarPower} kW</td>
-                          <td className="py-2 px-3 text-cyan-300">{record.windPower} kW</td>
-                          <td className="py-2 px-3 text-slate-400">{sPct}% Solar / {wPct}% Wind</td>
-                          <td className="py-2 px-3 text-right text-[9px] text-slate-500 font-mono truncate max-w-[120px]">
+                          <td className="py-2 px-3 text-accent-bright">{record.windPower} kW</td>
+                          <td className="py-2 px-3 text-foreground-muted">{sPct}% Solar / {wPct}% Wind</td>
+                          <td className="py-2 px-3 text-right text-[10px] text-foreground-muted font-mono truncate max-w-[120px]">
                             {record.id ? record.id.substring(0, 8) + '...' : 'PG-NODE'}
                           </td>
                         </tr>
@@ -648,13 +647,13 @@ export default function RenewablePage() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </GlassCard>
           )}
         </>
       )}
 
       {/* 4. Modeled Historical Solar Climatology Time Series */}
-      <div className="pt-4 border-t border-[#1B2C42]/80">
+      <div className="pt-2">
         <HistoricalSolarChart
           stationId={activeStationId}
           stationName={station?.name}

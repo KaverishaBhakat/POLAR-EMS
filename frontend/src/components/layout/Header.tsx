@@ -10,11 +10,11 @@ import {
   Thermometer,
   Wind,
   Clock,
-  ShieldCheck,
   ChevronDown,
-  RefreshCw,
   Building2,
   Sparkles,
+  User,
+  Activity,
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -25,8 +25,7 @@ export const Header: React.FC = () => {
     weather,
     unreadAlertCount,
     isLiveTelemetry,
-    setIsLiveTelemetry,
-    lastTelemetryTick,
+    currentUser,
     addToast,
   } = useStation();
 
@@ -38,7 +37,6 @@ export const Header: React.FC = () => {
     const updateClocks = () => {
       const now = new Date();
       setUtcTime(now.toUTCString().slice(17, 25) + ' UTC');
-      // Indian Standard / Research Station Log Time (UTC+5:30 or UTC+5)
       setStationTime(
         now.toLocaleTimeString('en-US', {
           timeZone: 'Asia/Kolkata',
@@ -67,124 +65,119 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6 py-3 bg-[#0A111C]/95 backdrop-blur-md border-b border-[#1B2C42]/80 text-slate-200">
-      {/* Left: Station Selector & Demo Environment Badge */}
+    <header className="sticky top-0 z-30 flex items-center justify-between px-6 sm:px-8 py-3 bg-[#050506]/80 backdrop-blur-xl border-b border-white/[0.06] text-[#EDEDEF] transition-colors duration-200">
+      {/* Left: Station Selector Dropdown */}
       <div className="flex items-center gap-3">
-        {/* Station Selector Dropdown */}
         <div className="relative">
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center gap-2.5 px-3 py-1.5 rounded bg-[#101A28] border border-cyan-500/40 hover:border-cyan-400 transition-all text-xs font-mono tracking-wider text-slate-100 shadow-[0_0_10px_rgba(6,182,212,0.1)] focus:outline-none"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08] hover:border-white/[0.16] hover:bg-white/[0.08] transition-all text-xs font-medium text-[#EDEDEF] focus:outline-none group shadow-sm"
           >
-            <Building2 className="w-4 h-4 text-cyan-400" />
-            <span className="font-semibold text-white">
+            <Building2 className="w-3.5 h-3.5 text-[#5E6AD2]" />
+            <span className="font-medium">
               {station?.name || 'Maitri Research Station'}
             </span>
-            <ChevronDown size={14} className="text-slate-400" />
+            <ChevronDown size={13} className="text-[#8A8F98] group-hover:text-[#EDEDEF] transition-transform duration-200" />
           </button>
 
           {dropdownOpen && (
-            <div className="absolute left-0 mt-1.5 w-64 rounded-md bg-[#0D1624] border border-[#1B2C42] shadow-2xl z-50 py-1.5">
-              <div className="px-3 py-1 text-[10px] font-mono text-slate-400 uppercase tracking-wider border-b border-[#1B2C42]/60">
-                Select Active Station
+            <div className="absolute left-0 mt-1.5 w-64 rounded-xl bg-[#0A0A0C] border border-white/[0.1] shadow-2xl z-50 py-1.5 overflow-hidden backdrop-blur-xl">
+              <div className="px-3 py-1 text-[10px] font-mono text-[#8A8F98] uppercase tracking-wider border-b border-white/[0.06]">
+                Active Node Selector
               </div>
               <button
                 onClick={() => handleStationChange('maitri')}
-                className={`w-full text-left px-3 py-2 text-xs font-mono flex items-center justify-between hover:bg-[#152336] ${
-                  activeStationId === 'maitri' ? 'text-cyan-300 font-bold bg-cyan-500/10' : 'text-slate-300'
+                className={`w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between transition-colors ${
+                  activeStationId === 'maitri'
+                    ? 'text-[#5E6AD2] font-semibold bg-[#5E6AD2]/10'
+                    : 'text-[#EDEDEF] hover:bg-white/[0.05]'
                 }`}
               >
                 <div>
-                  <div>Maitri Research Station</div>
-                  <div className="text-[10px] text-slate-400">Schirmacher Oasis (70°S)</div>
+                  <div className="font-medium">Maitri Research Station</div>
+                  <div className="text-[10px] text-[#8A8F98]">Schirmacher Oasis (70°S)</div>
                 </div>
                 {activeStationId === 'maitri' && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#5E6AD2]" />
                 )}
               </button>
               <button
                 onClick={() => handleStationChange('bharati')}
-                className={`w-full text-left px-3 py-2 text-xs font-mono flex items-center justify-between hover:bg-[#152336] ${
-                  activeStationId === 'bharati' ? 'text-cyan-300 font-bold bg-cyan-500/10' : 'text-slate-300'
+                className={`w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between transition-colors ${
+                  activeStationId === 'bharati'
+                    ? 'text-[#5E6AD2] font-semibold bg-[#5E6AD2]/10'
+                    : 'text-[#EDEDEF] hover:bg-white/[0.05]'
                 }`}
               >
                 <div>
-                  <div>Bharati Research Station</div>
-                  <div className="text-[10px] text-slate-400">Larsemann Hills (69°S)</div>
+                  <div className="font-medium">Bharati Research Station</div>
+                  <div className="text-[10px] text-[#8A8F98]">Larsemann Hills (69°S)</div>
                 </div>
                 {activeStationId === 'bharati' && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#5E6AD2]" />
                 )}
               </button>
             </div>
           )}
         </div>
 
-        {/* Demo Environment Badge */}
-        <span className="hidden md:inline-flex items-center gap-1.5 text-[10px] font-mono uppercase px-2 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-300">
-          <Sparkles size={11} className="text-amber-400" />
-          Demo Environment (Simulated SCADA)
-        </span>
+        {/* Status Pill */}
+        <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-400">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span>415V SCADA Synced</span>
+        </div>
       </div>
 
-      {/* Right: Weather Telemetry, Live Clock, Connection Status & Notifications */}
+      {/* Right: Weather metrics, clocks, alerts, user */}
       <div className="flex items-center gap-3 sm:gap-5">
-        {/* Quick Weather Telemetry */}
         {weather && (
-          <div className="hidden lg:flex items-center gap-4 text-xs font-mono bg-[#0D1724] px-3 py-1 rounded border border-[#1B2C42]">
-            <div className="flex items-center gap-1.5 text-cyan-300" title="Ambient Temperature">
-              <Thermometer size={14} className="text-cyan-400" />
-              <span>{weather.temperature}°C</span>
-              <span className="text-[10px] text-slate-400">({weather.apparentTemperature}°C)</span>
+          <div className="hidden lg:flex items-center gap-3 text-xs font-mono border-r border-white/[0.06] pr-4 text-[#8A8F98]">
+            <div className="flex items-center gap-1.5">
+              <Thermometer size={13} className="text-[#5E6AD2]" />
+              <span className="font-medium text-[#EDEDEF]">
+                {weather.temperature !== undefined ? `${weather.temperature.toFixed(1)}°C` : 'N/A'}
+              </span>
             </div>
-            <div className="w-[1px] h-3 bg-[#1B2C42]" />
-            <div className="flex items-center gap-1.5 text-blue-300" title="Wind Velocity">
-              <Wind size={14} className="text-blue-400" />
-              <span>{weather.windSpeed} m/s</span>
+            <div className="flex items-center gap-1.5">
+              <Wind size={13} className="text-[#5E6AD2]" />
+              <span className="font-medium text-[#EDEDEF]">
+                {weather.windSpeed !== undefined ? `${weather.windSpeed.toFixed(1)} m/s` : 'N/A'}
+              </span>
             </div>
           </div>
         )}
 
-        {/* Live Clocks */}
-        <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-slate-300 bg-[#0D1724] px-3 py-1 rounded border border-[#1B2C42]">
-          <Clock size={13} className="text-slate-400" />
-          <span className="text-slate-100 font-semibold">{stationTime}</span>
-          <span className="text-slate-500">|</span>
-          <span className="text-slate-400">{utcTime}</span>
+        <div className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-[#8A8F98]">
+          <Clock size={12} className="text-[#5E6AD2]" />
+          <span>{stationTime}</span>
         </div>
 
-        {/* Telemetry Pulse / Live Status */}
-        <button
-          onClick={() => setIsLiveTelemetry(!isLiveTelemetry)}
-          className={`flex items-center gap-2 text-xs font-mono px-2.5 py-1 rounded border transition-all ${
-            isLiveTelemetry
-              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
-              : 'border-slate-600 bg-slate-800/50 text-slate-400'
-          }`}
-          title="Toggle Live Telemetry Simulation"
-        >
-          <Radio
-            size={13}
-            className={isLiveTelemetry ? 'text-emerald-400 animate-pulse' : 'text-slate-500'}
-          />
-          <span className="hidden sm:inline font-bold">
-            {isLiveTelemetry ? 'TELEMETRY: LIVE' : 'TELEMETRY: PAUSED'}
-          </span>
-        </button>
-
-        {/* Notifications Icon */}
+        {/* Alerts Bell */}
         <Link
           href="/alerts"
-          className="relative p-1.5 rounded bg-[#101A28] border border-[#1B2C42] hover:border-cyan-500/50 text-slate-300 hover:text-cyan-300 transition-colors"
-          title="System Alerts"
+          className="relative p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-[#8A8F98] hover:text-[#EDEDEF] transition-colors"
+          title="Telemetry Alerts"
         >
-          <Bell size={16} />
+          <Bell size={15} />
           {unreadAlertCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center animate-pulse">
-              {unreadAlertCount}
-            </span>
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-[#050506]" />
           )}
         </Link>
+
+        {/* User Pill */}
+        <div className="flex items-center gap-2.5 pl-2 border-l border-white/[0.06]">
+          <div className="w-7 h-7 rounded-lg bg-[#5E6AD2]/20 border border-[#5E6AD2]/40 text-[#EDEDEF] flex items-center justify-center font-medium text-xs">
+            {currentUser?.initials || 'KB'}
+          </div>
+          <div className="hidden xl:block text-left text-xs leading-none">
+            <p className="font-medium text-[#EDEDEF]">
+              {currentUser?.name || 'Kaverisha Bhakat'}
+            </p>
+            <p className="text-[10px] text-[#8A8F98] mt-0.5">
+              SCADA Lead
+            </p>
+          </div>
+        </div>
       </div>
     </header>
   );

@@ -13,12 +13,6 @@ import {
   Sparkles,
   AlertTriangle,
   RotateCcw,
-  ShieldCheck,
-  Cpu,
-  Layers,
-  HelpCircle,
-  Activity,
-  Zap,
 } from 'lucide-react';
 
 const INITIAL_WELCOME_MESSAGE: ChatMessage = {
@@ -83,7 +77,6 @@ export default function AIAssistantPage() {
       timestamp: new Date().toISOString(),
     };
 
-    // Prepare recent messages (exclude welcome message, keep max 10 messages)
     const historyForBackend = messages
       .filter((m) => m.id !== 'welcome-msg')
       .slice(-10)
@@ -92,7 +85,6 @@ export default function AIAssistantPage() {
         content: m.content,
       }));
 
-    // Optimistically add user message to conversation
     setMessages((prev) => [...prev, newUserMsg]);
     setIsLoading(true);
 
@@ -179,7 +171,7 @@ export default function AIAssistantPage() {
         </div>
       </div>
 
-      {/* Suggested Prompts Header (shown prominently when starting conversation) */}
+      {/* Suggested Prompts Header */}
       {!hasUserMessages && (
         <div className="transition-all duration-300">
           <SuggestedPrompts onSelectPrompt={handleSendMessage} />
@@ -235,7 +227,7 @@ export default function AIAssistantPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Prompts Bar (when conversation already has messages) */}
+      {/* Quick Prompts Bar */}
       {hasUserMessages && (
         <div className="pt-1">
           <div className="flex items-center gap-2 mb-1.5">

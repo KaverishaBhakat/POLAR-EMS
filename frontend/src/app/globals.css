@@ -2,14 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-  font-family: "Helvetica Neue ME";
-  src: url("https://db.onlinewebfonts.com/t/95cecf452d3208890088a5b4c19c7ecf.eot");
-  src: url("https://db.onlinewebfonts.com/t/95cecf452d3208890088a5b4c19c7ecf.eot?#iefix") format("embedded-opentype"),
-       url("https://db.onlinewebfonts.com/t/95cecf452d3208890088a5b4c19c7ecf.woff2") format("woff2"),
-       url("https://db.onlinewebfonts.com/t/95cecf452d3208890088a5b4c19c7ecf.woff") format("woff"),
-       url("https://db.onlinewebfonts.com/t/95cecf452d3208890088a5b4c19c7ecf.ttf") format("truetype"),
-       url("https://db.onlinewebfonts.com/t/95cecf452d3208890088a5b4c19c7ecf.svg#Helvetica Neue ME") format("svg");
+:root {
+  --bg-deep: #020203;
+  --bg-base: #050506;
+  --bg-elevated: #0a0a0c;
+  --surface: rgba(255, 255, 255, 0.05);
+  --surface-hover: rgba(255, 255, 255, 0.08);
+  --foreground: #EDEDEF;
+  --foreground-muted: #8A8F98;
+  --foreground-subtle: rgba(255, 255, 255, 0.60);
+  --accent: #5E6AD2;
+  --accent-bright: #6872D9;
+  --accent-glow: rgba(94, 106, 210, 0.3);
+  --border-default: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.10);
+  --border-accent: rgba(94, 106, 210, 0.30);
 }
 
 html {
@@ -17,26 +24,28 @@ html {
 }
 
 body {
-  font-family: 'Helvetica Neue ME', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  background-color: #080D14;
-  color: #F1F5F9;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #050506;
+  color: #EDEDEF;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbar for SCADA Control Room */
+/* Linear-style fine scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #080D14;
+  background: #020203;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1B2C42;
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #06B6D4;
+  background: rgba(94, 106, 210, 0.5);
 }

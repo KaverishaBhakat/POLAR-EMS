@@ -9,7 +9,8 @@ import { ScenarioControls } from '@/components/simulation/ScenarioControls';
 import { ScenarioPresets } from '@/components/simulation/ScenarioPresets';
 import { SimulationResults } from '@/components/simulation/SimulationResults';
 import { LoadingSkeleton } from '@/components/common/Toast';
-import { PlaySquare, Play, RefreshCw, Sparkles } from 'lucide-react';
+import { PlaySquare, Play, RefreshCw, Sparkles, ShieldCheck } from 'lucide-react';
+import { PageHeader, GlassCard, Button } from '@/components/ui';
 
 export default function SimulationPage() {
   const { activeStationId, station, addToast } = useStation();
@@ -73,26 +74,30 @@ export default function SimulationPage() {
 
   return (
     <div className="space-y-6">
-      {/* Title & Subtitle */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#1B2C42]/50">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold font-mono text-white tracking-wide uppercase flex items-center gap-2.5">
-            <PlaySquare className="w-5 h-5 text-amber-400" />
-            Polar Scenario Simulator
-          </h1>
-          <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Interactive physics parameter modeling &amp; load-shedding sandbox | {station?.name}
-          </p>
-        </div>
-
-        <a
-          href="/resilience"
-          className="flex items-center gap-2 px-3.5 py-2 rounded bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/25 text-xs font-mono font-bold transition-all shadow-[0_0_10px_rgba(6,182,212,0.15)]"
-        >
-          <span>VIEW RESILIENCE DASHBOARD</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-200">6 SCENARIOS</span>
-        </a>
-      </div>
+      {/* Page Header */}
+      <PageHeader
+        title="Polar Scenario Simulator"
+        subtitle={`Interactive physics parameter modeling & load-shedding sandbox | ${station?.name || 'Maitri'}`}
+        icon={<PlaySquare className="w-5 h-5 text-amber-400" />}
+        badge={{
+          label: "SANDBOX / SIMULATION",
+          variant: "warning"
+        }}
+        breadcrumbs={[
+          { label: "Intelligence", href: "/simulation" },
+          { label: "Scenario Sandbox" }
+        ]}
+        actions={
+          <a
+            href="/resilience"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-slate-200 hover:text-white hover:bg-white/[0.08] text-xs font-mono font-medium transition-all"
+          >
+            <ShieldCheck size={14} className="text-accent-bright" />
+            <span>RESILIENCE DASHBOARD</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/20 text-accent-bright">6 SCENARIOS</span>
+          </a>
+        }
+      />
 
       {/* Scenario Presets Bar */}
       <ScenarioPresets

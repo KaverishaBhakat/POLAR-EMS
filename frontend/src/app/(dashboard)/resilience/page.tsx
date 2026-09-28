@@ -23,6 +23,7 @@ import { DataProvenanceAssumptions } from '@/components/resilience/DataProvenanc
 import { BharatiUnsupportedNotice } from '@/components/resilience/BharatiUnsupportedNotice';
 import { LoadingSkeleton } from '@/components/common/Toast';
 import { ShieldCheck, AlertTriangle, RefreshCw, Layers } from 'lucide-react';
+import { PageHeader, GlassCard, Button } from '@/components/ui';
 
 export default function ResiliencePage() {
   const { activeStationId, station } = useStation();
@@ -117,18 +118,16 @@ export default function ResiliencePage() {
 
   if (isBharati) {
     return (
-      <div className="space-y-6 font-mono">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#1B2C42]/50">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide uppercase flex items-center gap-2.5">
-              <ShieldCheck className="w-6 h-6 text-cyan-400" />
-              Microgrid Resilience &amp; Contingency Dashboard
-            </h1>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Antarctic Station: <span className="text-white font-bold">{station?.name || activeStationId}</span>
-            </p>
-          </div>
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          title="Microgrid Resilience & Contingency Dashboard"
+          subtitle={`Antarctic Station: ${station?.name || activeStationId}`}
+          icon={<ShieldCheck className="w-6 h-6 text-accent-bright" />}
+          breadcrumbs={[
+            { label: "Intelligence", href: "/resilience" },
+            { label: "Stress Testing" }
+          ]}
+        />
 
         <BharatiUnsupportedNotice />
       </div>
@@ -154,7 +153,7 @@ export default function ResiliencePage() {
   const dispatch: HourlyDispatchPoint[] = simResult?.dispatch || [];
 
   return (
-    <div className="space-y-6 font-mono">
+    <div className="space-y-6">
       {/* 1. Hero & Status Header */}
       <ResilienceHero
         stationName={station?.name || 'Maitri Station'}
@@ -182,26 +181,27 @@ export default function ResiliencePage() {
         </div>
       ) : error ? (
         /* Error State with Retry */
-        <div className="p-8 rounded-lg bg-[#0E1724]/90 border border-rose-500/40 text-center space-y-4 max-w-2xl mx-auto my-8">
-          <div className="w-14 h-14 rounded-full bg-rose-500/15 border border-rose-500/40 flex items-center justify-center text-rose-400 mx-auto">
+        <GlassCard className="p-8 text-center space-y-4 max-w-2xl mx-auto my-8 border-rose-500/30">
+          <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mx-auto">
             <AlertTriangle size={28} />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 font-mono">
             <h2 className="text-base sm:text-lg font-bold text-white uppercase">
               Unable to Load Resilience Simulation
             </h2>
             <p className="text-xs text-slate-300 leading-relaxed">{error}</p>
           </div>
           <div className="pt-2 flex justify-center">
-            <button
+            <Button
               onClick={() => fetchResilienceData(selectedScenarioId, activeStationId)}
-              className="flex items-center gap-2 px-4 py-2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 text-xs font-bold transition-all cursor-pointer"
+              variant="secondary"
+              size="sm"
             >
-              <RefreshCw size={14} />
+              <RefreshCw size={14} className="mr-1.5" />
               <span>Retry Simulation</span>
-            </button>
+            </Button>
           </div>
-        </div>
+        </GlassCard>
       ) : (
         /* Active Simulation Results */
         <>
