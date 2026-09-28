@@ -10,8 +10,6 @@ import {
   BarChart3,
   MapPin,
   ArrowRight,
-  ShieldCheck,
-  Zap,
 } from 'lucide-react';
 import { Stagger } from './Stagger';
 
@@ -19,54 +17,54 @@ interface Section2Props {
   opacity: number;
 }
 
-const DASHBOARD_MODULES = [
+const CAPABILITY_CARDS = [
   {
     title: 'Live SCADA Control',
     href: '/dashboard',
     icon: Activity,
     badge: 'LIVE',
     badgeColor: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30',
-    desc: 'Instantaneous multi-generator, PV, wind, and battery flow telemetry.',
+    desc: 'Monitor station weather, energy, renewable generation, battery and generator telemetry.',
   },
   {
-    title: 'AI Load & Weather Forecast',
+    title: 'AI Weather & Energy Forecasting',
     href: '/forecast',
     icon: TrendingUp,
-    badge: 'DEEP LEARNING',
+    badge: 'FORECAST',
     badgeColor: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
-    desc: '24-hour predictive load & renewable generation forecasting for polar stations.',
+    desc: 'Use historical station data and forecasting models to anticipate operating conditions.',
   },
   {
     title: 'MILP Dispatch Optimization',
     href: '/optimization',
     icon: Sliders,
-    badge: 'SAVE 21.2%',
+    badge: 'OPTIMIZATION SCENARIO',
     badgeColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
-    desc: 'Dynamic mathematical solver minimizing diesel burn while protecting life support.',
+    desc: 'Optimize renewable, battery and generator dispatch while respecting operating constraints.',
   },
   {
-    title: 'Blizzard Simulation Lab',
+    title: 'Resilience Simulation',
     href: '/simulation',
     icon: PlaySquare,
-    badge: 'STRESS TEST',
+    badge: 'SCENARIO',
     badgeColor: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
-    desc: 'Simulate sub-zero blizzards, wind gusts, and single-generator trip events.',
+    desc: 'Test polar-night, generator-failure, battery, renewable-drop and severe-weather scenarios.',
   },
   {
-    title: 'Station SCADA Network',
+    title: 'Station Network',
     href: '/stations',
     icon: MapPin,
     badge: 'MAITRI & BHARATI',
     badgeColor: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
-    desc: 'Dual station switching between Maitri (70°S) and Bharati (69°S) microgrids.',
+    desc: 'Switch between Maitri and Bharati with station-aware monitoring and data isolation.',
   },
   {
-    title: 'ESG & Fleet Analytics',
+    title: 'Energy & Operational Analytics',
     href: '/analytics',
     icon: BarChart3,
-    badge: 'ESG REPORT',
-    badgeColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
-    desc: 'CO₂ emissions abatement tracking, diesel fuel conservation, and generator runtimes.',
+    badge: 'ANALYTICS',
+    badgeColor: 'text-slate-400 bg-slate-500/10 border-slate-500/30',
+    desc: 'Analyze energy demand, renewable contribution, generator operation and historical trends.',
   },
 ];
 
@@ -86,23 +84,23 @@ export const Section2: React.FC<Section2Props> = ({ opacity }) => {
         <Stagger show={isVisible} delay={0}>
           <div className="space-y-2">
             <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-[#0A1626]/80 px-3 py-1 rounded-full bg-white/40 border border-[#0A1626]/20 backdrop-blur-sm">
-              Operational SCADA Capabilities
+              Platform Overview
             </span>
             <h2
               className="font-bold tracking-tight uppercase text-[#0A1626] leading-tight"
               style={{ fontSize: 'clamp(1.5rem, 3.2vw, 3rem)' }}
             >
-              Connected Antarctic Microgrid System
+              POLAR-EMS Capabilities
             </h2>
             <p className="text-xs sm:text-sm text-[#14263B]/80 max-w-2xl mx-auto">
-              Direct access to all live SCADA subsystems, predictive neural net forecasts, and mathematical dispatch engines:
+              Monitor, forecast, optimize and stress-test polar station energy systems from one operational platform.
             </p>
           </div>
         </Stagger>
 
-        {/* 6 Clickable Module Cards */}
+        {/* 6 Capability Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-2 text-left pointer-events-auto">
-          {DASHBOARD_MODULES.map((mod, i) => {
+          {CAPABILITY_CARDS.map((mod, i) => {
             const Icon = mod.icon;
             return (
               <Stagger key={mod.title} show={isVisible} delay={80 + i * 50}>
@@ -132,26 +130,6 @@ export const Section2: React.FC<Section2Props> = ({ opacity }) => {
             );
           })}
         </div>
-
-        {/* Bottom CTA Pill to Sign Up or Access All */}
-        <Stagger show={isVisible} delay={450}>
-          <div className="pt-2 flex flex-wrap items-center justify-center gap-3 pointer-events-auto">
-            <Link
-              href="/signup"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-[0_0_15px_rgba(6,182,212,0.4)]"
-            >
-              <span>Sign Up For Operator Access</span>
-              <ArrowRight size={14} />
-            </Link>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#08111D]/80 hover:bg-[#0E1D32] border border-cyan-500/40 text-cyan-300 text-xs uppercase tracking-wider transition-all duration-200"
-            >
-              <span>Launch Full SCADA Console</span>
-              <ArrowRight size={14} />
-            </Link>
-          </div>
-        </Stagger>
       </div>
     </section>
   );
