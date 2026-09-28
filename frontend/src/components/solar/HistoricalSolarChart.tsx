@@ -238,9 +238,9 @@ export function HistoricalSolarChart({
   }, [records]);
 
   return (
-    <div className={`space-y-4 font-mono ${className}`}>
+    <div className={`space-y-4 font-mono w-full min-w-0 overflow-hidden ${className}`}>
       {/* Header Banner */}
-      <div className="bg-[#0A121E] rounded-lg border border-amber-500/30 p-4 sm:p-5 shadow-[0_0_20px_rgba(245,158,11,0.06)]">
+      <div className="bg-[#0A121E] rounded-lg border border-amber-500/30 p-4 sm:p-5 shadow-[0_0_20px_rgba(245,158,11,0.06)] w-full min-w-0 overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2.5">
@@ -360,7 +360,7 @@ export function HistoricalSolarChart({
       </div>
 
       {/* 2. Interactive Date-Range & Month Controls */}
-      <div className="bg-[#0E1724]/90 rounded-lg border border-[#1B2C42] p-4 space-y-3">
+      <div className="bg-[#0E1724]/90 rounded-lg border border-[#1B2C42] p-4 space-y-3 w-full min-w-0 overflow-hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-[#1B2C42]/60">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-cyan-400" />
@@ -512,7 +512,7 @@ export function HistoricalSolarChart({
       </div>
 
       {/* 3. Main Historical Solar PV Chart */}
-      <div className="bg-[#0E1724]/90 rounded-lg border border-[#1B2C42] p-5 space-y-4">
+      <div className="bg-[#0E1724]/90 rounded-lg border border-[#1B2C42] p-4 sm:p-5 space-y-4 w-full min-w-0 overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#1B2C42]/60">
           <div>
             <h3 className="text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">

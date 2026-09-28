@@ -50,23 +50,23 @@ export const KPICard: React.FC<KPICardProps> = ({
 
   return (
     <div
-      className="relative rounded-2xl bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] p-5 transition-all duration-300 hover:bg-white/[0.06] hover:border-white/[0.14] hover:shadow-linear-card-hover shadow-linear-card group flex flex-col justify-between"
+      className="relative rounded-2xl bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] p-3.5 sm:p-4 transition-all duration-300 hover:bg-white/[0.06] hover:border-white/[0.14] hover:shadow-linear-card-hover shadow-linear-card group flex flex-col justify-between w-full min-w-0 overflow-hidden"
     >
       {/* Top row: Icon + Title + (Provenance / Tooltip) */}
-      <div>
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2.5">
+      <div className="min-w-0">
+        <div className="flex items-center justify-between gap-1.5 mb-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <div
-              className={`w-8 h-8 rounded-xl flex items-center justify-center border ${iconStyles} shadow-sm transition-transform duration-200 group-hover:scale-105`}
+              className={`w-7 h-7 rounded-lg flex items-center justify-center border ${iconStyles} shadow-sm transition-transform duration-200 group-hover:scale-105 flex-shrink-0`}
             >
-              <Icon size={15} />
+              <Icon size={14} />
             </div>
-            <span className="text-xs font-medium text-[#8A8F98] tracking-tight">
+            <span className="text-xs font-medium text-[#8A8F98] tracking-tight truncate" title={title}>
               {title}
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {provenance && <ProvenanceBadge type={provenance} size="xs" />}
             <div className="relative">
               <button
@@ -76,10 +76,10 @@ export const KPICard: React.FC<KPICardProps> = ({
                 className="text-[#8A8F98]/70 hover:text-[#EDEDEF] p-0.5 focus:outline-none transition-colors"
                 aria-label="Information"
               >
-                <HelpCircle size={13} />
+                <HelpCircle size={12} />
               </button>
               {showTooltip && (
-                <div className="absolute right-0 top-6 z-50 w-56 p-2.5 rounded-xl bg-[#0A0A0C] border border-white/[0.12] text-xs text-[#EDEDEF] leading-relaxed shadow-2xl font-sans backdrop-blur-xl">
+                <div className="absolute right-0 top-6 z-50 w-56 p-2.5 rounded-xl bg-[#0A0A0C] border border-white/[0.12] text-xs text-[#EDEDEF] leading-relaxed shadow-2xl font-sans backdrop-blur-xl pointer-events-none">
                   {tooltip}
                 </div>
               )}
@@ -88,12 +88,12 @@ export const KPICard: React.FC<KPICardProps> = ({
         </div>
 
         {/* Main Value & Unit */}
-        <div className="flex items-baseline gap-1.5 my-2">
-          <span className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#EDEDEF]">
+        <div className="flex items-baseline gap-1.5 my-1.5 min-w-0">
+          <span className="text-xl sm:text-2xl font-semibold tracking-tight text-[#EDEDEF] truncate">
             {value}
           </span>
           {unit && (
-            <span className="text-xs font-medium text-[#8A8F98]">
+            <span className="text-xs font-medium text-[#8A8F98] flex-shrink-0">
               {unit}
             </span>
           )}
@@ -101,25 +101,31 @@ export const KPICard: React.FC<KPICardProps> = ({
       </div>
 
       {/* Bottom row: Trend & Status */}
-      <div className="flex items-center justify-between gap-2 mt-2 pt-2.5 border-t border-white/[0.06] text-xs">
-        {trend ? (
-          <div
-            className={`flex items-center gap-1 font-mono text-[11px] ${
-              trend.isPositiveGood ?? true
-                ? 'text-emerald-400'
-                : 'text-amber-400'
-            }`}
-          >
-            {trend.isUp ?? true ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-            <span>{trend.value}</span>
-          </div>
-        ) : subtitle ? (
-          <span className="text-[11px] text-[#8A8F98] font-mono truncate">{subtitle}</span>
-        ) : (
-          <span className="text-[11px] text-[#8A8F98]/70 font-mono">SCADA Stream</span>
-        )}
+      <div className="flex items-center justify-between gap-1.5 mt-2 pt-2 border-t border-white/[0.06] text-xs min-w-0">
+        <div className="min-w-0 flex-1">
+          {trend ? (
+            <div
+              className={`flex items-center gap-1 font-mono text-[10px] sm:text-[10.5px] truncate ${
+                trend.isPositiveGood ?? true
+                  ? 'text-emerald-400'
+                  : 'text-amber-400'
+              }`}
+            >
+              {trend.isUp ?? true ? <TrendingUp size={11} className="flex-shrink-0" /> : <TrendingDown size={11} className="flex-shrink-0" />}
+              <span className="truncate">{trend.value}</span>
+            </div>
+          ) : subtitle ? (
+            <span className="text-[10px] sm:text-[10.5px] text-[#8A8F98] font-mono truncate block" title={subtitle}>
+              {subtitle}
+            </span>
+          ) : (
+            <span className="text-[10px] sm:text-[10.5px] text-[#8A8F98]/70 font-mono truncate block">
+              SCADA Stream
+            </span>
+          )}
+        </div>
 
-        {status && <StatusBadge status={status.variant} label={status.label} size="sm" />}
+        {status && <StatusBadge status={status.variant} label={status.label} size="sm" className="flex-shrink-0" />}
       </div>
     </div>
   );

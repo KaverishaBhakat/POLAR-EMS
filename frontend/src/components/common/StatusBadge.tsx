@@ -146,14 +146,14 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   const config = STATUS_CONFIG[normKey] || STATUS_CONFIG.INFO;
 
   const sizeClasses = {
-    sm: 'text-[10px] px-2.5 py-0.5 gap-1.5',
-    md: 'text-xs px-3 py-1 gap-2',
+    sm: 'text-[9.5px] px-2 py-0.5 gap-1.5',
+    md: 'text-xs px-2.5 py-0.5 gap-1.5',
     lg: 'text-sm px-3.5 py-1.5 gap-2.5',
   }[size];
 
   return (
     <span
-      className={`inline-flex items-center font-mono font-medium uppercase rounded-full border tracking-wide select-none ${config.bg} ${config.text} ${config.border} ${sizeClasses} ${className}`}
+      className={`inline-flex items-center font-mono font-medium uppercase rounded-full border tracking-wide select-none whitespace-nowrap flex-shrink-0 ${config.bg} ${config.text} ${config.border} ${sizeClasses} ${className}`}
     >
       {showDot && (
         <span

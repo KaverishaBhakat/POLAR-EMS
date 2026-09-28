@@ -149,7 +149,7 @@ export default function DashboardPage() {
     : 0;
 
   return (
-    <div className="space-y-7 max-w-7xl mx-auto">
+    <div className="space-y-7 max-w-7xl mx-auto w-full min-w-0">
       {/* PAGE HEADER */}
       <PageHeader
         title={`${stationDisplayName} Operations`}
@@ -172,7 +172,7 @@ export default function DashboardPage() {
       />
 
       {/* TOP KPI CARDS (6 Metrics) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-3.5 w-full min-w-0">
         {/* 1. Current Load */}
         <KPICard
           title="Current Load"

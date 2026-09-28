@@ -58,7 +58,7 @@ export const EnergyOverviewChart: React.FC<EnergyOverviewChartProps> = ({ data }
   const hasData = displayData.length > 0;
 
   return (
-    <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5 space-y-4">
+    <div className="bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-4 sm:p-5 space-y-4 w-full min-w-0 overflow-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-[#1B2C42]/50">
         <div>
           <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase font-mono flex items-center gap-2">

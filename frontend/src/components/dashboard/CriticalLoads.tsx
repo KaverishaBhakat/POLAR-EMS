@@ -65,18 +65,18 @@ export const CriticalLoads: React.FC<CriticalLoadsProps> = ({ loads }) => {
   ) / 10;
 
   return (
-    <GlassCard className="p-5">
+    <GlassCard className="p-4 sm:p-5 w-full min-w-0 overflow-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 pb-3 border-b border-white/6 gap-2">
         <div>
           <h3 className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            Station Subsystems & Critical Loads (PostgreSQL)
+            <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            Station Subsystems &amp; Critical Loads (PostgreSQL)
           </h3>
           <p className="text-xs text-foreground-muted mt-0.5">
             Priority-tiered circuit allocation: Critical life support guaranteed 100% un-sheddable under all operating conditions.
           </p>
         </div>
-        <div className="text-right font-mono">
+        <div className="text-right font-mono flex-shrink-0">
           <span className="text-xs text-emerald-400 font-semibold">{criticalOnlyKW} kW</span>
           <span className="text-[11px] text-foreground-muted ml-1">/ {totalKW} kW Total</span>
         </div>
@@ -87,7 +87,7 @@ export const CriticalLoads: React.FC<CriticalLoadsProps> = ({ loads }) => {
           No Critical Load circuits configured for this station in PostgreSQL database.
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 w-full min-w-0">
           {normalizedLoads.map((item) => {
             const categoryBadge = {
               CRITICAL: {
@@ -118,26 +118,26 @@ export const CriticalLoads: React.FC<CriticalLoadsProps> = ({ loads }) => {
             return (
               <div
                 key={item.id}
-                className="p-3 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-white/10 transition-colors"
+                className="p-3 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-white/10 transition-colors w-full min-w-0 overflow-hidden"
               >
-                <div className="flex items-center gap-3 min-w-[240px]">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="w-7 h-7 rounded-lg bg-white/[0.04] border border-white/6 flex items-center justify-center flex-shrink-0">
                     {getLoadIcon(item.name, item.category)}
                   </div>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-accent-bright font-semibold border border-white/6">
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-accent-bright font-semibold border border-white/6 flex-shrink-0">
                         P{item.priority}
                       </span>
-                      <span className="text-xs font-medium text-foreground">
+                      <span className="text-xs font-medium text-foreground truncate">
                         {item.name}
                       </span>
                       <span
-                        className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${categoryBadge.badge}`}
+                        className={`text-[10px] font-mono px-2 py-0.5 rounded-full border whitespace-nowrap flex-shrink-0 ${categoryBadge.badge}`}
                       >
                         {item.category}
                       </span>
-                      <span className="text-[10px] text-foreground-muted flex items-center gap-1 font-mono">
+                      <span className="text-[10px] text-foreground-muted flex items-center gap-1 font-mono whitespace-nowrap flex-shrink-0">
                         {categoryBadge.shedIcon}
                         {categoryBadge.shedLabel}
                       </span>
@@ -146,17 +146,17 @@ export const CriticalLoads: React.FC<CriticalLoadsProps> = ({ loads }) => {
                 </div>
 
                 {/* Progress and percentage */}
-                <div className="flex items-center gap-3 flex-1 max-w-sm font-mono">
-                  <div className="flex-1 bg-white/[0.04] h-2 rounded-full overflow-hidden border border-white/5">
+                <div className="flex items-center gap-3 flex-1 max-w-sm font-mono min-w-0 w-full sm:w-auto">
+                  <div className="flex-1 bg-white/[0.04] h-2 rounded-full overflow-hidden border border-white/5 min-w-[60px]">
                     <div
                       className={`h-full ${categoryBadge.bar} transition-all duration-300 rounded-full`}
                       style={{ width: `${item.percentage}%` }}
                     />
                   </div>
-                  <span className="text-xs font-semibold text-foreground min-w-[70px] text-right">
+                  <span className="text-xs font-semibold text-foreground min-w-[65px] text-right whitespace-nowrap flex-shrink-0">
                     {item.powerKW} <span className="text-[10px] text-foreground-muted font-normal">/ {item.ratedKW} kW</span>
                   </span>
-                  <span className="text-[11px] text-foreground-muted min-w-[35px] text-right">
+                  <span className="text-[11px] text-foreground-muted min-w-[32px] text-right whitespace-nowrap flex-shrink-0">
                     {item.percentage}%
                   </span>
                 </div>
@@ -164,6 +164,7 @@ export const CriticalLoads: React.FC<CriticalLoadsProps> = ({ loads }) => {
                 <StatusBadge
                   status={item.status === 'ONLINE' ? 'RUNNING' : item.status === 'SHED' ? 'OFFLINE' : item.status}
                   size="sm"
+                  className="flex-shrink-0 self-start sm:self-center"
                 />
               </div>
             );

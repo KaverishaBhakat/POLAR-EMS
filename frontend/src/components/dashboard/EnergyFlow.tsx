@@ -33,18 +33,18 @@ export const EnergyFlow: React.FC<EnergyFlowProps> = ({
   const totalGeneration = effectiveSolar + (windKW || 0) + (generatorKW || 0);
 
   return (
-    <div className="relative bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-5">
+    <div className="relative bg-[#0E1724]/90 backdrop-blur-md rounded-lg border border-[#1B2C42] p-4 sm:p-5 w-full min-w-0 overflow-hidden">
       <div className="flex items-center justify-between mb-4 pb-2.5 border-b border-[#1B2C42]/50">
         <div>
           <h3 className="text-xs sm:text-sm font-semibold tracking-wider text-slate-200 uppercase font-mono flex items-center gap-2">
-            <Zap className="w-4 h-4 text-cyan-400" />
+            <Zap className="w-4 h-4 text-cyan-400 flex-shrink-0" />
             Power Distribution & Microgrid Flow
           </h3>
           <p className="text-[11px] text-slate-400 mt-0.5">
             Real-time power balancing across generation buses, BESS, and station distribution
           </p>
         </div>
-        <StatusBadge status="OPERATIONAL" label="SYNCHRONIZED (50.0 Hz)" size="sm" />
+        <StatusBadge status="OPERATIONAL" label="SYNCHRONIZED (50.0 Hz)" size="sm" className="flex-shrink-0" />
       </div>
 
       {/* Interactive SCADA Flow Diagram */}
