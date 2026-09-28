@@ -7,7 +7,7 @@ import { Navbar } from '@/components/Navbar';
 import { Section1 } from '@/components/Section1';
 import { Section2 } from '@/components/Section2';
 import { Section3 } from '@/components/Section3';
-import { ArrowRight, UserPlus, LogIn, ShieldAlert } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { PolarLogo } from '@/components/common/PolarLogo';
 
 const VIDEO_URL =

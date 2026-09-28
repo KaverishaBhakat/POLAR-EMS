@@ -5,13 +5,6 @@ import Link from 'next/link';
 import {
   Activity,
   MapPin,
-  TrendingUp,
-  Sliders,
-  PlaySquare,
-  ShieldAlert,
-  BarChart3,
-  Bell,
-  UploadCloud,
   LogIn,
   UserPlus,
   Info,
@@ -33,25 +26,18 @@ interface NavLinkItem {
   icon: LucideIcon;
 }
 
-const SCADA_ROUTES: NavLinkItem[] = [
+const LIVE_ROUTES: NavLinkItem[] = [
   { name: 'Live Dashboard', href: '/dashboard', badge: 'LIVE', icon: Activity },
   { name: 'Stations', href: '/stations', icon: MapPin },
-  { name: 'AI Forecast', href: '/forecast', badge: 'ML', icon: TrendingUp },
-  { name: 'Optimization', href: '/optimization', badge: 'MILP', icon: Sliders },
-  { name: 'Simulation', href: '/simulation', icon: PlaySquare },
-  { name: 'Resilience Hub', href: '/resilience', badge: 'NEW', icon: ShieldAlert },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'Alerts', href: '/alerts', icon: Bell },
-  { name: 'Data Ingestion', href: '/data-upload', icon: UploadCloud },
 ];
 
-const AUTH_ROUTES = [
+const INFO_ROUTES: NavLinkItem[] = [
+  { name: 'About POLAR-EMS', href: '/about', icon: Info },
+];
+
+const AUTH_ROUTES: NavLinkItem[] = [
   { name: 'Sign In', href: '/login', icon: LogIn },
   { name: 'Sign Up', href: '/signup', icon: UserPlus },
-];
-
-const SYSTEM_ROUTES = [
-  { name: 'About POLAR-EMS', href: '/about', icon: Info },
 ];
 
 export const Navbar: React.FC<NavbarProps> = ({ scrollProgress }) => {
@@ -131,20 +117,20 @@ export const Navbar: React.FC<NavbarProps> = ({ scrollProgress }) => {
             transition: 'opacity 0.6s ease-out, transform 0.6s ease-out',
           }}
         >
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/60 flex items-center justify-center text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.3)] backdrop-blur-md">
+          <div className="w-8 h-8 rounded-lg bg-[#0A1626]/80 border border-cyan-500/60 flex items-center justify-center text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.3)] backdrop-blur-md">
             <PolarLogo size={20} className="group-hover:scale-110 transition-transform text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]" />
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-sm tracking-wider uppercase text-white drop-shadow">
-                POLAR<span className="text-cyan-400">-EMS</span>
+              <span className="font-bold text-sm tracking-wider uppercase drop-shadow-sm" style={{ color: '#0A1626' }}>
+                POLAR<span className="text-cyan-600">-EMS</span>
               </span>
-              <span className="hidden sm:inline-block text-[9px] px-1 py-0.2 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded font-bold">
+              <span className="hidden sm:inline-block text-[9px] px-1.5 py-0.5 bg-cyan-500/20 text-cyan-700 border border-cyan-500/50 rounded font-bold backdrop-blur-sm">
                 ANTARCTICA
               </span>
             </div>
-            <span className="text-[9px] text-slate-300 opacity-80 tracking-tight hidden sm:block">
-              NCPOR & MoES RESEARCH STATIONS
+            <span className="text-[9px] tracking-tight hidden sm:block font-medium drop-shadow-sm" style={{ color: '#1B3A5C' }}>
+              AI-POWERED POLAR ENERGY MANAGEMENT
             </span>
           </div>
         </Link>
@@ -202,13 +188,14 @@ export const Navbar: React.FC<NavbarProps> = ({ scrollProgress }) => {
               </span>
             </div>
 
-            {/* Category 1: SCADA LIVE */}
-            <div className="space-y-1.5 mb-5">
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-1">
-                SCADA LIVE
+            {/* Category 1: LIVE */}
+            <div className="space-y-1.5 mb-4">
+              <div className="text-[10px] font-bold text-cyan-500/80 uppercase tracking-widest px-2 mb-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                LIVE
               </div>
-              <div className="space-y-1">
-                {SCADA_ROUTES.map((route) => {
+              <div className="space-y-0.5">
+                {LIVE_ROUTES.map((route) => {
                   const Icon = route.icon;
                   return (
                     <Link
@@ -222,7 +209,7 @@ export const Navbar: React.FC<NavbarProps> = ({ scrollProgress }) => {
                         <span>{route.name}</span>
                       </span>
                       {route.badge && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
                           {route.badge}
                         </span>
                       )}
@@ -232,24 +219,25 @@ export const Navbar: React.FC<NavbarProps> = ({ scrollProgress }) => {
               </div>
             </div>
 
-            <div className="border-t border-[#1B2C42]/80 my-3" />
+            <div className="border-t border-[#1B2C42]/80 my-2" />
 
-            {/* Category 2: AUTHENTICATION */}
+            {/* Category 2: INFORMATION */}
             <div className="space-y-1.5 mb-4">
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-1">
-                AUTHENTICATION
+              <div className="text-[10px] font-bold text-cyan-500/80 uppercase tracking-widest px-2 mb-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                INFORMATION
               </div>
-              <div className="space-y-1">
-                {AUTH_ROUTES.map((route) => {
+              <div className="space-y-0.5">
+                {INFO_ROUTES.map((route) => {
                   const Icon = route.icon;
                   return (
                     <Link
                       key={route.href}
                       href={route.href}
                       onClick={() => setIsPanelOpen(false)}
-                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs hover:bg-[#122032] hover:text-cyan-300 transition-colors text-slate-300"
+                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs hover:bg-[#122032] hover:text-cyan-300 transition-colors text-slate-300 group"
                     >
-                      <Icon size={14} className="text-slate-400" />
+                      <Icon size={14} className="text-slate-400 group-hover:text-cyan-400 transition-colors" />
                       <span>{route.name}</span>
                     </Link>
                   );
@@ -257,24 +245,25 @@ export const Navbar: React.FC<NavbarProps> = ({ scrollProgress }) => {
               </div>
             </div>
 
-            <div className="border-t border-[#1B2C42]/80 my-3" />
+            <div className="border-t border-[#1B2C42]/80 my-2" />
 
-            {/* Category 3: SYSTEM */}
+            {/* Category 3: ACCOUNT */}
             <div className="space-y-1.5">
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-1">
-                SYSTEM
+              <div className="text-[10px] font-bold text-cyan-500/80 uppercase tracking-widest px-2 mb-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                ACCOUNT
               </div>
-              <div className="space-y-1">
-                {SYSTEM_ROUTES.map((route) => {
+              <div className="space-y-0.5">
+                {AUTH_ROUTES.map((route) => {
                   const Icon = route.icon;
                   return (
                     <Link
                       key={route.href}
                       href={route.href}
                       onClick={() => setIsPanelOpen(false)}
-                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs hover:bg-[#122032] hover:text-cyan-300 transition-colors text-slate-300"
+                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs hover:bg-[#122032] hover:text-cyan-300 transition-colors text-slate-300 group"
                     >
-                      <Icon size={14} className="text-slate-400" />
+                      <Icon size={14} className="text-slate-400 group-hover:text-cyan-400 transition-colors" />
                       <span>{route.name}</span>
                     </Link>
                   );

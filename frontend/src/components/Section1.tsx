@@ -1,9 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { ArrowRight, ShieldCheck, Zap, Radio, UserPlus, LogIn } from 'lucide-react';
-import { PolarLogo } from '@/components/common/PolarLogo';
+import { ArrowRight, ShieldCheck, Zap, Radio } from 'lucide-react';
 import { Stagger } from './Stagger';
 
 interface Section1Props {
@@ -33,8 +31,8 @@ export const Section1: React.FC<Section1Props> = ({ opacity }) => {
         {/* Hero Headline */}
         <Stagger show={isVisible} delay={120}>
           <h1
-            className="font-extrabold uppercase leading-[1.1] text-[#0A1626] tracking-tight drop-shadow-sm"
-            style={{ fontSize: 'clamp(2.1rem, 4.8vw, 4.4rem)' }}
+            className="font-extrabold uppercase leading-[1.15] text-[#0A1626] tracking-tight drop-shadow-sm"
+            style={{ fontSize: 'clamp(1.6rem, 3.5vw, 3rem)' }}
           >
             AI-Powered Polar <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 via-blue-700 to-[#0A1626]">
@@ -56,6 +54,7 @@ export const Section1: React.FC<Section1Props> = ({ opacity }) => {
             <div className="px-3 py-1.5 rounded-md bg-[#08111D]/85 border border-cyan-500/40 text-cyan-300 backdrop-blur-sm shadow-sm flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
               <span className="font-bold">21.2%</span> Fuel Savings
+              <span className="text-[9px] text-cyan-500/60">(modeled)</span>
             </div>
             <div className="px-3 py-1.5 rounded-md bg-[#08111D]/85 border border-emerald-500/40 text-emerald-300 backdrop-blur-sm shadow-sm flex items-center gap-2">
               <ShieldCheck size={14} className="text-emerald-400" />
@@ -64,23 +63,12 @@ export const Section1: React.FC<Section1Props> = ({ opacity }) => {
             <div className="px-3 py-1.5 rounded-md bg-[#08111D]/85 border border-purple-500/40 text-purple-300 backdrop-blur-sm shadow-sm flex items-center gap-2">
               <Zap size={14} className="text-purple-400" />
               <span>500 kWh BESS Storage</span>
+              <span className="text-[9px] text-purple-500/60">(spec)</span>
             </div>
           </div>
         </Stagger>
 
-        {/* Hero CTA Button: ONE Primary Action */}
-        <Stagger show={isVisible} delay={400}>
-          <div className="flex flex-wrap items-center gap-4 pt-3 pointer-events-auto">
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-3 px-7 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs sm:text-sm tracking-wider uppercase transition-all duration-300 shadow-[0_0_25px_rgba(6,182,212,0.45)] hover:shadow-[0_0_35px_rgba(6,182,212,0.7)] hover:scale-105 group"
-            >
-              <PolarLogo size={20} />
-              <span>ENTER SCADA DASHBOARD</span>
-              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </div>
-        </Stagger>
+
       </div>
 
       {/* Bottom-right scroll prompt */}
