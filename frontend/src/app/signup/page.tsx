@@ -4,7 +4,6 @@ import React, { useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  Compass,
   Lock,
   Mail,
   ArrowRight,
@@ -15,6 +14,7 @@ import {
   BadgeCheck,
   Building2,
 } from 'lucide-react';
+import { PolarLogo } from '@/components/common/PolarLogo';
 import { apiClient } from '@/lib/api/client';
 import { useStation, getInitials, UserProfile } from '@/lib/context/StationContext';
 
@@ -118,7 +118,7 @@ function SignUpContent() {
         <div className="relative z-10">
           <Link href="/" className="inline-flex items-center gap-3 mb-2 group">
             <div className="w-10 h-10 rounded-lg bg-cyan-500/20 border border-cyan-500/50 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.3)] group-hover:border-cyan-400 transition-colors">
-              <Compass size={22} className="animate-spin-slow" />
+              <PolarLogo size={24} className="text-cyan-400" />
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-wider text-white">

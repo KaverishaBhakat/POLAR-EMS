@@ -2,7 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Compass, ShieldCheck, Zap, Radio, UserPlus, LogIn } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Zap, Radio, UserPlus, LogIn } from 'lucide-react';
+import { PolarLogo } from '@/components/common/PolarLogo';
 import { Stagger } from './Stagger';
 
 interface Section1Props {
@@ -74,7 +75,7 @@ export const Section1: React.FC<Section1Props> = ({ opacity }) => {
               href="/dashboard"
               className="flex items-center gap-3 px-7 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs sm:text-sm tracking-wider uppercase transition-all duration-300 shadow-[0_0_25px_rgba(6,182,212,0.45)] hover:shadow-[0_0_35px_rgba(6,182,212,0.7)] hover:scale-105 group"
             >
-              <Compass size={18} />
+              <PolarLogo size={20} />
               <span>ENTER SCADA DASHBOARD</span>
               <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </Link>

@@ -23,10 +23,10 @@ import {
   Cpu,
   BatteryCharging,
   BrainCircuit,
-  Compass,
   Sparkles,
   LucideIcon,
 } from 'lucide-react';
+import { PolarLogo } from '@/components/common/PolarLogo';
 
 interface NavGroup {
   title: string;
@@ -89,7 +89,7 @@ export const Sidebar: React.FC = () => {
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/[0.06]">
           <Link href="/dashboard" className="flex items-center gap-2.5 overflow-hidden group">
             <div className="w-8 h-8 rounded-xl bg-[#5E6AD2]/15 border border-[#5E6AD2]/30 flex items-center justify-center flex-shrink-0 text-[#5E6AD2] group-hover:border-[#5E6AD2]/60 group-hover:bg-[#5E6AD2]/25 transition-all shadow-sm">
-              <Compass className="w-4 h-4" />
+              <PolarLogo size={18} className="text-[#5E6AD2] group-hover:scale-110 transition-transform" />
             </div>
             {!collapsed && (
               <div>

@@ -7,7 +7,8 @@ import { Navbar } from '@/components/Navbar';
 import { Section1 } from '@/components/Section1';
 import { Section2 } from '@/components/Section2';
 import { Section3 } from '@/components/Section3';
-import { Compass, ArrowRight, UserPlus, LogIn, ShieldAlert } from 'lucide-react';
+import { ArrowRight, UserPlus, LogIn, ShieldAlert } from 'lucide-react';
+import { PolarLogo } from '@/components/common/PolarLogo';
 
 const VIDEO_URL =
   'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260821_114821_a8ca298f-be2c-4613-a4dd-51b69e16bbde.mp4';
@@ -82,7 +83,7 @@ export default function LandingPage() {
             title="Enter Live POLAR-EMS SCADA Dashboard"
           >
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-            <Compass size={15} className="text-cyan-400" />
+            <PolarLogo size={16} className="text-cyan-400" />
             <span className="font-bold">SCADA Dashboard</span>
             <ArrowRight size={13} className="text-cyan-400 group-hover:translate-x-1 transition-transform" />
           </Link>

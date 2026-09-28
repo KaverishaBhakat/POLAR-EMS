@@ -4,7 +4,6 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import {
   X,
-  Compass,
   Activity,
   MapPin,
   TrendingUp,
@@ -24,6 +23,7 @@ import {
   ShieldCheck,
   BrainCircuit,
 } from 'lucide-react';
+import { PolarLogo } from '@/components/common/PolarLogo';
 
 interface MobileMenuProps {
   isOpen: boolean;
@@ -76,7 +76,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
         <div className="flex items-center justify-between border-b border-[#1B2C42] pb-5">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/60 flex items-center justify-center text-cyan-400">
-              <Compass size={18} className="animate-spin-slow" />
+              <PolarLogo size={18} className="text-cyan-400" />
             </div>
             <div>
               <div className="text-sm font-bold text-white tracking-wider">

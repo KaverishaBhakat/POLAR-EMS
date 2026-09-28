@@ -2,7 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Compass, UserPlus, ShieldCheck, Radio } from 'lucide-react';
+import { ArrowRight, UserPlus, ShieldCheck, Radio } from 'lucide-react';
+import { PolarLogo } from '@/components/common/PolarLogo';
 import { Stagger } from './Stagger';
 
 interface Section3Props {
@@ -66,7 +67,7 @@ export const Section3: React.FC<Section3Props> = ({ opacity }) => {
               href="/dashboard"
               className="inline-flex items-center gap-2.5 px-5 py-3.5 rounded-xl bg-[#08111D]/90 hover:bg-[#0E1D32] border border-cyan-500/50 text-white font-bold text-xs uppercase tracking-wider transition-all duration-300 backdrop-blur-md hover:border-cyan-400"
             >
-              <Compass size={16} className="text-cyan-400" />
+              <PolarLogo size={18} className="text-cyan-400" />
               <span>Enter SCADA Control</span>
             </Link>
           </div>

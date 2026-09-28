@@ -6,6 +6,11 @@ import { ToastContainer } from '@/components/common/Toast';
 export const metadata: Metadata = {
   title: 'POLAR-EMS | AI Antarctic Research Station Energy Management System',
   description: 'Intelligent SCADA Energy Management & Predictive Microgrid Optimization for Indian Antarctic Research Stations (Maitri & Bharati).',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({

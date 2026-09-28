@@ -2,14 +2,15 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Compass, AlertTriangle, ArrowLeft, Activity } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Activity } from 'lucide-react';
+import { PolarLogo } from '@/components/common/PolarLogo';
 
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-[#080D14] flex items-center justify-center p-6 font-mono text-slate-100">
       <div className="max-w-md w-full bg-[#0E1724] border border-cyan-500/40 rounded-lg p-8 text-center shadow-[0_0_30px_rgba(6,182,212,0.15)] relative">
         <div className="w-14 h-14 rounded-full bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center text-cyan-400 mx-auto mb-4 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
-          <Compass size={28} className="animate-spin-slow" />
+          <PolarLogo size={30} className="text-cyan-400" />
         </div>
 
         <span className="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold uppercase tracking-wider">

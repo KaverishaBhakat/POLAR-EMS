@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import {
-  Compass,
   Activity,
   MapPin,
   TrendingUp,
@@ -21,6 +20,7 @@ import {
   Radio,
   LucideIcon,
 } from 'lucide-react';
+import { PolarLogo } from '@/components/common/PolarLogo';
 
 interface NavbarProps {
   scrollProgress: number;
@@ -132,7 +132,7 @@ export const Navbar: React.FC<NavbarProps> = ({ scrollProgress }) => {
           }}
         >
           <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/60 flex items-center justify-center text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.3)] backdrop-blur-md">
-            <Compass size={18} className="animate-spin-slow" />
+            <PolarLogo size={20} className="group-hover:scale-110 transition-transform text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]" />
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
@@ -191,7 +191,7 @@ export const Navbar: React.FC<NavbarProps> = ({ scrollProgress }) => {
             {/* Side Panel Header */}
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#1B2C42]">
               <div className="flex items-center gap-2">
-                <Compass size={16} className="text-cyan-400" />
+                <PolarLogo size={18} className="text-cyan-400" />
                 <span className="text-xs font-bold uppercase tracking-wider text-white">
                   POLAR<span className="text-cyan-400">-EMS</span> SCADA
                 </span>
