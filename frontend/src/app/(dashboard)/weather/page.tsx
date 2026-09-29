@@ -46,6 +46,7 @@ export default function WeatherPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'temperature' | 'wind' | 'humidity' | 'pressure' | 'solar'>('temperature');
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('2016');
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -96,14 +97,102 @@ export default function WeatherPage() {
     fetchWeatherData();
   }, [fetchWeatherData]);
 
-  // Date-aware X-axis tick formatter for multi-year historical timeline
+  // Segment historical observations into distinct observation campaigns
+  const campaigns = useMemo(() => {
+    if (!history || history.length === 0) return [];
+
+    const groups: { [key: string]: WeatherData[] } = {};
+    history.forEach((r) => {
+      const d = new Date(r.timestamp || r.createdAt || Date.now());
+      const yr = d.getUTCFullYear();
+      const key = String(yr);
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(r);
+    });
+
+    return Object.keys(groups)
+      .sort((a, b) => Number(a) - Number(b))
+      .map((yrKey) => {
+        const recs = groups[yrKey];
+        const yr = Number(yrKey);
+        const start = new Date(recs[0].timestamp || recs[0].createdAt || Date.now());
+        const end = new Date(recs[recs.length - 1].timestamp || recs[recs.length - 1].createdAt || Date.now());
+
+        const startMonth = start.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+        const endMonth = end.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+        const startDay = start.getUTCDate();
+        const endDay = end.getUTCDate();
+
+        let dateRangeFormatted = '';
+        if (startMonth === endMonth) {
+          dateRangeFormatted = `${startMonth} ${startDay}–${endDay}, ${yr}`;
+        } else {
+          dateRangeFormatted = `${startMonth} ${startDay} – ${endMonth} ${endDay}, ${yr}`;
+        }
+
+        let label = `${yr} Campaign`;
+        let shortLabel = `${yr} Expedition`;
+        if (yr === 1985) {
+          label = '4th Antarctic Expedition · 1985';
+          shortLabel = '4th Expedition (1985)';
+        } else if (yr === 2016) {
+          label = '36th Antarctic Expedition · 2016';
+          shortLabel = '36th Expedition (2016)';
+        } else {
+          label = `${yr} Observation Period`;
+          shortLabel = `${yr} Period`;
+        }
+
+        return {
+          id: yrKey,
+          label,
+          shortLabel,
+          year: yr,
+          count: recs.length,
+          startDate: start,
+          endDate: end,
+          records: recs,
+          dateRangeFormatted,
+        };
+      });
+  }, [history]);
+
+  // Ensure default campaign is set (defaults to 2016 if present, otherwise largest/latest)
+  useEffect(() => {
+    if (campaigns.length > 0) {
+      const exists = campaigns.some((c) => c.id === selectedCampaignId);
+      if (!exists) {
+        const has2016 = campaigns.some((c) => c.id === '2016');
+        if (has2016) {
+          setSelectedCampaignId('2016');
+        } else {
+          const largest = [...campaigns].sort((a, b) => b.count - a.count)[0];
+          setSelectedCampaignId(largest?.id || campaigns[campaigns.length - 1].id);
+        }
+      }
+    }
+  }, [campaigns, selectedCampaignId]);
+
+  const activeCampaign = useMemo(() => {
+    return campaigns.find((c) => c.id === selectedCampaignId) || campaigns[campaigns.length - 1] || null;
+  }, [campaigns, selectedCampaignId]);
+
+  const activeCampaignData = useMemo(() => {
+    return activeCampaign ? activeCampaign.records : [];
+  }, [activeCampaign]);
+
+  // Date-aware X-axis tick formatter for selected campaign (shows Month Day)
   const formatTimeLabel = (ts?: string | Date) => {
     if (!ts) return '';
     const d = new Date(ts);
-    return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    return d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: '2-digit',
+      timeZone: 'UTC',
+    });
   };
 
-  // Full timestamp formatter for tooltips & table
+  // Full timestamp formatter for tooltips & table (UTC precise)
   const formatDateLabel = (ts?: string | Date) => {
     if (!ts) return 'N/A';
     const d = new Date(ts);
@@ -114,13 +203,19 @@ export default function WeatherPage() {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
+      timeZone: 'UTC',
     });
   };
 
-  // Check if historical dataset contains any non-null solar radiation measurements
+  // Check if active campaign dataset contains any non-null solar radiation measurements
   const hasSolarData = useMemo(() => {
-    return history.some((r) => r.solarRadiation !== null && r.solarRadiation !== undefined);
-  }, [history]);
+    return activeCampaignData.some((r) => r.solarRadiation !== null && r.solarRadiation !== undefined);
+  }, [activeCampaignData]);
+
+  // Check if active campaign dataset contains any non-null relative humidity measurements
+  const hasHumidityData = useMemo(() => {
+    return activeCampaignData.some((r) => r.humidity !== null && r.humidity !== undefined);
+  }, [activeCampaignData]);
 
   // Derive date range label from active records
   const dateRangeLabel = useMemo(() => {
@@ -349,81 +444,122 @@ export default function WeatherPage() {
             </div>
           )}
 
-          {/* 2. Meteorological Sensor Trends Chart */}
+          {/* 2. Meteorological Sensor Trends Chart (Campaign-Aware Segmented View) */}
           {history.length > 0 && (
             <GlassCard className="p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-white/6">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-2">
-                      <CloudSun className="w-4 h-4 text-accent" />
-                      Historical Weather Observations ({history.length} Data Points: {dateRangeLabel})
-                    </h3>
-                    <ProvenanceBadge type="REAL_MEASURED" size="xs" />
+              <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-white/6">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-2">
+                        <CloudSun className="w-4 h-4 text-accent" />
+                        Historical Weather Observations
+                      </h3>
+                      <ProvenanceBadge type="REAL_MEASURED" size="xs" />
+                      {activeCampaign && (
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 border border-accent/20 text-accent-bright font-mono font-medium">
+                          {activeCampaign.count} Data Points · {activeCampaign.dateRangeFormatted}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-foreground-muted mt-0.5">
+                      {campaigns.length} historical observation campaign{campaigns.length !== 1 ? 's' : ''} · {totalRecords} total observations ({dateRangeLabel})
+                    </p>
                   </div>
-                  <p className="text-xs text-foreground-muted mt-0.5">
-                    Chronological AWS meteorological observations retrieved from PostgreSQL `weather_data`
-                  </p>
+
+                  {/* Metric Tab Selectors */}
+                  <div className="flex items-center gap-1 p-1 bg-white/[0.04] rounded-lg border border-white/6 text-xs flex-wrap">
+                    <button
+                      onClick={() => setActiveTab('temperature')}
+                      className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                        activeTab === 'temperature'
+                          ? 'bg-accent text-white shadow-sm'
+                          : 'text-foreground-muted hover:text-foreground'
+                      }`}
+                    >
+                      Temperature
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('wind')}
+                      className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                        activeTab === 'wind'
+                          ? 'bg-accent text-white shadow-sm'
+                          : 'text-foreground-muted hover:text-foreground'
+                      }`}
+                    >
+                      Wind Speed
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('humidity')}
+                      className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                        activeTab === 'humidity'
+                          ? 'bg-accent text-white shadow-sm'
+                          : 'text-foreground-muted hover:text-foreground'
+                      }`}
+                    >
+                      Humidity
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('pressure')}
+                      className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                        activeTab === 'pressure'
+                          ? 'bg-accent text-white shadow-sm'
+                          : 'text-foreground-muted hover:text-foreground'
+                      }`}
+                    >
+                      Pressure
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('solar')}
+                      className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                        activeTab === 'solar'
+                          ? 'bg-accent text-white shadow-sm'
+                          : 'text-foreground-muted hover:text-foreground'
+                      }`}
+                    >
+                      Solar
+                    </button>
+                  </div>
                 </div>
 
-                {/* Metric Tab Selectors */}
-                <div className="flex items-center gap-1 p-1 bg-white/[0.04] rounded-lg border border-white/6 text-xs flex-wrap">
-                  <button
-                    onClick={() => setActiveTab('temperature')}
-                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                      activeTab === 'temperature'
-                        ? 'bg-accent text-white shadow-sm'
-                        : 'text-foreground-muted hover:text-foreground'
-                    }`}
-                  >
-                    Temperature
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('wind')}
-                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                      activeTab === 'wind'
-                        ? 'bg-accent text-white shadow-sm'
-                        : 'text-foreground-muted hover:text-foreground'
-                    }`}
-                  >
-                    Wind Speed
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('humidity')}
-                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                      activeTab === 'humidity'
-                        ? 'bg-accent text-white shadow-sm'
-                        : 'text-foreground-muted hover:text-foreground'
-                    }`}
-                  >
-                    Humidity
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('pressure')}
-                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                      activeTab === 'pressure'
-                        ? 'bg-accent text-white shadow-sm'
-                        : 'text-foreground-muted hover:text-foreground'
-                    }`}
-                  >
-                    Pressure
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('solar')}
-                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                      activeTab === 'solar'
-                        ? 'bg-accent text-white shadow-sm'
-                        : 'text-foreground-muted hover:text-foreground'
-                    }`}
-                  >
-                    Solar
-                  </button>
-                </div>
+                {/* Campaign Selector Pill Buttons */}
+                {campaigns.length > 1 && (
+                  <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-white/4">
+                    <span className="text-[11px] uppercase tracking-wider text-foreground-muted font-mono font-semibold flex items-center gap-1.5 mr-1">
+                      <Clock className="w-3.5 h-3.5 text-accent" />
+                      Observation Campaign:
+                    </span>
+                    {campaigns.map((camp) => {
+                      const isSelected = selectedCampaignId === camp.id;
+                      return (
+                        <button
+                          key={camp.id}
+                          onClick={() => setSelectedCampaignId(camp.id)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all flex items-center gap-2 ${
+                            isSelected
+                              ? 'bg-accent/20 border border-accent text-accent-bright shadow-sm font-semibold'
+                              : 'bg-white/[0.03] border border-white/6 text-foreground-muted hover:text-foreground hover:bg-white/[0.06]'
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              isSelected ? 'bg-accent-bright animate-pulse' : 'bg-foreground-muted/40'
+                            }`}
+                          />
+                          <span>{camp.label}</span>
+                          <span className="text-[10px] opacity-75 font-normal">
+                            ({camp.count} pts · {camp.dateRangeFormatted})
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
-              {/* Telemetry Sufficiency Status */}
+              {/* Telemetry Sufficiency Status for Active Campaign */}
               <ChartTelemetryStatus
-                inspection={inspectTelemetryData(history, (r) => r.timestamp || r.createdAt)}
+                inspection={inspectTelemetryData(activeCampaignData, (r) => r.timestamp || r.createdAt)}
                 domainName="meteorological"
                 className="mb-3"
               />
@@ -435,7 +571,7 @@ export default function WeatherPage() {
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     {activeTab === 'temperature' ? (
-                      <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <AreaChart data={activeCampaignData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <defs>
                           <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#5E6AD2" stopOpacity={0.4} />
@@ -448,7 +584,7 @@ export default function WeatherPage() {
                           tickFormatter={formatTimeLabel}
                           stroke="#8A8F98"
                           fontSize={10}
-                          minTickGap={40}
+                          minTickGap={35}
                         />
                         <YAxis stroke="#8A8F98" fontSize={10} unit="°C" />
                         <Tooltip
@@ -484,7 +620,7 @@ export default function WeatherPage() {
                         />
                       </AreaChart>
                     ) : activeTab === 'wind' ? (
-                      <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <AreaChart data={activeCampaignData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <defs>
                           <linearGradient id="windGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
@@ -497,7 +633,7 @@ export default function WeatherPage() {
                           tickFormatter={formatTimeLabel}
                           stroke="#8A8F98"
                           fontSize={10}
-                          minTickGap={40}
+                          minTickGap={35}
                         />
                         <YAxis stroke="#8A8F98" fontSize={10} unit="m/s" />
                         <Tooltip
@@ -523,48 +659,65 @@ export default function WeatherPage() {
                         />
                       </AreaChart>
                     ) : activeTab === 'humidity' ? (
-                      <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="humidGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
-                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                        <XAxis
-                          dataKey="timestamp"
-                          tickFormatter={formatTimeLabel}
-                          stroke="#8A8F98"
-                          fontSize={10}
-                          minTickGap={40}
-                        />
-                        <YAxis stroke="#8A8F98" fontSize={10} unit="%" domain={[0, 100]} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: '#0a0a0c',
-                            borderColor: 'rgba(255,255,255,0.1)',
-                            borderRadius: '12px',
-                            fontFamily: 'monospace',
-                            fontSize: '11px',
-                            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-                          }}
-                          labelFormatter={(v) => formatDateLabel(v)}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="humidity"
-                          name="Relative Humidity (%)"
-                          stroke="#06b6d4"
-                          strokeWidth={2}
-                          fill="url(#humidGradient)"
-                          dot={{ r: 2, fill: '#06b6d4' }}
-                          activeDot={{ r: 5, fill: '#22d3ee' }}
-                          connectNulls={false}
-                        />
-                      </AreaChart>
+                      hasHumidityData ? (
+                        <AreaChart data={activeCampaignData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="humidGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
+                              <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                          <XAxis
+                            dataKey="timestamp"
+                            tickFormatter={formatTimeLabel}
+                            stroke="#8A8F98"
+                            fontSize={10}
+                            minTickGap={35}
+                          />
+                          <YAxis stroke="#8A8F98" fontSize={10} unit="%" domain={[0, 100]} />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: '#0a0a0c',
+                              borderColor: 'rgba(255,255,255,0.1)',
+                              borderRadius: '12px',
+                              fontFamily: 'monospace',
+                              fontSize: '11px',
+                              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                            }}
+                            labelFormatter={(v) => formatDateLabel(v)}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="humidity"
+                            name="Relative Humidity (%)"
+                            stroke="#06b6d4"
+                            strokeWidth={2}
+                            fill="url(#humidGradient)"
+                            dot={{ r: 2, fill: '#06b6d4' }}
+                            activeDot={{ r: 5, fill: '#22d3ee' }}
+                            connectNulls={false}
+                          />
+                        </AreaChart>
+                      ) : (
+                        <div className="h-full w-full flex flex-col items-center justify-center bg-white/[0.02] rounded-xl border border-white/5 text-center p-6 space-y-2.5">
+                          <div className="p-3 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+                            <Droplets className="w-6 h-6" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-xs sm:text-sm font-semibold text-foreground uppercase tracking-wider">
+                              Relative humidity sensor channel unavailable
+                            </h4>
+                            <ProvenanceBadge type="UNAVAILABLE" size="xs" />
+                          </div>
+                          <p className="text-xs text-foreground-muted max-w-md">
+                            The {activeCampaign?.label || '1985 expedition'} archival dataset did not log relative humidity sensor channels (values recorded as missing/NULL in IMD records). Values are preserved without synthetic estimation.
+                          </p>
+                        </div>
+                      )
                     ) : activeTab === 'solar' ? (
                       hasSolarData ? (
-                        <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <AreaChart data={activeCampaignData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                           <defs>
                             <linearGradient id="solarGradient" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
@@ -577,7 +730,7 @@ export default function WeatherPage() {
                             tickFormatter={formatTimeLabel}
                             stroke="#8A8F98"
                             fontSize={10}
-                            minTickGap={40}
+                            minTickGap={35}
                           />
                           <YAxis stroke="#8A8F98" fontSize={10} unit="W/m²" />
                           <Tooltip
@@ -616,19 +769,19 @@ export default function WeatherPage() {
                           <p className="text-xs text-foreground-muted max-w-md">
                             {isBharati
                               ? 'Unavailable — no measured Bharati pyranometer data in the uploaded dataset. Values are preserved as NULL without synthetic estimation.'
-                              : 'The historical IMD Maitri dataset does not contain solar radiation sensor instrumentation. Values are preserved as NULL in the database without synthetic estimation.'}
+                              : `The historical IMD ${activeCampaign?.shortLabel || 'Maitri'} dataset does not contain solar radiation sensor instrumentation. Values are preserved as NULL in the database without synthetic estimation.`}
                           </p>
                         </div>
                       )
                     ) : (
-                      <LineChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <LineChart data={activeCampaignData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                         <XAxis
                           dataKey="timestamp"
                           tickFormatter={formatTimeLabel}
                           stroke="#8A8F98"
                           fontSize={10}
-                          minTickGap={40}
+                          minTickGap={35}
                         />
                         <YAxis stroke="#8A8F98" fontSize={10} unit="hPa" domain={['auto', 'auto']} />
                         <Tooltip
@@ -672,7 +825,7 @@ export default function WeatherPage() {
                   </span>
                 </div>
                 <span className="text-xs text-foreground-muted font-mono">
-                  Displaying {history.length} historical observations ({dateRangeLabel})
+                  Displaying {activeCampaignData.length} observations ({activeCampaign?.label || dateRangeLabel})
                 </span>
               </div>
 
@@ -691,7 +844,7 @@ export default function WeatherPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/4 font-mono text-xs">
-                    {[...history].reverse().map((record) => (
+                    {[...activeCampaignData].reverse().map((record) => (
                       <tr key={record.id || String(record.timestamp)} className="hover:bg-white/[0.03] transition-colors">
                         <td className="py-2 px-3 text-accent-bright font-semibold whitespace-nowrap">
                           {formatDateLabel(record.timestamp || record.createdAt)}
