@@ -262,10 +262,10 @@ These capabilities can be developed on top of the existing energy-management arc
 ## 🎥 Demo
 
 **Watch the project demonstration:**
-(https://youtu.be/PAmuiOzXiH0)(#)
+https://youtu.be/PAmuiOzXiH0
 
 **View the source code:**
-https://github.com/KaverishaBhakat/POLAR-EMS(#)
+https://github.com/KaverishaBhakat/POLAR-EMS
 
 ---
 
