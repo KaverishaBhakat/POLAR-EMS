@@ -1,10 +1,10 @@
 # POLAR-EMS ❄️⚡
 
-### AI-Driven Smart Energy Management System for Polar Research Stations
+### Energy Management & Decision Support System for Polar Research Stations
 
-POLAR-EMS is a smart energy management platform designed for isolated polar research stations.
+POLAR-EMS is an energy management and decision-support platform designed for isolated polar research stations.
 
-The system aims to improve energy reliability and efficiency by combining energy monitoring, renewable energy integration, battery management, fuel optimization, forecasting, simulation, and intelligent decision support.
+It brings together weather conditions, energy consumption, renewable generation, generators, battery storage, critical loads, alerts, and scenario-based energy analysis into a centralized station-level dashboard.
 
 > Developed as a solution for Smart India Hackathon 2026.
 
@@ -12,164 +12,267 @@ The system aims to improve energy reliability and efficiency by combining energy
 
 ## 🧊 Problem Statement
 
-Polar research stations operate in extremely harsh and isolated environments where reliable energy supply is critical.
+Polar research stations operate in remote and harsh environments where maintaining a reliable energy supply is essential.
 
-These stations may depend heavily on diesel generators while also having access to renewable energy sources such as solar and wind. However, renewable generation is variable, energy demand changes with weather and station activities, and fuel logistics are difficult and expensive.
+Energy demand can vary with weather conditions and station activities, while renewable generation from sources such as solar and wind is variable. Diesel generators and battery storage therefore need to be monitored alongside critical station loads.
 
-Therefore, an intelligent energy management system is required to:
-
-- Forecast energy demand
-- Predict renewable energy availability
-- Efficiently manage batteries
-- Optimize generator usage
-- Reduce fuel consumption
-- Prioritize critical loads
-- Detect potential energy risks
-- Support operators in making better energy decisions
+A centralized energy management system can help operators understand the current energy situation, monitor important assets, identify risks, and evaluate different energy scenarios.
 
 ---
 
 ## 💡 Our Solution
 
-POLAR-EMS provides a centralized digital platform for monitoring and managing the energy ecosystem of a polar research station.
+POLAR-EMS provides a centralized platform for monitoring and analyzing the energy ecosystem of a polar research station.
 
-The platform follows the principle:
+The system integrates:
 
-**AI predicts → Optimization decides → Safety constraints protect → Human operator approves/overrides**
+* Weather data
+* Energy consumption
+* Solar and wind generation
+* Diesel/CHP generators
+* Battery storage and readings
+* Critical and flexible loads
+* Energy alerts
+* Renewable penetration analysis
+* Energy balance analysis
+* Scenario-based simulation
+* Station-level monitoring
 
-The system is designed to integrate:
-
-- Energy load monitoring
-- Weather data
-- Solar and wind generation
-- Battery storage
-- Diesel/CHP generators
-- Critical and flexible loads
-- Fuel consumption
-- Alerts and notifications
-- Forecasting
-- Optimization
-- What-if simulation
-- Analytics and reporting
+The platform is designed to support operators by presenting these different energy components together in an interactive dashboard.
 
 ---
 
-## 🎯 Key Objectives
+## 🎯 Key Features
 
-1. Reduce unnecessary diesel generator operation.
-2. Increase utilization of renewable energy.
-3. Improve battery utilization.
-4. Maintain reliable power for critical station operations.
-5. Provide operators with real-time energy insights.
-6. Simulate different energy scenarios.
-7. Support future AI-based forecasting and optimization.
-8. Improve energy resilience in extreme polar conditions.
+### 🌦️ Weather Monitoring
+
+Monitor station weather conditions including:
+
+* Temperature
+* Wind speed
+* Wind direction
+* Atmospheric pressure
+* Humidity
+* Solar radiation data where available
+
+### ⚡ Energy Monitoring
+
+Track station energy demand and its major components, including:
+
+* Heating
+* Water systems
+* Communication
+* Laboratory
+* Refrigeration
+* Flexible loads
+
+### 🌱 Renewable Generation
+
+Monitor renewable energy contribution from:
+
+* Solar generation
+* Wind generation
+* Total renewable generation
+
+The dashboard also provides renewable penetration and energy-balance insights.
+
+### 🔋 Battery Monitoring
+
+Monitor battery systems and their readings as part of the station energy ecosystem.
+
+### 🔥 Generator Monitoring
+
+Track generator availability and generation information alongside renewable sources and battery storage.
+
+### 🚨 Critical Loads & Alerts
+
+Monitor critical station loads and energy-related alerts to help operators identify important operating conditions.
+
+### 🧪 Scenario & Simulation Analysis
+
+POLAR-EMS includes scenario-based analysis that allows different energy conditions to be represented and compared.
+
+Simulation results can be used to understand how changes in energy conditions affect the station system.
+
+### 🛰️ Multi-Station Architecture
+
+The system is designed around individual stations, allowing different polar research stations to be monitored through the same platform.
 
 ---
 
-## 🖥️ Current Development Status
+## 🖥️ Dashboard
 
-### Phase 1 — Frontend ✅
+The POLAR-EMS interface provides a control-room-style view of a station's energy ecosystem.
 
-The current repository contains the frontend interface of POLAR-EMS.
+The dashboard brings together:
 
-The frontend provides a control-room-style interface for:
-
-- Energy monitoring
-- Renewable generation monitoring
-- Battery status
-- Generator status
-- Critical load monitoring
-- Energy forecasting
-- Optimization results
-- Energy simulation
-- Analytics
-- Alerts
-- Station management
-
-The current frontend uses demo/synthetic data where backend APIs are not yet connected.
-
-### Phase 2 — Backend 🚧
-
-Planned backend stack:
-
-- Node.js
-- Express.js
-- PostgreSQL
-- Prisma ORM
-- JWT Authentication
-- REST APIs
-
-The backend will provide APIs for stations, weather, energy, renewable generation, generators, batteries, critical loads, alerts, simulations, analytics, and authentication.
-
-### Phase 3 — AI/ML & Optimization 🚧
-
-Future intelligence layer:
-
-- Energy load forecasting
-- Renewable generation forecasting
-- Fuel optimization
-- Generator scheduling
-- Battery dispatch optimization
-- Energy-risk prediction
-
-Potential technologies include:
-
-- Python
-- Scikit-learn
-- XGBoost
-- Pandas
-- NumPy
-- OR-Tools / optimization frameworks
+* Station overview
+* Weather conditions
+* Energy consumption
+* Renewable generation
+* Battery status
+* Generator status
+* Critical loads
+* Active alerts
+* Energy insights
+* Scenario and simulation results
 
 ---
 
 ## 🏗️ System Architecture
 
 ```text
-                    ┌──────────────────────┐
-                    │   Polar Station      │
-                    │                      │
-                    │ Weather / Energy     │
-                    │ Solar / Wind         │
-                    │ Battery / Generator  │
-                    └──────────┬───────────┘
-                               │
-                               ▼
-                    ┌──────────────────────┐
-                    │    Data Layer        │
-                    │                      │
-                    │ PostgreSQL Database  │
-                    └──────────┬───────────┘
-                               │
-                               ▼
-                    ┌──────────────────────┐
-                    │    Node.js Backend   │
-                    │      Express API     │
-                    └──────────┬───────────┘
-                               │
-                               ▼
-                    ┌──────────────────────┐
-                    │    AI / ML Layer     │
-                    │                      │
-                    │ Load Forecasting     │
-                    │ Renewable Forecast   │
-                    └──────────┬───────────┘
-                               │
-                               ▼
-                    ┌──────────────────────┐
-                    │ Optimization Engine  │
-                    │                      │
-                    │ Generator Dispatch   │
-                    │ Battery Scheduling   │
-                    │ Fuel Optimization    │
-                    └──────────┬───────────┘
-                               │
-                               ▼
-              ┌──────────────────────────────────┐
-              │          POLAR-EMS UI            │
-              │                                  │
-              │ Dashboard | Forecast | Optimize  │
-              │ Simulation | Analytics | Alerts  │
-              └──────────────────────────────────┘
+                    ┌─────────────────────────┐
+                    │    Polar Research       │
+                    │        Station          │
+                    │                         │
+                    │ Weather / Energy        │
+                    │ Solar / Wind            │
+                    │ Battery / Generator     │
+                    │ Critical Loads          │
+                    └────────────┬────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────┐
+                    │      Data Layer         │
+                    │                         │
+                    │ PostgreSQL + Neon       │
+                    └────────────┬────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────┐
+                    │      Backend API        │
+                    │                         │
+                    │ Node.js + Express       │
+                    │ REST APIs + Prisma      │
+                    └────────────┬────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────┐
+                    │     Analysis Layer      │
+                    │                         │
+                    │ Energy Balance          │
+                    │ Renewable Penetration   │
+                    │ Scenario Analysis       │
+                    │ Simulation Results       │
+                    └────────────┬────────────┘
+                                 │
+                                 ▼
+              ┌────────────────────────────────────┐
+              │            POLAR-EMS UI             │
+              │                                    │
+              │ Dashboard | Weather | Energy       │
+              │ Assets | Alerts | Simulation      │
+              │ Scenario Analysis                  │
+              └────────────────────────────────────┘
+```
 
+---
+
+## 🛠️ Technology Stack
+
+### Frontend
+
+* Next.js
+* React
+* TypeScript
+* Data Visualization
+
+### Backend
+
+* Node.js
+* Express.js
+* REST APIs
+
+### Database
+
+* PostgreSQL
+* Prisma ORM
+* Neon
+
+### Development
+
+* Git
+* GitHub
+* VS Code
+
+---
+
+## 📊 Data
+
+POLAR-EMS works with a combination of historical, modeled, scenario, and demonstration data depending on the system component.
+
+The project includes station weather information and energy-system data used for monitoring, analysis, and simulation.
+
+The platform is structured so that additional station datasets and energy sources can be integrated in the future.
+
+---
+
+## 🗺️ Current Stations
+
+The current system includes station-level support for:
+
+* **Maitri Station**
+* **Bharati Station**
+
+The architecture is designed to support additional remote research stations.
+
+---
+
+## 🚀 Project Structure
+
+```text
+POLAR-EMS/
+│
+├── frontend/
+│   ├── app/
+│   ├── components/
+│   └── ...
+│
+├── backend/
+│   ├── src/
+│   ├── prisma/
+│   ├── scripts/
+│   └── ...
+│
+└── README.md
+```
+
+---
+
+## 🔮 Future Scope
+
+The current platform provides the foundation for further development of intelligent energy-management capabilities.
+
+Possible future extensions include:
+
+* Energy demand forecasting
+* Renewable generation forecasting
+* Battery dispatch optimization
+* Generator scheduling
+* Fuel-consumption optimization
+* Advanced anomaly detection
+* Machine-learning-based prediction
+* Integration with additional real-time station data
+
+These capabilities can be developed on top of the existing energy-management architecture.
+
+---
+
+## 🎥 Demo
+
+**Watch the project demonstration:**
+(https://youtu.be/PAmuiOzXiH0)(#)
+
+**View the source code:**
+https://github.com/KaverishaBhakat/POLAR-EMS(#)
+
+---
+
+## 👩‍💻 Developed For
+
+**Smart India Hackathon 2026**
+
+POLAR-EMS explores how a centralized energy-management and decision-support platform can help monitor and analyze energy systems in isolated research environments.
+
+---
